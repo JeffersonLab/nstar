@@ -1,11 +1,22 @@
 ## Extract projected operator coefficients
 
-import hadron_sun_npart_irrep_op, streams, osproc,
-       serializetools/serializexml, tables, xmlparser, xmltree, parseutils, strutils
+import hadron_sun_npart_irrep_op, streams, osproc, os, xmlparser,
+       serializetools/serializexml, tables, xmltree, parseutils, strutils
 
-#die "$0 <output xml file>  <t0> <tZ> <opslistfile> <state num> <opname pattern> [<secondary op xml>...]\n" unless $#ARGV >= 6;
+#$irreps{"000_T1mP.fewer"} = {"ir" => "T1", "mom" => "000", "t0" => 8, "tZ" =>  4, "states" => [0], "opxmls" => "../omega8.ops.xml"};
 
-proc readOpsMapFiles(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPartIrrepOp_t] =
+type
+  ExtractProjOps_t* = object
+    dir*:     string   # 000_T1mP.fewer, etc.
+    ir*:      string   # "T1"
+    mom*:     string   # "000", etc.
+    t0*:      int
+    tZ*:      int
+    states*:  seq[int]
+
+
+    
+proc readOpsMapFiles*(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPartIrrepOp_t] =
   ## Read in several ops map files and return one table holding them all
   result = initTable[string, KeyHadronSUNNPartIrrepOp_t]()
 
@@ -21,6 +32,7 @@ proc readOpsMapFiles(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPartI
     # Loop over its entries and add to the main table
     for k, v in pairs(ops):
       result.add(k,v)
+
 
 proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[KeyHadronSUNNPartIrrepOp_t,float64] =
   ## Extract projected operator weights for state `state` at a fixed `t0` and `tZ`
@@ -74,6 +86,37 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
 
     # next line
     line = readLine(opsList)
+
+
+proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[string,Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
+  ## Loop over many irreps extract the projects operators for several states `states` within an irrep
+  #
+  result = initTable[string, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
+
+  # Loop over the irreps
+  # For each irrep, extract the weights. 
+  for rep in items(irreps):
+    echo "\n--------------------------\nIrrep= ", rep.ir, " mom= ", rep.mom, " t0= ", rep.t0, " tZ= ", rep.tZ
+
+    # Move into the expected dir
+    if not dirExists(rep.dir):
+      echo "dir = ", rep.dir, " does not exist"
+      assert false
+
+    setCurrentDir(rep.dir)
+
+    # Loop over each state
+    for state in items(rep.states):
+      let proj_op_name = channel & "_proj" & $state & "_p" & rep.mom & "_" & rep.ir
+
+      # Grab the projected ops
+      let projOpsMap = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
+
+      # Insert into the big map
+      result.add(proj_op_name, projOpsMap)
+
+    # Move back up
+    setCurrentDir("..")
 
 
 
