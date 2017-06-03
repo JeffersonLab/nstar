@@ -11,7 +11,7 @@ proc readOpsMapFiles(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPartI
 
   # Loop over each opsmap file and add it to the main table
   for f in items(opsMapFiles):
-    # Read source ops xml and make a map (source_opsmap)
+    # Read source ops xml and make a map
     echo "Read file= ", f
     let xml: XmlNode = loadXml(f)
 
@@ -22,15 +22,12 @@ proc readOpsMapFiles(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPartI
     for k, v in pairs(ops):
       result.add(k,v)
 
-proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMapFiles: seq[string]): Table[KeyHadronSUNNPartIrrepOp_t,float64] =
+proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[KeyHadronSUNNPartIrrepOp_t,float64] =
   ## Extract projected operator weights for state `state` at a fixed `t0` and `tZ`
   ## Return a table holding the operators and their weights (float64) - the "optimal" operator that projects onto this level.
   #
   echo "Extract weights for projected state = ", state
 #  let cwd = getCurrentDir()
-
-  # Uber ops map
-  let opsMap = readOpsMapFiles(opsMapFiles)
 
   # Output table starts empty
   result = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
@@ -52,13 +49,15 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMapFil
     let subOpName = ll[1]
 
     if not opsMap.hasKey(subOpName):
-      echo "Key=  ", subopName, "  not in map of operator xml"
+      echo "Key=  ", subopName, "  not in operator opsMap"
       assert false
 
     # V_t file
-    let file = "t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack"
+    let Vt = "t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack"
                     
-    let command = "calcbc \" sqrt( 2 * " & massfile & " ) * exp ( - " & massfile & " * " & $t0 & " / 2 ) * extract ( " & file & " , " & $tZ & " ) \" | awk '{print $2}' "
+    # Call calcbc to do some ensemble math. This needs improvement.
+    # It appears I need to use this biggestfloat stuff to parse double-prec numbers
+    let command = "calcbc \" sqrt( 2 * " & massfile & " ) * exp ( - " & massfile & " * " & $t0 & " / 2 ) * extract ( " & Vt & " , " & $tZ & " ) \" | awk '{print $2}' "
     echo "command= ", command
     let valstr = execProcess(command)
     echo "valstr= ", valstr
@@ -79,7 +78,9 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMapFil
 
 
 when isMainModule:
-  let projOpsMap = extractProjectOpWeights(0, 8, 10, "ops_phases", @["../h8.ops.xml", "../omega8.ops.xml"])
+  let opsMap = readOpsMapFiles(@["../h8.ops.xml", "../omega8.ops.xml"])
+
+  let projOpsMap = extractProjectOpWeights(0, 8, 10, "ops_phases", opsMap)
   echo "projOpsMap = ", projOpsMap
 
   var f: File
