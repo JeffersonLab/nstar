@@ -1,3 +1,4 @@
+#!/usr/bin/env /home/edwards/bin/nimrunner
 ## Extract projected operator coefficients
 
 import hadron_sun_npart_irrep_op, streams, osproc, os, xmlparser,
@@ -49,14 +50,18 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
   echo "massfile= ", massfile
                                                                                             
   # Slurp in the entire contents of the ops_phases file
-  let opsList = newStringStream(readFile(opsListFile))
+  let inputString = readFile(opsListFile)
   
   # Loop over the operators for this state
-  var line = readLine(opsList)
+  for line in splitLines(inputString):
+    # Ignore empty lines
+    if line.len < 1: continue
 
-  while line != "":
     echo "parse line= ", line
     let ll = splitWhiteSpace(line)
+    if ll.len != 4:
+      quit("Input needs space split values, got: " & line)
+
     let ii = parseInt(ll[0])
     let subOpName = ll[1]
 
@@ -82,10 +87,7 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
     let op = opsMap[subopName]
 
     # add it into the table
-    result.add(op, val)
-
-    # next line
-    line = readLine(opsList)
+    result[op] = val
 
 
 proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[string,Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
