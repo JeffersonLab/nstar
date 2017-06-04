@@ -25,6 +25,7 @@ proc readOpsMapFiles*(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPart
   for f in items(opsMapFiles):
     # Read source ops xml and make a map
     echo "Read file= ", f
+    if not fileExists(f): quit("file = " & f & " does not exist")
     let xml: XmlNode = loadXml(f)
 
     # Deserialize this table
@@ -121,19 +122,36 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
     setCurrentDir("..")
 
 
-
+#-----------------------------------------------------------------------------
 when isMainModule:
   let opsMap = readOpsMapFiles(@["../h8.ops.xml", "../omega8.ops.xml"])
 
+  # A single directory - have to be in the dir.
   let projOpsMap = extractProjectOpWeights(0, 8, 10, "ops_phases", opsMap)
   echo "projOpsMap = ", projOpsMap
 
+  # Write the xml
   var f: File
   if open(f, "proj_op.xml", fmWrite):
     f.write(serializeXML(projOpsMap, "ProjectedOps"))
     f.close()
 
+  # Load it back in for a check
   let xml = loadXml("proj_op.xml")
   echo "xml = ", xml
   let ff = deserializeXML[type(projOpsMap)](xml)
   echo "ff = ", ff
+
+  # Work on multiple directories
+  # Weights
+  let channel = "h8"
+  let work1 = ExtractProjOps_t(dir:"000_T1pP.fewer", ir:"T1", mom:"000", t0:8, tZ:10, states: @[0])
+  let work2 = ExtractProjOps_t(dir:"100_A2P", ir:"H0D4A2", mom:"100", t0:8, tZ:9, states: @[0])
+  let allProjOpsMap = extractProjectOpWeights(channel, @[work1, work2], opsMap)
+    
+  # Write the xml
+  var fff: File
+  if open(fff, "all_proj_op.xml", fmWrite):
+    fff.write(serializeXML(allProjOpsMap, "ProjectedOpWeights"))
+    fff.close()
+  
