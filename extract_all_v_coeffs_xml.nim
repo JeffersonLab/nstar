@@ -134,14 +134,14 @@ when isMainModule:
   # Output file
   var output: ProjectedOpWeights
 
-  # Work on multiple directories
   # Weights
-  let channel = "h8"
-  let work1 = ExtractProjOps_t(dir:"000_T1pP.fewer", ir:"T1", mom:"000", t0:8, tZ:10, states: @[0])
-  let work2 = ExtractProjOps_t(dir:"100_A2P", ir:"H0D4A2", mom:"100", t0:8, tZ:9, states: @[0])
-
-  output.version      = 3
-  output.ProjectedOps = extractProjectOpWeights(channel, @[work1, work2], opsMap)
+  # Work on multiple directories
+  output.version = 3
+  output.ProjectedOps = extractProjectOpWeights("h8", @[
+       ExtractProjOps_t(dir:"000_T1pP.fewer", ir:"T1", mom:"000", t0:8, tZ:10, states: @[0]),
+       ExtractProjOps_t(dir:"100_A2P", ir:"H0D4A2", mom:"100", t0:8, tZ:9, states: @[0]) 
+       ],
+       opsMap)
 
   # Write the xml
   var f: File
