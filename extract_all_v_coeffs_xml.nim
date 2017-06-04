@@ -6,18 +6,18 @@ import hadron_sun_npart_irrep_op, streams, osproc, os, xmlparser,
 
 type
   # We choose some particular structure for the objects
-  ProjectedOpWeights* = object
-    version*:      int
-    ProjectedOps*: Table[string,Table[KeyHadronSUNNPartIrrepOp_t,float64]]
+  ProjectedOpWeights* = tuple
+    version:      int
+    ProjectedOps: Table[string,Table[KeyHadronSUNNPartIrrepOp_t,float64]]
     
-  # Structure that drives the 
-  ExtractProjOps_t* = object
-    dir*:     string   # 000_T1mP.fewer, etc.
-    ir*:      string   # "T1"
-    mom*:     string   # "000", etc.
-    t0*:      int      # t0
-    tZ*:      int      # tZ
-    states*:  seq[int] # all the states
+  # Structure that drives the extraction routine
+  ExtractProjOps_t* = tuple
+    dir:     string   # 000_T1mP.fewer, etc.
+    ir:      string   # "T1"
+    mom:     string   # "000", etc.
+    t0:      int      # t0
+    tZ:      int      # tZ
+    states:  seq[int] # all the states
 
 
     
@@ -28,7 +28,7 @@ proc readOpsMapFiles*(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPart
   # Loop over each opsmap file and add it to the main table
   for f in items(opsMapFiles):
     # Read source ops xml and make a map
-    echo "Read file= ", f
+#   echo "Read file= ", f
     if not fileExists(f): quit("file = " & f & " does not exist")
     let xml: XmlNode = loadXml(f)
 
@@ -62,7 +62,7 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
     # Ignore empty lines
     if line.len < 1: continue
 
-    echo "parse line= ", line
+#   echo "parse line= ", line
     let ll = splitWhiteSpace(line)
     if ll.len != 4:
       quit("Input needs space split values, got: " & line)
@@ -71,8 +71,7 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
     let subOpName = ll[1]
 
     if not opsMap.hasKey(subOpName):
-      echo "Key=  ", subopName, "  not in operator opsMap"
-      assert false
+      quit("Key=  " & subopName & "  not in operator opsMap")
 
     # V_t file
     let Vt = "t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack"
@@ -80,12 +79,12 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
     # Call calcbc to do some ensemble math. This needs improvement.
     # It appears I need to use this biggestfloat stuff to parse double-prec numbers
     let command = "calcbc \" sqrt( 2 * " & massfile & " ) * exp ( - " & massfile & " * " & $t0 & " / 2 ) * extract ( " & Vt & " , " & $tZ & " ) \" | awk '{print $2}' "
-    echo "command= ", command
+#   echo "command= ", command
     let valstr = execProcess(command)
-    echo "valstr= ", valstr
+#   echo "valstr= ", valstr
     var big: BiggestFloat
     discard parseutils.parseBiggestFloat(valstr, big)
-    echo "OpName: ", subopName, " ", subopName, " ", big
+#   echo "OpName: ", subopName, " ", subopName, " ", big
     var val: float64 = big
 
     # Here is the struct
@@ -107,8 +106,7 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
 
     # Move into the expected dir
     if not dirExists(rep.dir):
-      echo "dir = ", rep.dir, " does not exist"
-      assert false
+      quit("dir = " & rep.dir & " does not exist")
 
     setCurrentDir(rep.dir)
 
@@ -138,8 +136,8 @@ when isMainModule:
   # Work on multiple directories
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights("h8", @[
-       ExtractProjOps_t(dir:"000_T1pP.fewer", ir:"T1", mom:"000", t0:8, tZ:10, states: @[0]),
-       ExtractProjOps_t(dir:"100_A2P", ir:"H0D4A2", mom:"100", t0:8, tZ:9, states: @[0]) 
+       (dir:"000_T1pP.fewer", ir:"T1", mom:"000", t0:8, tZ:10, states: @[0]),
+       (dir:"100_A2P", ir:"H0D4A2", mom:"100", t0:8, tZ:9, states: @[0]) 
        ],
        opsMap)
 
