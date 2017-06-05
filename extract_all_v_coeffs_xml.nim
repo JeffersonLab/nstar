@@ -40,12 +40,11 @@ proc readOpsMapFiles*(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPart
       result.add(k,v)
 
 
-proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[KeyHadronSUNNPartIrrepOp_t,float64] =
+proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): auto =
   ## Extract projected operator weights for state `state` at a fixed `t0` and `tZ`
   ## Return a table holding the operators and their weights (float64) - the "optimal" operator that projects onto this level.
   #
   echo "Extract weights for projected state = ", state
-#  let cwd = getCurrentDir()
 
   # Output table starts empty
   result = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
@@ -53,6 +52,7 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
   # The ensemble (mass) file we will use
   let massfile = "t0" & $t0 & "/MassJackFiles/mass_t0_" & $t0 & "_reorder_state" & $state & ".jack"
   echo "massfile= ", massfile
+  if not fileExists(massfile): quit("file = " & massfile & " does not exist")
                                                                                             
   # Slurp in the entire contents of the ops_phases file
   let inputString = readFile(opsListFile)
@@ -75,6 +75,7 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
 
     # V_t file
     let Vt = "t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack"
+    if not fileExists(Vt): quit("file = " & Vt & " does not exist")
                     
     # Call calcbc to do some ensemble math. This needs improvement.
     # It appears I need to use this biggestfloat stuff to parse double-prec numbers
