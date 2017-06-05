@@ -113,13 +113,9 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
 
     # Loop over each state
     for state in items(rep.states):
+      # Grab the projected ops, and insert into the big map
       let proj_op_name = channel & "_proj" & $state & "_p" & rep.mom & "_" & rep.ir
-
-      # Grab the projected ops
-      let projOpsMap = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
-
-      # Insert into the big map
-      result.add(proj_op_name, projOpsMap)
+      result[proj_op_name] = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
 
     # Move back up
     setCurrentDir(cwd)
