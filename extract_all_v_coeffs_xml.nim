@@ -108,6 +108,7 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
     if not dirExists(rep.dir):
       quit("dir = " & rep.dir & " does not exist")
 
+    let cwd = getCurrentDir()
     setCurrentDir(rep.dir)
 
     # Loop over each state
@@ -121,7 +122,7 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
       result.add(proj_op_name, projOpsMap)
 
     # Move back up
-    setCurrentDir("..")
+    setCurrentDir(cwd)
 
 
 #-----------------------------------------------------------------------------
@@ -135,18 +136,7 @@ when isMainModule:
 
   # Weights
   # Work on multiple directories
-  let ot = "../omega8/fits_rge"
-
-#$irreps{"000_T1pP.fewer"} = {"ir" => "T1",      "mom" => "000", "t0" =>  8, "tZ" => 10, "states" => [0], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"100_A2P"}        = {"ir" => "H0D4A2",  "mom" => "100", "t0" =>  8, "tZ" =>  9, "states" => [0], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"$ot/100_E2P"}    = {"ir" => "H1D4E2",  "mom" => "100", "t0" =>  9, "tZ" => 10, "states" => [1], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"110_A2P"}        = {"ir" => "H0D2A2",  "mom" => "110", "t0" =>  8, "tZ" =>  6, "states" => [0], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"$ot/110_B1P"}    = {"ir" => "H1D2B1",  "mom" => "110", "t0" =>  9, "tZ" => 11, "states" => [1], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"$ot/110_B2P"}    = {"ir" => "H1D2B2",  "mom" => "110", "t0" => 10, "tZ" => 11, "states" => [1], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"111_A2P"}        = {"ir" => "H0D3A2",  "mom" => "111", "t0" =>  8, "tZ" => 10, "states" => [0], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"$ot/111_E2P"}    = {"ir" => "H1D3E2",  "mom" => "111", "t0" =>  8, "tZ" => 11, "states" => [1], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"200_A2P"}        = {"ir" => "H0D4A2",  "mom" => "200", "t0" =>  7, "tZ" => 10, "states" => [0], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
-#$irreps{"$ot/200_E2P"}    = {"ir" => "H1D4E2",  "mom" => "200", "t0" =>  8, "tZ" => 11, "states" => [1], "opxmls" => "../omega8.ops.xml ../h8.ops.xml"};
+  let ot = "../../omega8/fits_rge"
 
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights("h8", @[
