@@ -1,8 +1,9 @@
 #!/usr/bin/env /home/edwards/bin/nimrunner
 ## Extract projected operator coefficients
 
-import hadron_sun_npart_irrep_op, streams, osproc, os, xmlparser,
-       serializetools/serializexml, tables, xmltree, parseutils, strutils
+import hadron_sun_npart_irrep_op, streams, os, xmlparser,
+       serializetools/serializexml, tables, xmltree, parseutils, strutils,
+       ensem
 
 type
   # We choose some particular structure for the objects
@@ -12,12 +13,12 @@ type
     
   # Structure that drives the extraction routine
   ExtractProjOps_t* = tuple
-    dir:     string   # 000_T1mP.fewer, etc.
-    ir:      string   # "T1"
-    mom:     string   # "000", etc.
-    t0:      int      # t0
-    tZ:      int      # tZ
-    states:  seq[int] # all the states
+    dir:     string   ## 000_T1mP.fewer, etc.
+    ir:      string   ## "T1"
+    mom:     string   ## "000", etc.
+    t0:      int      ## t0
+    tZ:      int      ## tZ
+    states:  seq[int] ## all the states
 
 
     
@@ -50,10 +51,8 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
   result = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
 
   # The ensemble (mass) file we will use
-  let massfile = "t0" & $t0 & "/MassJackFiles/mass_t0_" & $t0 & "_reorder_state" & $state & ".jack"
-  echo "massfile= ", massfile
-  if not fileExists(massfile): quit("file = " & massfile & " does not exist")
-                                                                                            
+  let massfile = readEnsemble("t0" & $t0 & "/MassJackFiles/mass_t0_" & $t0 & "_reorder_state" & $state & ".jack")
+
   # Slurp in the entire contents of the ops_phases file
   let inputString = readFile(opsListFile)
   
@@ -74,19 +73,12 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
       quit("Key=  " & subopName & "  not in operator opsMap")
 
     # V_t file
-    let Vt = "t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack"
-    if not fileExists(Vt): quit("file = " & Vt & " does not exist")
+    let Vt = readEnsemble("t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack")
                     
-    # Call calcbc to do some ensemble math. This needs improvement.
-    # It appears I need to use this biggestfloat stuff to parse double-prec numbers
-    let command = "calcbc \" sqrt( 2 * " & massfile & " ) * exp ( - " & massfile & " * " & $t0 & " / 2 ) * extract ( " & Vt & " , " & $tZ & " ) \" | awk '{print $2}' "
-#   echo "command= ", command
-    let valstr = execProcess(command)
-#   echo "valstr= ", valstr
-    var big: BiggestFloat
-    discard parseutils.parseBiggestFloat(valstr, big)
-#   echo "OpName: ", subopName, " ", subopName, " ", big
-    var val: float64 = big
+    # Calc utils from module "ensem"
+    let valc = calc(sqrt(2 * massfile) * exp(-0.5*massfile * t0) * extract(Vt, tZ))
+    let val  = valc.data[0].avg.re
+    echo "subopName= ", subopName, "  val= ", val
 
     # Here is the struct
     let op = opsMap[subopName]
@@ -152,7 +144,7 @@ when isMainModule:
 
   # Write the xml
   var f: File
-  if open(f, "all_proj_op.xml", fmWrite):
+  if open(f, "new_all_proj_op.xml", fmWrite):
     f.write(xmlHeader)
     f.write(serializeXML(output, "ProjectedOpWeights"))
     f.close()
