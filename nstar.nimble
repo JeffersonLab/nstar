@@ -7,6 +7,6 @@ license       = "MIT"
 
 # Dependencies
 
-requires "nim >= 0.17.0", "ensem >= 1.1.0", "serializetools >= 1.4.0"
+requires "nim >= 0.17.0", "ensem >= 1.1.0", "serializetools >= 1.5.1", "niledb >= 1.0.0"
 
 
