@@ -4,7 +4,7 @@ import niledb, tables,
        serializetools/serializebin, serializetools/serialstring
 import unittest
 import strutils, posix, os, hashes
-#import discoblocks
+import discoblocks
 import streams
   
 # Useful for debugging
@@ -13,67 +13,6 @@ proc printBin(x:string): string =
   result = "0x"
   for e in items(x):
     result.add(toHex(e))
-
-type
-  Fred1_t* = object
-    t_slice*: cushort                ## Meson operator time slice
-  
-  Fred2_t* = object
-    t_slice*: cushort                ## Meson operator time slice
-    junk*:    cushort
-  
-  Fred3_t* = object
-    t_slice*: cushort                ## Meson operator time slice
-    junk*:    cushort
-    disp*:    seq[cshort]            ## Displacement dirs of quark (right)
-  
-  Fred4_t* = object
-    t_slice*: cushort                ## Meson operator time slice
-    junk*:    cushort
-    disp*:    seq[cshort]            ## Displacement dirs of quark (right)
-    mom*:     seq[cshort]    ## D-1 momentum of this operator
-  
-
-proc hash*(x: Fred1_t): Hash =
-  ## Computes a Hash from `x`.
-  var h: Hash = 0
-  # Iterate over parts of `x`.
-  for xAtom in x.fields:
-    # Mix the atom with the partial hash.
-    h = h !& hash(xAtom)
-    # Finish the hash.
-    result = !$h
-
-proc hash*(x: Fred2_t): Hash =
-  ## Computes a Hash from `x`.
-  var h: Hash = 0
-  # Iterate over parts of `x`.
-  for xAtom in x.fields:
-    # Mix the atom with the partial hash.
-    h = h !& hash(xAtom)
-    # Finish the hash.
-    result = !$h
-
-proc hash*(x: Fred3_t): Hash =
-  ## Computes a Hash from `x`.
-  var h: Hash = 0
-  # Iterate over parts of `x`.
-  for xAtom in x.fields:
-    # Mix the atom with the partial hash.
-    h = h !& hash(xAtom)
-    # Finish the hash.
-    result = !$h
-
-proc hash*(x: Fred4_t): Hash =
-  ## Computes a Hash from `x`.
-  var h: Hash = 0
-  # Iterate over parts of `x`.
-  for xAtom in x.fields:
-    # Mix the atom with the partial hash.
-    h = h !& hash(xAtom)
-    # Finish the hash.
-    result = !$h
-
 
 
 when isMainModule:
@@ -100,6 +39,7 @@ when isMainModule:
   var meta = odb.getUserdata()
   echo "it did not blowup..."
   #echo " meta= ", meta
+  #let nrow = [32, 32, 32, 96
 
   # Read all the keys
   echo "try getting all the deserialized keys"
@@ -114,67 +54,32 @@ when isMainModule:
     echo "k[",i,"]= ", printBin(des_keys[i]), " len= ", des_keys[i].len
     #echo "k[",i,"]= ", des_keys[i]
 
-  # Stuff
-  echo "\n\nStuff:"
-  echo "sizeof(cushort)= ", sizeof(cushort), "  cshort= ", sizeof(cshort), " mom= ", sizeof(array[0..2, cshort])
-
-  # Crazy
-  echo "\nTime to go off-grid"
-  if true:
-    var ss = newStringStream(des_keys[8])
-    var t_slice: cushort
-    var junk: cushort
-    var mom: array[0..2, cshort]
-    var disp: seq[cshort]
-    doLoadBinary[type(t_slice)](ss, t_slice)
-    echo "t_slice= ", t_slice, "  size= ", sizeof(t_slice)
-    doLoadBinary[type(junk)](ss, junk)
-    echo "junk= ", junk, "  size= ", sizeof(junk)
-    var nn: int32
-    doLoadBinary[type(nn)](ss, nn)
-    echo "nn= ", nn, "  size= ", sizeof(nn)
-    var fred: cshort
-    doLoadBinary[type(fred)](ss, fred)
-    echo "d[0]= ", fred, "  size= ", sizeof(fred)
-    doLoadBinary[type(nn)](ss, nn)
-    echo "nn= ", nn, "  size= ", sizeof(nn)
-    doLoadBinary[type(fred)](ss, fred)
-    echo "m[0]= ", fred, "  size= ", sizeof(fred)
-    doLoadBinary[type(fred)](ss, fred)
-    echo "m[1]= ", fred, "  size= ", sizeof(fred)
-    doLoadBinary[type(fred)](ss, fred)
-    echo "m[2]= ", fred, "  size= ", sizeof(fred)
-    #quit("bye")
-
-    echo "0000 0000 0000"
-
-
   # Test
-  echo "Fred1"
-  echo deserializeBinary[Fred1_t](des_keys[8])
-
-  echo "Fred2"
-  echo deserializeBinary[Fred2_t](des_keys[8])
-
-  echo "Fred3"
-  echo deserializeBinary[Fred3_t](des_keys[8])
-
-  quit("bye")
-
-  echo "Fred4"
-  echo deserializeBinary[Fred4_t](des_keys[8])
-
-  echo "Convert a binary key to a struct"
-  #let foobar = deserializeBinary[DiscoKeyOperator_t](des_keys[0])
-  #echo "foobar= ", foobar
+  if true:
+    echo "Convert a binary key to a struct"
+    let foobar = deserializeBinary[DiscoKeyOperator_t](des_keys[8])
+    echo "foobar= ", foobar
   
+  # Now try
+  if true:
+    echo "\n\nNow try values"
+    var val0: DiscoValOperator_t
+    var sval: string
+    var ret = getBinary(odb, des_keys[8], sval)
+    echo "got ret= ", ret
+    echo "sval = ", printBin(sval)
+    ret = get(odb, deserializeBinary[DiscoKeyOperator_t](des_keys[8]), val0)
+    echo "get ret= ", ret
+    echo "val0= ", val0
+
   # Close
-  assert(odb.close() == 0)
-  quit("bye")
+  #assert(odb.close() == 0)
 
 
 #[
+  #
   # New file
+  #
   echo "Declare conf db"
   var ndb = newConfDataStoreDB()
 
@@ -224,5 +129,4 @@ when isMainModule:
 
     # Close
     require(db.close() == 0)
-]#
-    
+]#    
