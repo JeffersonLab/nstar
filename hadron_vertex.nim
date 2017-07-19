@@ -1,7 +1,9 @@
 ## Reduced set of hadron vertex info
 
-## #----------------------------------------------------------------------------------
-## #! The key for the hadron nodes used here
+import hashes
+
+##----------------------------------------------------------------------------------
+## The key for the hadron nodes used here
 
 type
   HadronVertex_t* = object
@@ -12,10 +14,30 @@ type
     Cconj*:       bool                ## Is the node (gamma matrix structure) C-conjugated? 
     twoI_z*:      cint                ## Isospin_z - here, always set to 0 for compatibility purposes 
     row*:         cint                ## Some row indicator of irrep, etc. 
-    mom*:         array[0..2, cint]   ## D-1 momentum of the operator 
+    #mom*:         array[0..2, cint]   ## D-1 momentum of the operator 
+    mom*:         seq[cint]           ## D-1 momentum of the operator 
     creation_op*: bool                ## Is this a creation ops?  
     smearedP*:    bool                ## Does this operators use distillation/distillution? 
   
 
-#proc constructHadronVertex_t*(): HadronVertex_t {.constructor,
-#    importcpp: "Hadron::HadronVertex_t(@)", header: "hadron_vertex.h".}
+proc newHadronVertex_t*(): HadronVertex_t =
+  ## Constructor
+  result.`type`        = '\0'
+  result.piece_num     = 0
+  result.Cconj         = false
+  result.twoI_z        = 0
+  result.row           = 0
+  result.creation_op   = false
+  result.smearedP      = false
+
+
+proc hash*(x: HadronVertex_t): Hash =
+  ## Computes a Hash from `x`.
+  var h: Hash = 0
+  # Iterate over parts of `x`.
+  for xAtom in x.fields:
+    # Mix the atom with the partial hash.
+    h = h !& hash(xAtom)
+  # Finish the hash.
+  result = !$h
+

@@ -1,5 +1,7 @@
 ## Diagram time-slice info
 
+import serializetools/array1d, hashes
+
 #----------------------------------------------------------------------------
 # Active time slices for a correlator
 type
@@ -12,6 +14,14 @@ type
     t_slices*:         Array1dO[cint] ## The fixed time-slices for all the graph   [npt -> t_slice] 
   
 
+proc newHadronDiagramTimeSlices_t*(): HadronDiagramTimeSlices_t =
+  result.Nt_corr          = 0
+  result.t_start          = -1
+  result.t_end            = -1
+  result.neg_slice_npt    = -1
+  result.source_slice_npt = -1
+
+
 proc hash*(x: HadronDiagramTimeSlices_t): Hash =
   ## Computes a Hash from `x`.
   var h: Hash = 0
@@ -21,8 +31,3 @@ proc hash*(x: HadronDiagramTimeSlices_t): Hash =
     h = h !& hash(xAtom)
   # Finish the hash.
   result = !$h
-
-
-#proc constructHadronDiagramTimeSlices_t*(): HadronDiagramTimeSlices_t {.
-#    constructor, importcpp: "Hadron::HadronDiagramTimeSlices_t(@)",
-#    header: "hadron_diagram_time.h".}

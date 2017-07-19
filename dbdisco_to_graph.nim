@@ -1,11 +1,13 @@
 ##  Unittests for niledb
 
 import niledb, tables,
-       serializetools/serializebin, serializetools/serialstring
+       serializetools/serializebin, serializetools/serializexml, serializetools/serialstring, serializetools/array1d
 import unittest
 import strutils, posix, os, hashes
 import discoblocks
 import streams
+import hadron_npart_npt_conn_graph, hadron_adj_map, hadron_vertex, hadron_diagram_time
+import xmltree, xmlparser
   
 # Useful for debugging
 proc printBin(x:string): string =
@@ -63,6 +65,7 @@ when isMainModule:
     let foobar = deserializeBinary[DiscoKeyOperator_t](bin_keys[8])
     echo "foobar= ", foobar
 
+
   # Now try
   if false:
     echo "\n\nNow try values"
@@ -77,6 +80,49 @@ when isMainModule:
 
   # Close
   #assert(odb.close() == 0)
+
+
+  #
+  # Read in a noneval_graph.xml file
+  #
+#  if false:
+#    let xml: XmlNode = loadXml("noneval_graph.xml")
+#    echo "xml = ", xml
+#    let one_pts = deserializeXML[seq[KeyHadronNPartNPtConnGraph_t]](xml)
+#    echo "one_points:\n"
+#    for k in items(one_pts):
+#      echo "k= ", k
+#    var one_pt_template = one_pts[0]
+#  if false:
+#    one_pt_template = KeyHadronNPartNPtConnGraph_t(graph: M1:2:Q2:1:, ensemble: nil, AdjMap: {1: {1: (vertex_num: 1, slot_num: 2, conj: false, flavor: l), 2: (vertex_num: 1, slot_num: 1, conj: true, flavor: l)}}, Vertices: {1: (First: (name: omegal_rhoxD0_J0__J1_T1, smear: nil, type: M, piece_num: 1, Cconj: false, twoI_z: 0, row: 2, mom: @[0, 0, 0], creation_op: true, smearedP: false), Second: 1)}, DiagramTimeSlices: (Nt_corr: 16, t_start: 0, t_end: 15, neg_slice_npt: 1, source_slice_npt: 1, t_slices: (data: @[0])))
+
+
+  #
+  # Build redstar one-pt template
+  #
+  let adj_map_template = {cint(1): {cint(1): HadronAdjMapTarget_t(vertex_num: cint(1), slot_num: cint(2), conj: false, flavor: 'l'), cint(2): HadronAdjMapTarget_t(vertex_num: cint(1), slot_num: cint(1), conj: true, flavor: 'l')}.toOrderedTable}.toOrderedTable
+
+  let vertex_template = {cint(1): PairVertexNpt_t(First: HadronVertex_t(name: "omegal_rhoxD0_J0__J1_T1", smear: nil, `type`: 'M', piece_num: cint(1), Cconj: false, twoI_z: cint(0), row: cint(2), mom: @[cint(0), cint(0), cint(0)], creation_op: true, smearedP: false), Second: cint(1))}.toOrderedTable
+
+  let diag_time_template = HadronDiagramTimeSlices_t(Nt_corr: cint(16), t_start: cint(0), t_end: cint(nrow[3]), neg_slice_npt: cint(1), source_slice_npt: cint(1), t_slices: Array1dO[cint](data: @[cint(0)]))
+
+  let one_pt_template = KeyHadronNPartNPtConnGraph_t(graph: "M1:2:Q2:1:", ensemble: nil, AdjMap: adj_map_template, Vertices: vertex_template, DiagramTimeSlices: diag_time_template)
+
+  #
+  # Operator templates
+  #
+  type
+    OpGamma_t = tuple[name: string, gamma: int, row: int]            ## [operator name, gamma index, row]
+    OpTemp_t  = OrderedTable[int, OpGamma_t]                         ## gamma index
+
+#etal_pion_2xD0_J0__J0_A1
+#etal_pionxD0_J0__J0_A1
+#fl_a0xD0_J0__J0_A1
+#fl_a1xD0_J0__J1_T1
+#hl_b0xD0_J0__J0_A1
+#hl_b1xD0_J0__J1_T1
+#omegal_rho_2xD0_J0__J1_T1
+#omegal_rhoxD0_J0__J1_T1
 
 
   #
@@ -98,6 +144,7 @@ when isMainModule:
   #echo "Here is the metadata to insert:\n", meta
   ndb.setMaxUserInfoLen(meta.len)
 
+
   echo "open the ndb = ", single_file
   ret = ndb.open(single_file, O_RDWR or O_TRUNC or O_CREAT, 0o664)
   echo "open = ", single_file, "  return type= ", ret
@@ -116,6 +163,7 @@ when isMainModule:
   var disps  = [[cshort(0)]]
   var disps2 = [[cshort(1)], [cshort(2)], [cshort(3)], [cshort(4)], [cshort(-1)], [cshort(-2)], [cshort(-3)], [cshort(-4)]]
 
+#[
   # Loop over all possible keys
   for px in -mom2_max..mom2_max:
     for py in -mom2_max..mom2_max:
@@ -141,6 +189,31 @@ when isMainModule:
             assert(ret == 0)
             let op = val.op
             echo "val: len= ", op.len, "  op= ", op
+]#
+
+
+  # Loop over all possible keys
+  let disp = disps[0]
+
+  #for t_slice in 0..nrow[3]-1:
+  for t_slice in 0..2:
+    #echo "t_slice= ", t_slice, " disp= ", disp, " mom= ", cmom
+    let key = DiscoKeyOperator_t(t_slice: cushort(t_slice), 
+                                 mom: @[cshort(0), cshort(0), cshort(0)],
+                                 disp: @disp, ndisp: cushort(disp.len))
+    echo "key= ", key
+
+    # val
+    echo "get the val"
+    var val: DiscoValOperator_t
+    assert(get(odb, key, val) == 0)
+    let op = val.op
+    echo "val: len= ", op.len, "  op= ", op
+
+    # Each of the 16 gamma constructions
+    var one_pt = one_pt_template
+    
+    
 
 
 

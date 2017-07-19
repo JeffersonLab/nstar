@@ -1,5 +1,5 @@
 import
-  hadron_diagram_time, hadron_vertex
+  hadron_diagram_time, hadron_vertex, hashes, tables
 
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
@@ -12,6 +12,21 @@ type
     flavor*:     char ## Quark flavor, something like  d,u,s,c,... 
   
 
+proc newHadronAdjMapTarget_t*(): HadronAdjMapTarget_t =
+  ## Empty constructor
+  result.vertex_num = 0
+  result.slot_num   = 0
+  result.conj       = false
+  result.flavor     = '\0'
+
+proc newHadronAdjMapTarget_t*(v: cint, s: cint, c: bool, f: char): HadronAdjMapTarget_t =
+  ## A constructor from bits
+  result.vertex_num = v
+  result.slot_num   = s
+  result.conj       = c
+  result.flavor     = f
+
+
 proc hash*(x: HadronAdjMapTarget_t): Hash =
   ## Computes a Hash from `x`.
   var h: Hash = 0
@@ -23,13 +38,32 @@ proc hash*(x: HadronAdjMapTarget_t): Hash =
   result = !$h
 
 
-#proc constructHadronAdjMapTarget_t*(): HadronAdjMapTarget_t {.constructor,
-#    importcpp: "Hadron::HadronAdjMapTarget_t(@)", header: "hadron_adj_map.h".}
-#proc constructHadronAdjMapTarget_t*(v: cint; s: cint; c: bool; f: char): HadronAdjMapTarget_t {.
-#    constructor, importcpp: "Hadron::HadronAdjMapTarget_t(@)",
-#    header: "hadron_adj_map.h".}
 
-
-# Adjacancy map: [vertex_num -> [slot -> {target vertex,target slot}]]
+# Adjacancy map
 type
-  HadronGraphAdjMap_t* = map[cint, map[cint, HadronAdjMapTarget_t]]
+  HadronGraphAdjMap_t* = OrderedTable[cint, OrderedTable[cint, HadronAdjMapTarget_t]] ## Adjacancy map: [vertex_num -> [slot -> {target vertex,target slot}]]
+
+
+#[
+proc hash*(x: Table[cint, HadronAdjMapTarget_t]): Hash =
+  ## Computes a Hash from `x`.
+  var h: Hash = 0
+  # Iterate over parts of `x`.
+  for k,v in pairs(x):
+    # Mix the atom with the partial hash.
+    h = h !& hash(k)
+    h = h !& hash(v)
+  # Finish the hash.
+  result = !$h
+
+proc hash*(x: HadronGraphAdjMap_t): Hash =
+  ## Computes a Hash from `x`.
+  var h: Hash = 0
+  # Iterate over parts of `x`.
+  for k,v in pairs(x):
+    # Mix the atom with the partial hash.
+    h = h !& hash(k)
+    h = h !& hash(v)
+  # Finish the hash.
+  result = !$h
+]#
