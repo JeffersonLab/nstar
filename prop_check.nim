@@ -45,7 +45,10 @@ proc openTheDB(out_file: string): ConfDataStoreDB =
   # Open a file
   echo "Is file= ", out_file, "  present?"
   if fileExists(out_file):
-    echo "hooray, it exists"
+    if getFileSize(out_file) == 0:
+      quit("oops, file is empty in size")
+    else:
+      echo "hooray, it exists"
   else:
     quit("oops, does not exist")
 
