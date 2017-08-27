@@ -19,16 +19,15 @@ proc openTheDB(out_file: string): ConfDataStoreDB =
 when isMainModule:
   # Open the DB
   echo "paramCount = ", paramCount()
-  if paramCount() < 2:
+  if paramCount() != 2:
     quit("Usage: exe <cutoff> <dir>")
     
   let cutoff = parseFloat(paramStr(1))
   echo "cutoff= ", cutoff
 
   # Loop over the sdbs within a dir
-  for n in 1..paramCount():
+  for pt,sdb in walkDir(paramStr(2)):
     # Has to be a sensible filename
-    let sdb = paramStr(n)
     echo "sdb= ", sdb
     if not sdb.contains(".sdb"): continue
 
