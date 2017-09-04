@@ -61,6 +61,8 @@ when isMainModule:
         if v.mat[0,0].re < cutoff:
           echo "k= ", k, "  v[", i, ",",i,"]= ",v.mat[i,i], "  bad"
           bad = true
+        else:
+          echo "k= ", k, "  okay"
       
     # Close
     if db.close() != 0:
