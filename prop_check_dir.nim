@@ -26,7 +26,7 @@ when isMainModule:
   echo "cutoff= ", cutoff
 
   # Loop over the sdbs within a dir
-  for pt,sdb in walkDir(paramStr(2)):
+  for sdb in walkDirRec(paramStr(2)):
     # Has to be a sensible filename
     echo "sdb= ", sdb
     if not sdb.contains(".sdb"): continue
