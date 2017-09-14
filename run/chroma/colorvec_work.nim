@@ -2,7 +2,7 @@
 # This is the work script called by run_colorvec_*pl
 #
 import os, ospaths, strutils
-import pegs
+import re
 import config
 
 #------------------------------------------------------------------------
@@ -165,16 +165,15 @@ proc gzip*(file: string): string =
 proc extract_params*(data: string): seq[int] =
   ## Determine the lattice size
   # Yuk, do some file name surgery
-  var stem = data.replace(peg"\..*$")
-  stem = stem.replace(peg"per\..*$")
-  stem = stem.replace(peg"non\..*$")
-  stem = stem.replace(peg"dir\..*$")
+  var stem = data.replace(re"\..*$")
+  stem = stem.replace(re"per\..*$")
+  stem = stem.replace(re"non\..*$")
+  stem = stem.replace(re"dir\..*$")
 
-  let F  = stem.split(peg"_")
-  let Ls = parseInt(F[0])
-  let Lt = parseInt(F[1])
+  let F  = stem.split('_')
+  let Ls = parseInt(F[1])
+  let Lt = parseInt(F[2])
   result = @[Ls, Ls, Ls, Lt]
-  echo "lattSize= ", result
 
 
 #[
