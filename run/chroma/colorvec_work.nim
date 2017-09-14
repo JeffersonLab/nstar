@@ -1,7 +1,7 @@
 #
 # This is the work script called by run_colorvec_*pl
 #
-import os, ospaths, strutils
+import os, ospaths, osproc, strutils
 import re
 import config
 
@@ -162,7 +162,7 @@ proc gzip*(file: string): string =
 
 
 #------------------------------------------------------------------------
-proc extract_params*(data: string): seq[int] =
+proc extractLattSize*(data: string): array[0..3,int] =
   ## Determine the lattice size
   # Yuk, do some file name surgery
   var stem = data.replace(re"\..*$")
@@ -176,25 +176,16 @@ proc extract_params*(data: string): seq[int] =
   result = @[Ls, Ls, Ls, Lt]
 
 
-#[
+
 #------------------------------------------------------------------------
-# Setup the rng in my desired way (using the trajectory number)
-#
-proc setup_rng*
-  local($traj) = @_
+proc getTimeOrigin*(Lt: int, trajj: string): int =
+  ## Displace the origin of the time slices using the trajectory as a seed to a RNG
+  var traj = trajj.replace(re"[a-zA-Z]")
 
   # Seed the rng with the traj number
-  srand($traj)
+  let (outp, errC) = execCmdEx("t_origin.pl " & $Lt & " " & traj)
 
-  # Call a few to clear out junk
-  foreach $i (1 .. 20)
-  {
-    rand(1.0)
-  }
-
-  # Displace the origin of the time slices
-  $HMCParam::origin = int(rand($HMCParam::nrow[3]))
-]#
+  result = parseInt(outp)
 
 
 

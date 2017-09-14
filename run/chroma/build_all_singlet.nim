@@ -84,7 +84,7 @@ proc buildAllSinglet*(quark: string, seqnos: seq[string]) =
     #discard existsOrCreateDir(home & "/scratch/${stem}/rge_temp/prop.${quark}")
 
     setCurrentDir(dir)
-    writeFile("list", $seqno)
+    writeFile("list", seqno)
     writeFile("quark_mass", "strange")
 
     #symLink(home & "/arch/wraprun/bin/serial", ".")
