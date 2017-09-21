@@ -259,7 +259,7 @@ proc newAnisoParams*(): AnisoParam_t =
 
 proc newSFBC*(): XmlNode =
   ## Simple anti-periodic fermion bc
-  newSimpleFermBC(@[1,1,1-1])
+  newSimpleFermBC(@[1,1,1,-1])
 
 proc newAnisoCloverParams*(mass: float): CloverParams_t =
   ## QUDA used this for clover parameters
@@ -286,10 +286,22 @@ proc newAnisoUnprecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newAnisoCloverFermAct("UNPRECONDITIONED_CLOVER", mass)
 
+proc newIsoCloverFermAct*(mass: float): XmlNode =
+  ## Isotropic clover fermion action
+  let state  = newSimpleFermState(newSFBC())
+  serializeXML(IsoCloverFermionAction_t(FermAct: "CLOVER", Mass: mass, clovCoeff: 1.0, FermState: state), "FermState")
+
 
 #------------------------------------------------------------------------------
 # Yeah, loads of funky/nutty/wacky inverters
 
+proc newVanillaCG*(rsd: float): XmlNode =
+  ## Vanilla CG
+  serializeXML(CGInverter_t(invType: "CG_INVERTER",
+                            RsdCG: rsd,
+                            MaxCG: 200), "InvertParam")
+
+                                            
 proc newQOPAMG24x256*(mass: float, rsd: float): XmlNode =
   ## QOP MG inverter on 24^3x256
   serializeXML(QOPCloverMultigridInverter_t(invType: "QOP_CLOVER_MULTIGRID_INVERTER",
@@ -337,10 +349,10 @@ proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
                     Blocking: @[@[3,3,3,4], @[2,2,2,2]])
 
 
-proc newQUDAMGInv*(mass: float, Rsd: float, mg: MULTIGRIDParams_t): XmlNode =
+proc newQUDAMGInv*(mass: float, rsd: float, mg: MULTIGRIDParams_t): XmlNode =
   ## QUDA MG inverter, with some parameters hardwired
   serializeXML(QUDA_MULTIGRID_CLOVER_INVERTER_t(invType: "QUDA_MULTIGRID_CLOVER_INVERTER",
-                                                RsdTarget: Rsd,
+                                                RsdTarget: rsd,
                                                 MULTIGRIDParams: mg,
                                                 CloverParams: newAnisoCloverParams(mass),
                                                 Delta: 1.0e-4, MaxIter: 200, RsdToleranceFactor: 100,
@@ -657,26 +669,35 @@ close(INPUT)
 when isMainModule:
   let input_file = "fred.xml"
 
+#[
   let stem  = "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265"
   let seqno = "1000a"
+
+  let lustre_dir = "/lustre/atlas/proj-shared/nph103"
+  let cfg_file =  lustre_dir & "/" & stem & "/cfgs/" & stem & "_" & seqno & ".lime"
+  let colorvec_files = @[lustre_dir & "/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
+  let sdb = "prop_op_file"
+]#
+
+  let stem  = "test_4_16_b10p0"
+  let seqno = "1"
+
+  let cfg_file =  stem & ".lime1"
+  let colorvec_files = @[stem & ".3d.eigs.mod" & seqno]
+  let sdb = "prop_op_file.sdb"
 
   let lattSize = extractLattSize(stem)
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt,seqno)
   echo "Lt= ", Lt, "   t_origin= ", t_origin
 
-  let lustre_dir = "/lustre/atlas/proj-shared/nph103"
-  let cfg_file =  lustre_dir & "/" & stem & "/cfgs/" & stem & "_" & seqno & ".lime"
-  let colorvec_files = @[lustre_dir & "/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
-  let sdb = "./prop_op_file"
-
   # Basic parameters
-  let mass        = -0.0850
-  let mass_label  = "U" & formatFloat(mass, ffDecimal, 4)
+  let mass        = 0.05
+  let mass_label  = "U" & formatFloat(mass, ffDecimal, 2)
   echo "mass_label= ", mass_label
-  let num_vecs    = 162
+  let num_vecs    = 1
   let t_source    = 1
-  let Rsd         = 1.0e-8
+  let Rsd         = 1.0e-4
 
   var Nt_forward, Nt_backward: int
   if t_source mod 16 == 0:
@@ -697,12 +718,15 @@ when isMainModule:
                                         num_tries: 1)
  
 
-  # Inverter
+  # Fermion action and inverters
+#[
   let mg  = newQUDAMGParams24x256()
   let inv = newQUDAMGInv(mass, Rsd, mg)
-
-  # Fermion action
   let fermact = newAnisoPrecCloverFermAct(mass)
+]#
+
+  let inv  = newVanillaCG(Rsd)
+  let fermact = newIsoCloverFermAct(mass)
 
   # Inline measurement
   let mat_named_obj = NamedObject_t(gauge_id: "default_gauge_field",

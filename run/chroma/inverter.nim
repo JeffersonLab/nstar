@@ -5,8 +5,15 @@ import serializetools/serializexml
 import xmltree
 
 type
+  CGInverter_t* = object
+    invType*:          string   ## CG_INVERTER
+    RsdCG*:            float
+    MaxCG*:            int
+
+
+type
   QOPCloverMultigridInverter_t* = object
-    invType*:          string   # <invType>QOP_CLOVER_MULTIGRID_INVERTER</invType>
+    invType*:          string   ## QOP_CLOVER_MULTIGRID_INVERTER
     Mass*:             float
     Clover*:           float
     CloverT*:          float
