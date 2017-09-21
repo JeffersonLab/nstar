@@ -196,7 +196,7 @@ proc getTimeOrigin*(Lt: int, trajj: string): int =
     echo("Some error running t_origin.pl")
 
   removeSuffix(outp)
-  echo "outp= XX", outp, "XX"
+  #echo "outp= XX", outp, "XX"
   result = parseInt(outp)
 
 
@@ -206,8 +206,8 @@ proc getTimeOrigin*(Lt: int, trajj: string): int =
 type
   ChromaParam_t* = object   
     ## All inline measurements
-    InlineMeasurements*:  seq[InlineMeasurement_t]      ## Yup, the inline measurements
-    nrow*:                array[4,int]              ## lattice size
+    InlineMeasurements*:  seq[XmlNode]  ## Yup, the inline measurements
+    nrow*:                array[4,int]  ## lattice size
 
 
 #------------------------------------------------------------------------
@@ -657,25 +657,28 @@ close(INPUT)
 when isMainModule:
   let input_file = "fred.xml"
 
-  let stem = "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265"
+  let stem  = "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265"
+  let seqno = "1000a"
+
   let lattSize = extractLattSize(stem)
   let Lt = lattSize[3]
-  echo "Lt = ", Lt
+  let t_origin = getTimeOrigin(Lt,seqno)
+  echo "Lt= ", Lt, "   t_origin= ", t_origin
 
-  let seqno    = "1000a"
-  let cfg_file = "/lustre/atlas/proj-shared/nph103/" & stem & "/cfgs/" & "_" & seqno & ".lime"
-  let colorvec_files = @["/lustre/atlas/proj-shared/nph103/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
+  let lustre_dir = "/lustre/atlas/proj-shared/nph103"
+  let cfg_file =  lustre_dir & "/" & stem & "/cfgs/" & stem & "_" & seqno & ".lime"
+  let colorvec_files = @[lustre_dir & "/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
   let sdb = "./prop_op_file"
 
-
   # Basic parameters
-  let mass_label  = "-0.0850"
-  let mass        = parseFloat(mass_label)
+  let mass        = -0.0850
+  let mass_label  = "U" & formatFloat(mass, ffDecimal, 4)
+  echo "mass_label= ", mass_label
   let num_vecs    = 162
   let t_source    = 1
   let Rsd         = 1.0e-8
+
   var Nt_forward, Nt_backward: int
-  
   if t_source mod 16 == 0:
     Nt_forward  = 48
     Nt_backward = 0
@@ -685,9 +688,9 @@ when isMainModule:
 
 
   # Used by distillation input
-  let contract = matelem.Contractions_t(mass_label: "U" & mass_label,
+  let contract = matelem.Contractions_t(mass_label: mass_label,
                                         num_vecs: num_vecs,
-                                        t_sources: @[t_source + getTimeOrigin(Lt,seqno)],
+                                        t_sources: @[t_source + t_origin],
                                         Nt_forward: Nt_forward,
                                         Nt_backward: Nt_backward,
                                         decay_dir: 3,
@@ -706,26 +709,16 @@ when isMainModule:
                                     colorvec_files: colorvec_files,
                                     prop_op_file: sdb)
   let mat_prop      = newPropagator(fermact, inv)
-  #let mat_param     = matelem.DistParams_t(contract, mat_prop)
-  var mat_param: matelem.DistParams_t
-  mat_param.Contractions = contract
-  mat_param.Propagator   = mat_prop
+  let mat_param     = matelem.DistParams_t(Contractions: contract, Propagator: mat_prop)
   let inline_dist   = matelem.newPropAndMatelemDistillation(mat_param, mat_named_obj)
-  echo "inline:\n", inline_dist
-
-  #echo "inline:\n", inline
-  #let xml = serializeXML(inline)
-  #echo "xml:\n", xml
 
   var chromaParam = ChromaParam_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
-  echo "Param:\n", $serializeXML(chromaParam, "chroma")
+  #echo "Param:\n", $serializeXML(chromaParam, "chroma")
 
-#[
   let cfg = Cfg_t(cfg_type: "SCIDAC", cfg_file: cfg_file, parallel_io: true)
 
   let chroma = Chroma_t(Param: chromaParam, Cfg: cfg)
-  echo "Chroma:\n", $serializeXML(chroma)
+  echo "Chroma:\n", serializeXML(chroma)
 
-  let input = print_header_xml() & "\n" & $serializeXML(chroma)
+  let input = xmlHeader & "\n" & $serializeXML(chroma)
   writeFile(input_file, input)
-]#

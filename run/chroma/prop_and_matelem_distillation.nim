@@ -27,14 +27,19 @@ type
     prop_op_file*:    string
 
   PropAndMatelemDistillationParams_t* = object
+    Name*:            string
+    Frequency*:       int
     Param*:           DistParams_t
     NamedObject*:     NamedObject_t
 
 
 
-proc newPropAndMatelemDistillation*(Param: DistParams_t, NamedObject: NamedObject_t): InlineMeasurement_t =
+proc newPropAndMatelemDistillation*(Param: DistParams_t, NamedObject: NamedObject_t): XmlNode =
   ## Return a new prop
-  return InlineMeasurement_t(Name: "PROP_AND_MATELEM_DISTILLATION", Frequency: 1, Measurement: serializeXML(PropAndMatelemDistillationParams_t(Param: Param, NamedObject: NamedObject)))
+  return serializeXML(PropAndMatelemDistillationParams_t(Name: "PROP_AND_MATELEM_DISTILLATION", 
+                                                         Frequency: 1, 
+                                                         Param: Param, 
+                                                         NamedObject: NamedObject))
 
 
 
