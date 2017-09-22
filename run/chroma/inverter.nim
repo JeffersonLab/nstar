@@ -119,4 +119,96 @@ type
     SubspaceID*:            string
 
 
-  
+#[
+          <InvertParam>
+            <invType>QUDA_MULTIGRID_CLOVER_INVERTER</invType>
+
+            <MULTIGRIDParams>
+              <Residual>2.5e-1</Residual>
+              <CycleType>MG_RECURSIVE</CycleType>
+              <RelaxationOmegaMG>1.0</RelaxationOmegaMG>
+              <RelaxationOmegaOuter>1.0</RelaxationOmegaOuter>
+              <MaxIterations>10</MaxIterations> 
+              <SmootherType>MR</SmootherType>
+              <Verbosity>false</Verbosity>
+              <Precision>HALF</Precision>
+              <Reconstruct>RECONS_8</Reconstruct>
+              <NullVectors>24 32</NullVectors>
+              <GenerateNullspace>true</GenerateNullspace>
+              <GenerateAllLevels>true</GenerateAllLevels>
+              <Pre-SmootherApplications>4 4</Pre-SmootherApplications>
+              <Post-SmootherApplications>4 4</Post-SmootherApplications>
+              <SchwarzType>ADDITIVE_SCHWARZ</SchwarzType>
+              <Blocking>
+                <elem>3 3 3 4</elem>
+                <elem>2 2 2 2</elem>
+              </Blocking>
+            </MULTIGRIDParams>
+
+            <RsdTarget>{HMCParam::RsdCG}</RsdTarget>
+            <CloverParams>
+              <Mass>{m_q}</Mass>
+              <clovCoeffR>{c_s}</clovCoeffR>
+              <clovCoeffT>{c_t}</clovCoeffT>
+              <AnisoParam>
+                <anisoP>true</anisoP>
+                <t_dir>3</t_dir>
+                <xi_0>{HMCParam::xi_0}</xi_0>
+                <nu>{HMCParam::nu}</nu>
+              </AnisoParam>
+            </CloverParams>
+            <Delta>1.0e-4</Delta>
+            <MaxIter>200</MaxIter>
+            <RsdToleranceFactor>100</RsdToleranceFactor>
+            <SilentFail>true</SilentFail>
+            <AntiPeriodicT>true</AntiPeriodicT>
+            <SolverType>GCR</SolverType>
+            <Verbose>true</Verbose>
+            <AsymmetricLinop>false</AsymmetricLinop>
+            <CudaReconstruct>RECONS_12</CudaReconstruct>
+            <CudaSloppyPrecision>SINGLE</CudaSloppyPrecision>
+            <CudaSloppyReconstruct>RECONS_8</CudaSloppyReconstruct>
+            <AxialGaugeFix>false</AxialGaugeFix>
+            <AutotuneDslash>false</AutotuneDslash>
+            <SubspaceID>foo</SubspaceID>
+          </InvertParam>
+]#
+
+
+type
+  QPhiXCloverIterRefineBICGstabInverter_t* = object
+    invType*:               string      # QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER
+    SolverType*:            string
+    MaxIter*:               int
+    RsdTarget*:             float
+    Delta*:                 float
+    CloverParams*:          CloverParams_t
+    AntiPeriodicT*:         bool
+    Verbose*:               bool
+    RsdToleranceFactor*:    int
+
+#[
+          <InvertParam>
+          <!-- invType>QPHIX_CLOVER_INVERTER</invType -->
+          <invType>QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER</invType>
+          <SolverType>BICGSTAB</SolverType>
+          <MaxIter>${HMCParam::MaxIter}</MaxIter>
+          <RsdTarget>${HMCParam::RsdTarget}</RsdTarget>
+          <Delta>${HMCParam::Delta}</Delta>
+          <CloverParams>
+               <Mass>${m_q}</Mass>
+               <clovCoeffR>${c_s}</clovCoeffR>
+               <clovCoeffT>${c_t}</clovCoeffT>
+               <AnisoParam>
+                 <anisoP>${HMCParam::anisoP}</anisoP>
+                 <t_dir>${HMCParam::t_dir}</t_dir>
+                 <xi_0>${HMCParam::xi_0}</xi_0>
+                 <nu>${HMCParam::nu}</nu>
+               </AnisoParam>
+          </CloverParams>
+          <AntiPeriodicT>true</AntiPeriodicT>
+          <Verbose>false</Verbose>
+          <RsdToleranceFactor>${HMCParam::RsdToleranceFactor}</RsdToleranceFactor>
+         </InvertParam>
+
+]#
