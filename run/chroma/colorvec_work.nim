@@ -456,12 +456,12 @@ when isMainModule:
   let inline_dist   = matelem.newPropAndMatelemDistillation(mat_param, mat_named_obj)
 
   var chromaParam = ChromaParam_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
-  #echo "Param:\n", $serializeXML(chromaParam, "chroma")
+  #echo "Param:\n", extractXML(serializeXML(chromaParam, "chroma"))
 
   let cfg = Cfg_t(cfg_type: "SCIDAC", cfg_file: cfg_file, parallel_io: true)
 
   let chroma = Chroma_t(Param: chromaParam, Cfg: cfg)
-  echo "Chroma:\n", serializeXML(chroma)
+  echo "Chroma:\n", extractXML(serializeXML(chroma))
 
-  let input = xmlHeader & "\n" & $serializeXML(chroma)
+  let input = xmlHeader & "\n" & extractXML(serializeXML(chroma))
   writeFile(input_file, input)
