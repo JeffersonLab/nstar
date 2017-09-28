@@ -55,12 +55,12 @@
 
 
 
-# The multiplier a = 0x5DEECE66D = 0c273 673 163 155
+# The multiplier a = 0x5 DE EC E6 6D = 0c2736 7316 3155
 const
-  m1 = 0c273
-  m2 = 0c673
-  m3 = 0c163
-  m4 = 0c155
+  m1 = 0
+  m2 = 0c2736
+  m3 = 0c7316
+  m4 = 0c3155
   incr = 0c13
   twom12 = 1.0/4096.0
 
@@ -112,7 +112,7 @@ proc build48(iseed: array[4,int]): int =
   result = result or (iseed[2] and 4095)
   result = result shl 12
   result = result or (iseed[3] and 4095)
-  echo "build48= ", result
+  #echo "build48= ", result
   
 
 proc srand48*(lseed: int) =
@@ -123,7 +123,7 @@ proc srand48*(lseed: int) =
   ##
   var iseed = lseed and 0xFFFFFFFF
   iseed = (iseed shl 16) or 0x330E
-  echo "srand48: iseed= ", iseed
+  #echo "srand48: iseed= ", iseed
   l4 = iseed and 4095
   iseed = iseed shr 12
   l3 = iseed and 4095
@@ -131,7 +131,7 @@ proc srand48*(lseed: int) =
   l2 = iseed and 4095
   iseed = iseed shr 12
   l1 = iseed and 4095
-  echo "input seed= ", @[l1,l2,l3,l4]
+  #echo "input seed= ", @[l1,l2,l3,l4]
 
   
 proc srand48*(iseed: array[4,int]) = 
