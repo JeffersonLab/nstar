@@ -152,16 +152,16 @@ proc savern48*(): array[4,int] =
   result = [l1, l2, l3, l4]
 
 
-proc getTimeOrigin(Lt: int, traj: int): int =
-  ## Return the randomly shift time-origin
-  srand48(traj)
-  for i in 1..20:
-    discard drand48()
-  result = int(float(Lt)*drand48())
-
 
 #------------------------------------------------------------------------
 when isMainModule:
+  proc getTimeOrigin(Lt: int, traj: int): int =
+    ## Return the randomly shift time-origin
+    srand48(traj)
+    for i in 1..20:
+      discard drand48()
+    result = int(float(Lt)*drand48())
+
   echo "t_origin= ", getTimeOrigin(256, 1000)
 
   var seed = 11
