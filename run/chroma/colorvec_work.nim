@@ -7,6 +7,7 @@ import re
 import serializetools/serializexml, niledb
 import xmltree
 import inline_meas
+import drand48
 
 import config
 
@@ -186,19 +187,16 @@ proc extractLattSize*(data: string): array[4,int] =
 #------------------------------------------------------------------------
 proc getTimeOrigin*(Lt: int, trajj: string): int =
   ## Displace the origin of the time slices using the trajectory as a seed to a RNG
-  var traj = trajj.replace(re"[a-zA-Z]")
+  # Clean out characters and set the rng with the traj number as an int
+  var traj = parseInt(trajj.replace(re"[a-zA-Z]"))
+  srand48(traj)
+  
+  # Clean out rngs
+  for i in 1..20:
+    discard drand48()
 
-  # Seed the rng with the traj number
-  const basedir = strip(staticExec("pwd"))
-  #let basedir = "/Users/edwards/Documents/qcd/git/nim-play/nstar/run/chroma"
-  var (outp, errC) = execCmdEx(basedir & "/t_origin.pl " & $Lt & " " & $traj)
-  if errC != 0:
-    echo("Some error running t_origin.pl")
-
-  removeSuffix(outp)
-  #echo "outp= XX", outp, "XX"
-  result = parseInt(outp)
-
+  # Origin is in the interval [0,Lt-1)
+  result = int(float(Lt)*drand48())
 
 
 
@@ -381,8 +379,8 @@ proc newQPhiXInv*(mass: float, rsd: float): XmlNode =
 when isMainModule:
   let input_file = "fred.xml"
 
-  const ensemble = "test"
-#  const ensemble = "real"
+#  const ensemble = "test"
+  const ensemble = "real"
 
   # Basic parameters
   when ensemble == "real":
@@ -469,12 +467,12 @@ when isMainModule:
   let inline_dist   = matelem.newPropAndMatelemDistillation(mat_param, mat_named_obj)
 
   var chromaParam = ChromaParam_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
-  #echo "Param:\n", extractXML(serializeXML(chromaParam, "chroma"))
+  #echo "Param:\n", xmlToStr(serializeXML(chromaParam, "chroma"))
 
   let cfg = Cfg_t(cfg_type: "SCIDAC", cfg_file: cfg_file, parallel_io: true)
 
   let chroma = Chroma_t(Param: chromaParam, Cfg: cfg)
-  echo "Chroma:\n", extractXML(serializeXML(chroma))
+  echo "Chroma:\n", xmlToStr(serializeXML(chroma))
 
-  let input = xmlHeader & "\n" & extractXML(serializeXML(chroma))
+  let input = xmlHeader & "\n" & xmlToStr(serializeXML(chroma))
   writeFile(input_file, input)
