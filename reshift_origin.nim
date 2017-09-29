@@ -84,19 +84,15 @@ when isMainModule:
 
       type K = KeyPropElementalOperator_t
       let all_keys = allKeys[K](old_db)
-      echo "found num keys= ", all_keys.len
+      #echo "found num keys= ", all_keys.len
       discard close(old_db)
 
       # Only need to check one of the keys, find its origin and decide on the new name
       let first_key = all_keys[0]
 
-      let new_t_source = first_key.t_source - 74 + t_origin
-      let outfile = outdir & "/" & long_stem & ".t0_" & $new_t_source & ".sdb" & seqno
-      echo "new file= ", outfile
+      let correct_t_source = (t0 + t_origin + Lt) mod Lt
+      if correct_t_source != first_key.t_source:
+        let use_t0 = (t0 - correct_t_source + first_key.t_source + Lt) mod Lt
+        let outfile = outdir & "/" & long_stem & ".t0_" & $use_t0 & ".sdb" & seqno
+        echo "    new file= ", outfile
 
-
-      
-
-#-------------------------------------------------------------------------
-when isMainModule:
-  echo "hello"
