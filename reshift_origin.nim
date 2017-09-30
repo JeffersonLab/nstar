@@ -41,25 +41,48 @@ proc getTimeOrigin(Lt: int, trajj: string): int =
 when isMainModule:
   # Open the DB
   echo "paramCount = ", paramCount()
-  if paramCount() != 4:
-    quit("Usage: exe <output dir> <input dir> <stem> <file of seqnos>")
-    
-  # Sanity checks
-  let outdir    = paramStr(1)
-  let  indir    = paramStr(2)
-  let long_stem = paramStr(3)
 
+  #const use_argsP = true
+  const use_argsP = false
+
+  when use_argsP:
+    if paramCount() != 5:
+      quit("Usage: exe <output dir> <dup forward dir> <input dir> <stem> <file of seqnos>")
+
+    # Get params
+    let outdir     = paramStr(1)
+    let dupdir     = paramStr(2)
+    let  indir     = paramStr(3)
+    let long_stem  = paramStr(4)
+    let seqno_file = paramStr(5)
+
+    let stem = long_stem.replace(re"\..*$")  # remove trailing tags after stem
+  else:
+    if paramCount() != 2:
+      quit("Usage: exe <quark> <file of seqnos>")
+
+    let quark      = paramStr(1)
+    let seqno_file = paramStr(2)
+
+    let  stem     = "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265"
+    let lustre    = "/lustre/cache/Spectrum/Clover/NF2+1"
+    let outdir    = lustre & "/" & stem & "/prop_db_t0.shift"
+    let dupdir    = lustre & "/" & stem & "/prop_db_t0.dup"
+    let  indir    = lustre & "/" & stem & "/prop_db_t0"
+    let long_stem = stem & ".prop.n162." & quark
+
+  # Sanity checks
   assert(dirExists(outdir))
+  assert(dirExists(dupdir))
   assert(dirExists(indir))
 
   # The stem gives the time extent
-  let stem = long_stem.replace(re"\..*$")  # remove trailing tags after stem
   let lattSize = extractLattSize(stem)
   let Lt = lattSize[3]
 
   # Slurp in all the seqnos
-  assert(fileExists(paramStr(4)))
-  let seqnos = readFile(paramStr(4))
+  assert(fileExists(seqno_file))
+  let seqnos = readFile(seqno_file)
 
   # Loop over the seqnos
   for seqno in splitLines(seqnos):
@@ -72,7 +95,7 @@ when isMainModule:
     for t0 in 0..Lt-1:
       # Has to be a sensible filename
       let infile  = indir & "/" & long_stem & ".t0_" & $t0 & ".sdb" & seqno
-      echo "  input file= ", infile
+      #echo "  input file= ", infile
       if not fileExists(infile): continue
 
       # Quick sanity check
@@ -93,6 +116,13 @@ when isMainModule:
       let correct_t_source = (t0 + t_origin + Lt) mod Lt
       if correct_t_source != first_key.t_source:
         let use_t0 = (t0 - correct_t_source + first_key.t_source + Lt) mod Lt
-        let outfile = outdir & "/" & long_stem & ".t0_" & $use_t0 & ".sdb" & seqno
-        echo "    new file= ", outfile
+        var destdir: string
+        if use_t0 mod 16 == 0:
+          destdir = dupdir
+        else:
+          destdir = outdir
+
+        let outfile = destdir & "/" & long_stem & ".t0_" & $use_t0 & ".sdb" & seqno
+        echo "  rename infile= ", infile, "  outfile= ", outfile
+        moveFile(infile, outfile)
 
