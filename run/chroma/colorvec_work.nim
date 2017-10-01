@@ -200,42 +200,10 @@ proc getTimeOrigin*(Lt: int, trajj: string): int =
 
 
 
-#------------------------------------------------------------------------
-type
-  ChromaParam_t* = object   
-    ## All inline measurements
-    InlineMeasurements*:  seq[XmlNode]  ## Yup, the inline measurements
-    nrow*:                array[4,int]  ## lattice size
-
-
-#------------------------------------------------------------------------
-type
-  Cfg_t* = object   
-    ## Configuration params
-    cfg_type*:      string              ## Type
-    cfg_file*:      string              ## File name, if it exists
-    parallel_io*:   bool                ## Whether we can use parallel io
-
-
-#------------------------------------------------------------------------
-type
-  Chroma_t* = object   
-    ## All parameters for chroma
-    Param*:         ChromaParam_t       ## Type
-    Cfg*:           Cfg_t               ## File name, if it exists
-
-
-#------------------------------------------------------------------------
-type
-  Harom_t* = object   
-    ## All parameters for harom
-    Param*:         ChromaParam_t       ## Type
-
-
-
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 ## Various constructions useful for distillation
+import chroma
 import prop_and_matelem_distillation as matelem
 #import prop_and_matelem_distillation
 import fermbc, fermstate
@@ -388,7 +356,7 @@ when isMainModule:
     let seqno = "1000a"
 
     let lustre_dir = "/lustre/atlas/proj-shared/nph103"
-    let cfg_file =  lustre_dir & "/" & stem & "/cfgs/" & stem & "_" & seqno & ".lime"
+    let cfg_file   =  lustre_dir & "/" & stem & "/cfgs/" & stem & "_" & seqno & ".lime"
     let colorvec_files = @[lustre_dir & "/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
     let sdb = "prop_op_file"
 
@@ -424,15 +392,7 @@ when isMainModule:
   let t_origin = getTimeOrigin(Lt,seqno)
   echo "Lt= ", Lt, "   t_origin= ", t_origin
 
-  var Nt_forward, Nt_backward: int
-  if t_source mod 16 == 0:
-    Nt_forward  = 48
-    Nt_backward = 0
-
-  else:
-    Nt_forward  = 1
-    Nt_backward = 0
-
+  var (Nt_forward, Nt_backward) = if t_source mod 16 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: mass_label,
@@ -459,20 +419,20 @@ when isMainModule:
 
 
   # Inline measurement
-  let mat_named_obj = NamedObject_t(gauge_id: "default_gauge_field",
-                                    colorvec_files: colorvec_files,
-                                    prop_op_file: sdb)
+  let mat_named_obj = matelem.NamedObject_t(gauge_id: "default_gauge_field",
+                                            colorvec_files: colorvec_files,
+                                            prop_op_file: sdb)
   let mat_prop      = newPropagator(fermact, inv)
   let mat_param     = matelem.DistParams_t(Contractions: contract, Propagator: mat_prop)
   let inline_dist   = matelem.newPropAndMatelemDistillation(mat_param, mat_named_obj)
 
-  var chromaParam = ChromaParam_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
+  var chromaParam = chroma.Param_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
   #echo "Param:\n", xmlToStr(serializeXML(chromaParam, "chroma"))
 
-  let cfg = Cfg_t(cfg_type: "SCIDAC", cfg_file: cfg_file, parallel_io: true)
+  let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: cfg_file, parallel_io: true)
 
-  let chroma = Chroma_t(Param: chromaParam, Cfg: cfg)
-  echo "Chroma:\n", xmlToStr(serializeXML(chroma))
+  let chroma_xml = chroma.Chroma_t(Param: chromaParam, Cfg: cfg)
+  echo "Chroma:\n", xmlToStr(serializeXML(chroma_xml))
 
-  let input = xmlHeader & "\n" & xmlToStr(serializeXML(chroma))
+  let input = xmlHeader & xmlToStr(serializeXML(chroma_xml))
   writeFile(input_file, input)
