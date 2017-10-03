@@ -48,7 +48,8 @@ proc buildT0List*() =
     let fe = dir_mss & "/prop_db/" & f
 
     #if (! -f $fv && ! -f $fs && ! -f $fd && ! -f $fe)
-    if not fileExists(fv) and not fileExists(fd):
+    #if not fileExists(fv) and not fileExists(fd):
+    if not fileExists(fv) and not fileExists(fs) and not fileExists(fd) and not fileExists(fe):
       writeLine(stdout, "   missing")
       writeLine(LIST, $t0)
 
