@@ -12,6 +12,12 @@ import drand48
 import config
 
 
+#------------------------------------------------------------------------------
+proc readListT0*(list: string): int =
+  ## Read/modify the next t0 in the list
+  result = -1
+
+
 #------------------------------------------------------------------------
 # Find a local path to a file, or cache_cp it
 proc find_file*(orig_file: string): string =
@@ -432,7 +438,7 @@ when isMainModule:
   let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: cfg_file, parallel_io: true)
 
   let chroma_xml = chroma.Chroma_t(Param: chromaParam, Cfg: cfg)
-  echo "Chroma:\n", xmlToStr(serializeXML(chroma_xml))
+  echo "Chroma:\n", xmlToStr(serializeXML(chroma_xml, "chroma"))
 
   let input = xmlHeader & xmlToStr(serializeXML(chroma_xml))
   writeFile(input_file, input)
