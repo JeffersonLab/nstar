@@ -51,6 +51,7 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   # Main paths
   let dataDir    = cache & "/" & stem
   let workDir    = scratch & "/" & seqno & "." & formatFloat(mass, ffDecimal, 4) & ".allt"
+  assert(existsOrCreateDir(workDir))
 
   # Files
   let cfg_file       = PathFile_t(fileDir: dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
