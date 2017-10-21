@@ -52,7 +52,7 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   removeSuffix(seqno)
   echo "seqno= ", seqno
 
-  let mass        = -0.0850
+  let mass        = -0.0743
   let mass_label  = "U" & formatFloat(mass, ffDecimal, 4)
   echo "mass_label= ", mass_label
 
@@ -74,7 +74,7 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   let prop_op_file   = PathFile_t(fileDir: seqDir, name: prefix & ".sdb" & seqno)
   let input_file     = PathFile_t(fileDir: seqDir, name: prefix & ".ini.xml" & seqno)
   let output_file    = PathFile_t(fileDir: seqDir, name: prefix & ".out.xml" & seqno)
-  #let out_file       = PathFile_t(fileDir: seqDir, name: prefix & ".out" & seqno)
+  let out_file       = PathFile_t(fileDir: seqDir, name: prefix & ".out" & seqno)
 
   # Common stuff
   let Rsd         = 1.0e-8
@@ -97,9 +97,19 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
                                         num_tries: 1)
  
   # Fermion action and inverters
-  let mg  = newQUDAMGParams24x256()
-  let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
-  let fermact = newAnisoPrecCloverFermAct(mass)
+  #const platform = "OLCF"
+  const platform = "NERSC"
+
+  when platform == "OLCF":
+    let mg  = newQUDAMGParams24x256()
+    let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
+    let fermact = newAnisoPrecCloverFermAct(mass)
+  elif platform == "NERSC":
+    let inv = newQPhiXInv(mass, Rsd, MaxIter)
+    let fermact = newAnisoCloverFermAct(mass)
+  else:
+    quit("not allowed")
+
 
   # Inline measurement
   let mat_named_obj = matelem.NamedObject_t(gauge_id: "default_gauge_field",
@@ -117,22 +127,15 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   let input = xmlHeader & xmlToStr(serializeXML(chroma_xml, "chroma"))
   writeFile(genPath(input_file), input)
 
-  let script_name = "run.nersc.csh"
-  let run_script = seqDir & "/" & script_name
+  let run_script = seqDir & "/nersc.t0_" & $t0 & ".sh"
   let script_exe = """
 #!/bin/bash
 
-tt=$1
+input="""" & genPath(input_file) & """"
+output="""" & genPath(output_file) & """"
+out="""" & genPath(out_file) & """"
+/bin/rm -f """ & genPath(prop_op_file) & """
 
-stem="""" & stem & """"
-seqno="""" & seqno & """"
-scratch_dir="""" & seqDir & """"
-pref="${scratch_dir}/${stem}.t0_${tt}"
-input="${pref}.prop.ini.xml${seqno}"
-output="${pref}.prop.out.xml${seqno}"
-out="${pref}.prop.out${seqno}"
-
-#basedir="$HOME/qcd/git/bw.3/scripts_rge/run/chroma"
 exe="$HOME/bin/exe/ib9q/chroma.cori2.scalar.qphix.aug_28_2017"
 
 source """ & basedir & """/env_qphix.sh
@@ -142,6 +145,8 @@ export KMP_PLACE_THREADS=1s,64c,2t
 $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 > $out 2>&1
 """
   writeFile(run_script, script_exe)
+  var perm = getFilePermissions(run_script) + {fpUserExec}
+  setFilePermissions(run_script, perm)
 
   #let QPHIXVARS = "-by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 -poolsize 64"
 
@@ -151,9 +156,9 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
   job.campaign       = stem
   job.name           = seqName
   job.checkNodes     = 0
-  job.checkWallTime  = " "
+  job.checkWallTime  = ""
   job.nodes          = 1
-  job.wallTime       = "00:30:00"
+  job.wallTime       = "00:10:00"
   job.inputFiles     = @[]
   job.inputfiles.add(input_file)
   job.inputFiles.add(cfg_file)
@@ -165,8 +170,8 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
 # run.nersc.csh szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265 32 1860d
 #  job.executionCommand  = "serial chroma -i " & genPath(job.inputFiles[0]) & " -o " & genPath(job.outputFiles[0]) & " " & QPHIXVARS & ">&" & seqDir & "/" & out_file
 #  job.executionCommand  = "export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t ; chroma -i " & genPath(job -o job.output_file & '&>' job.out_file
-  job.executionCommand   = "./serial " & seqName & "/" & script_name & " "& $t0
-  job.checkOutputCommand = " "
+  job.executionCommand   = run_script
+  job.checkOutputCommand = ""
   job.checkOutputScript  = "prop_check 0.5 " & genPath(prop_op_file)
 
   # Each instance modified the campaign. Not needed
@@ -175,10 +180,10 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
   data.Campaign.checkWallTime = job.checkWallTime
   data.Campaign.workDir       = workDir
   data.Campaign.header        = "\n#SBATCH -p debug\n#SBATCH -C knl,quad,cache\nmodule load python\nsource " & basedir & "/env_qphix.sh; export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t\n"
-  data.Campaign.footer        = " "
+  data.Campaign.footer        = "\n"
   data.Campaign.wallTime      = job.wallTime 
-  data.Campaign.checkHeader   = " "
-  data.Campaign.checkFooter   = " "
+  data.Campaign.checkHeader   = ""
+  data.Campaign.checkFooter   = ""
 
   # Add on this job
   data.Job.add(job)

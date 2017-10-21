@@ -243,6 +243,10 @@ proc newAnisoCloverFermAct*(FermAct: string, mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newCloverFermionAction(FermAct, mass, 1.589327, 0.902784, newAnisoParams(), newAnisoStoutFermState())
 
+proc newAnisoCloverFermAct*(mass: float): XmlNode =
+  ## Anisotropic clover fermion action
+  newAnisoCloverFermAct("CLOVER", mass)
+
 proc newAnisoPrecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newAnisoCloverFermAct("PRECONDITIONED_CLOVER", mass)
@@ -333,11 +337,11 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t)
                                                 SubspaceID: "foo"), "InvertParam")
 
 
-proc newQPhiXInv*(mass: float, rsd: float): XmlNode =
+proc newQPhiXInv*(mass: float, rsd: float, MaxIter: int): XmlNode =
   ## QPHIX BICGstab inverter, with some parameters hardwired
   serializeXML(QPhiXCloverIterRefineBICGstabInverter_t(invType: "QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER",
                                                        SolverType: "BICGSTAB",
-                                                       MaxIter: 10000,
+                                                       MaxIter: MaxIter,
                                                        RsdTarget: rsd,
                                                        CloverParams: newAnisoCloverParams(mass),
                                                        Delta: 1.0e-4, 
