@@ -172,8 +172,8 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
 # run.nersc.csh szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265 32 1860d
 #  job.executionCommand  = "serial chroma -i " & genPath(job.inputFiles[0]) & " -o " & genPath(job.outputFiles[0]) & " " & QPHIXVARS & ">&" & seqDir & "/" & out_file
 #  job.executionCommand  = "export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t ; chroma -i " & genPath(job -o job.output_file & '&>' job.out_file
-  # job.executionCommand   = run_script
-  job.executionCommand   = "echo did it"
+  job.executionCommand   = run_script
+  #job.executionCommand   = "echo did it"
   #job.checkOutputCommand = "serial " & propCheck & " 0.5 " & genPath(prop_op_file)
   #job.checkOutputCommand = "./serial " & propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
   job.checkOutputCommand = propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
