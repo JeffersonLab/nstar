@@ -150,15 +150,17 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
 
   #let QPHIXVARS = "-by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 -poolsize 64"
 
+  let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
+
   # This particular job
   var job: JobType_t
 
   job.campaign       = stem
   job.name           = seqName
-  job.checkNodes     = 0
-  job.checkWallTime  = ""
   job.nodes          = 1
   job.wallTime       = "00:10:00"
+  job.checkNodes     = 1
+  job.checkWallTime  = "00:05:00"
   job.inputFiles     = @[]
   job.inputfiles.add(input_file)
   job.inputFiles.add(cfg_file)
@@ -170,9 +172,13 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
 # run.nersc.csh szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265 32 1860d
 #  job.executionCommand  = "serial chroma -i " & genPath(job.inputFiles[0]) & " -o " & genPath(job.outputFiles[0]) & " " & QPHIXVARS & ">&" & seqDir & "/" & out_file
 #  job.executionCommand  = "export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t ; chroma -i " & genPath(job -o job.output_file & '&>' job.out_file
-  job.executionCommand   = run_script
-  job.checkOutputCommand = ""
-  job.checkOutputScript  = "prop_check 0.5 " & genPath(prop_op_file)
+  # job.executionCommand   = run_script
+  job.executionCommand   = "echo did it"
+  #job.checkOutputCommand = "serial " & propCheck & " 0.5 " & genPath(prop_op_file)
+  #job.checkOutputCommand = "./serial " & propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
+  job.checkOutputCommand = propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
+  #job.checkOutputScript  = "prop_check 0.5 " & genPath(prop_op_file)
+  job.checkOutputScript  = "echo hello"
 
   # Each instance modified the campaign. Not needed
   data.Campaign.name          = stem
@@ -182,8 +188,8 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
   data.Campaign.header        = "\n#SBATCH -p debug\n#SBATCH -C knl,quad,cache\nmodule load python\nsource " & basedir & "/env_qphix.sh; export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t\n"
   data.Campaign.footer        = "\n"
   data.Campaign.wallTime      = job.wallTime 
-  data.Campaign.checkHeader   = ""
-  data.Campaign.checkFooter   = ""
+  data.Campaign.checkHeader   = "\n#SBATCH -p debug\n#SBATCH -C knl,quad,cache\nmodule load python\n"
+  data.Campaign.checkFooter   = "\n"
 
   # Add on this job
   data.Job.add(job)
