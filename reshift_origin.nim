@@ -116,12 +116,7 @@ when isMainModule:
       let correct_t_source = (t0 + t_origin + Lt) mod Lt
       if correct_t_source != first_key.t_source:
         let use_t0 = (t0 - correct_t_source + first_key.t_source + Lt) mod Lt
-        var destdir: string
-        if use_t0 mod 16 == 0:
-          destdir = dupdir
-        else:
-          destdir = outdir
-
+        let destdir = if use_t0 mod 16 == 0: dupdir else: outdir
         let outfile = destdir & "/" & long_stem & ".t0_" & $use_t0 & ".sdb" & seqno
         echo "  rename infile= ", infile, "  outfile= ", outfile
         moveFile(infile, outfile)

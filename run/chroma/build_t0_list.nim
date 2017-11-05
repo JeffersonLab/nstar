@@ -20,7 +20,8 @@ proc buildT0List*() =
   let num_vecs = getNumVecs()
   let suffix  = "prop.n" & $num_vecs & "." & quark
 
-  let Lt = 256
+  ##let Lt = 256
+  let Lt = 2
 
   # The config
   if not fileExists(list):
@@ -48,7 +49,8 @@ proc buildT0List*() =
     let fe = dir_mss & "/prop_db/" & f
 
     #if (! -f $fv && ! -f $fs && ! -f $fd && ! -f $fe)
-    if not fileExists(fv) and not fileExists(fd):
+    #if not fileExists(fv) and not fileExists(fd):
+    if not fileExists(fv) and not fileExists(fs) and not fileExists(fd) and not fileExists(fe):
       writeLine(stdout, "   missing")
       writeLine(LIST, $t0)
 

@@ -2,12 +2,13 @@
 
 #import strutils, os, ospaths
 
-proc getStem*(): string = return "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265"
+proc getBase(): string = return "/global/homes/r/redwards/scratch"
+proc getStem*(): string = return "szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265"
+##proc getNumVecs*(): int = 162
+proc getNumVecs*(): int = 1
 
-proc getEnsemblePath*(): string = return "/Users/edwards/Documents/qcd/data/colorvec"
+proc getEnsemblePath*(): string = return getBase() & "/" & getStem()
 
-proc getNumVecs*(): int = 162
-
-proc getScratchPath*(): string = return "/Users/edwards/Documents/qcd/data/colorvec/tmp.allt"
+proc getScratchPath*(): string = return getBase() & "/" & getStem() & "/tmp.allt"
 
 
