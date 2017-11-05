@@ -95,7 +95,7 @@ when isMainModule:
     for t0 in 0..Lt-1:
       # Has to be a sensible filename
       let infile  = indir & "/" & long_stem & ".t0_" & $t0 & ".sdb" & seqno
-      #echo "  input file= ", infile
+      echo "  input file= ", infile
       if not fileExists(infile): continue
 
       # Quick sanity check
@@ -107,7 +107,7 @@ when isMainModule:
 
       type K = KeyPropElementalOperator_t
       let all_keys = allKeys[K](old_db)
-      #echo "found num keys= ", all_keys.len
+      echo "found num keys= ", all_keys.len
       discard close(old_db)
 
       # Only need to check one of the keys, find its origin and decide on the new name
