@@ -95,7 +95,7 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
   # Loop over the irreps
   # For each irrep, extract the weights. 
   for rep in items(irreps):
-    echo "\n--------------------------\nIrrep= ", rep.ir, " mom= ", rep.mom, " t0= ", rep.t0, " tZ= ", rep.tZ
+    echo "\n--------------------------\nChannel= ", channel, "  irrep= ", rep.ir, " mom= ", rep.mom, " t0= ", rep.t0, " tZ= ", rep.tZ
 
     # Move into the expected dir
     if not dirExists(rep.dir):
@@ -108,6 +108,7 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
     for state in items(rep.states):
       # Grab the projected ops, and insert into the big map
       let proj_op_name = channel & "_proj" & $state & "_p" & rep.mom & "_" & rep.ir
+      echo "Projected op = ", proj_op_name
       result[proj_op_name] = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
 
     # Move back up
@@ -127,25 +128,25 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
     var C = +1
     let subopname = k.Operators[1].name
 
-    if match(subopname, re"_a0x"): C *= +1
-    if match(subopname, re"_a1x"): C *= +1
-    if match(subopname, re"_pionx"): C *= +1
-    if match(subopname, re"_pion_2x"): C *= +1
+    if contains(subopname, re"_a0x"): C *= +1
+    if contains(subopname, re"_a1x"): C *= +1
+    if contains(subopname, re"_pionx"): C *= +1
+    if contains(subopname, re"_pion_2x"): C *= +1
 
-    if match(subopname, re"_b0x"): C *= -1
-    if match(subopname, re"_b1x"): C *= -1
-    if match(subopname, re"_rhox"): C *= -1
-    if match(subopname, re"_rho_2x"): C *= -1
+    if contains(subopname, re"_b0x"): C *= -1
+    if contains(subopname, re"_b1x"): C *= -1
+    if contains(subopname, re"_rhox"): C *= -1
+    if contains(subopname, re"_rho_2x"): C *= -1
   
-    if match(subopname, re"xD0_"): C *= +1
-    if match(subopname, re"xD2_J0_"): C *= +1
-    if match(subopname, re"xD2_J2_"): C *= +1
-    if match(subopname, re"xD3_J131_"): C *= +1
+    if contains(subopname, re"xD0_"): C *= +1
+    if contains(subopname, re"xD2_J0_"): C *= +1
+    if contains(subopname, re"xD2_J2_"): C *= +1
+    if contains(subopname, re"xD3_J131_"): C *= +1
 
-    if match(subopname, re"xD1_"): C *= -1
-    if match(subopname, re"xD2_J1_"): C *= -1
-    if match(subopname, re"xD3_J130_"): C *= -1
-    if match(subopname, re"xD3_J132_"): C *= -1
+    if contains(subopname, re"xD1_"): C *= -1
+    if contains(subopname, re"xD2_J1_"): C *= -1
+    if contains(subopname, re"xD3_J130_"): C *= -1
+    if contains(subopname, re"xD3_J132_"): C *= -1
 
     result[k] = float64(C)*v
 
