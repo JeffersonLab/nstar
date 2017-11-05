@@ -71,10 +71,13 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   let colorvec_files = @[PathFile_t(fileDir: dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
 
   let prefix         = stem & ".prop.n" & $num_vecs & "." & quark & ".t0_" & $t0 
-  let prop_op_file   = PathFile_t(fileDir: seqDir, name: prefix & ".sdb" & seqno)
+  let prop_op_tmp    = PathFile_t(fileDir: seqDir, name: prefix & ".sdb" & seqno)
   let input_file     = PathFile_t(fileDir: seqDir, name: prefix & ".ini.xml" & seqno)
   let output_file    = PathFile_t(fileDir: seqDir, name: prefix & ".out.xml" & seqno)
   let out_file       = PathFile_t(fileDir: seqDir, name: prefix & ".out" & seqno)
+  let check_file     = PathFile_t(fileDir: seqDir, name: prefix & ".check" & seqno)
+
+  let prop_op_file   = PathFile_t(fileDir: dataDir & "/prop_db_t0", name: prop_op_tmp.name)
 
   # Common stuff
   let Rsd         = 1.0e-8
@@ -114,7 +117,7 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   # Inline measurement
   let mat_named_obj = matelem.NamedObject_t(gauge_id: "default_gauge_field",
                                             colorvec_files: genPath(colorvec_files),
-                                            prop_op_file: genPath(prop_op_file))
+                                            prop_op_file: genPath(prop_op_tmp))
   let mat_prop      = newPropagator(fermact, inv)
   let mat_param     = matelem.DistParams_t(Contractions: contract, Propagator: mat_prop)
   let inline_dist   = matelem.newPropAndMatelemDistillation(mat_param, mat_named_obj)
@@ -127,6 +130,8 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   let input = xmlHeader & xmlToStr(serializeXML(chroma_xml, "chroma"))
   writeFile(genPath(input_file), input)
 
+  let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
+
   let run_script = seqDir & "/nersc.t0_" & $t0 & ".sh"
   let script_exe = """
 #!/bin/bash
@@ -134,7 +139,7 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
 input="""" & genPath(input_file) & """"
 output="""" & genPath(output_file) & """"
 out="""" & genPath(out_file) & """"
-/bin/rm -f """ & genPath(prop_op_file) & """
+/bin/rm -f """ & genPath(prop_op_tmp) & """
 
 exe="$HOME/bin/exe/ib9q/chroma.cori2.scalar.qphix.aug_28_2017"
 
@@ -143,14 +148,22 @@ export KMP_AFFINITY=compact,granularity=thread
 export KMP_PLACE_THREADS=1s,64c,2t
 
 $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 > $out 2>&1
+
+""" & propCheck & " 0.5 " & genPath(prop_op_tmp) & " > " & genPath(check_file) & """
+
+stat=$?
+if [ $stat -eq 0 ]
+then
+  /bin/mv """ & genPath(prop_op_tmp) & " " & genPath(prop_op_file) & """
+
+fi
 """
+
   writeFile(run_script, script_exe)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
 
   #let QPHIXVARS = "-by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 -poolsize 64"
-
-  let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
 
   # This particular job
   var job: JobType_t
@@ -158,16 +171,15 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
   job.campaign       = stem
   job.name           = seqName
   job.nodes          = 1
-  job.wallTime       = "00:10:00"
-  job.checkNodes     = 1
-  job.checkWallTime  = "00:05:00"
+  job.wallTime       = "08:00:00"
+  job.checkNodes     = 0
+  job.checkWallTime  = "00:15:00"
   job.inputFiles     = @[]
   job.inputfiles.add(input_file)
   job.inputFiles.add(cfg_file)
   job.inputFiles.add(colorvec_files)
   job.outputFiles    = @[]
-  job.outputFiles.add(output_file)
-  job.outputFiles.add(prop_op_file)
+  job.outputFiles.add(prop_op_file)    # this is the main output
 
 # run.nersc.csh szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265 32 1860d
 #  job.executionCommand  = "serial chroma -i " & genPath(job.inputFiles[0]) & " -o " & genPath(job.outputFiles[0]) & " " & QPHIXVARS & ">&" & seqDir & "/" & out_file
@@ -176,19 +188,19 @@ $exe -i $input -o $output -by 4 -bz 4 -pxy 0 -pxyz 0 -c 64 -sy 1 -sz 2 -minct 1 
   #job.executionCommand   = "echo did it"
   #job.checkOutputCommand = "serial " & propCheck & " 0.5 " & genPath(prop_op_file)
   #job.checkOutputCommand = "./serial " & propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
-  job.checkOutputCommand = propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
+  #job.checkOutputCommand = propCheck & " 0.5 ./" & seqName & "/" & prop_op_file.name
   #job.checkOutputScript  = "prop_check 0.5 " & genPath(prop_op_file)
-  job.checkOutputScript  = "echo hello"
+  #job.checkOutputScript  = "echo hello"
 
   # Each instance modified the campaign. Not needed
   data.Campaign.name          = stem
   data.Campaign.wallTime      = job.wallTime
   data.Campaign.checkWallTime = job.checkWallTime
   data.Campaign.workDir       = workDir
-  data.Campaign.header        = "\n#SBATCH -p debug\n#SBATCH -C knl,quad,cache\nmodule load python\nsource " & basedir & "/env_qphix.sh; export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t\n"
+  data.Campaign.header        = "\n#SBATCH -p regular\n#SBATCH -C knl,quad,cache\nmodule load python\nsource " & basedir & "/env_qphix.sh; export KMP_AFFINITY=compact,granularity=thread; export KMP_PLACE_THREADS=1s,64c,2t\n"
   data.Campaign.footer        = "\n"
   data.Campaign.wallTime      = job.wallTime 
-  data.Campaign.checkHeader   = "\n#SBATCH -p debug\n#SBATCH -C knl,quad,cache\nmodule load python\n"
+  data.Campaign.checkHeader   = "\n#SBATCH -p regular\n#SBATCH -C knl,quad,cache\nmodule load python\n"
   data.Campaign.checkFooter   = "\n"
 
   # Add on this job

@@ -20,8 +20,7 @@ proc buildT0List*() =
   let num_vecs = getNumVecs()
   let suffix  = "prop.n" & $num_vecs & "." & quark
 
-  ##let Lt = 256
-  let Lt = 2
+  let Lt = 256
 
   # The config
   if not fileExists(list):
