@@ -1,9 +1,9 @@
 #!/usr/bin/env /home/edwards/bin/nimrunner
 ## Extract projected operator coefficients
 
-import hadron_sun_npart_irrep_op, streams, os, xmlparser,
+import hadron_sun_npart_irrep_op, streams, os, xmlparser, re,
        serializetools/serializexml, tables, xmltree, parseutils, strutils,
-       ensem
+       ensem, serializetools/array1d
 
 type
   # We choose some particular structure for the objects
@@ -112,6 +112,43 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
 
     # Move back up
     setCurrentDir(cwd)
+
+
+proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): Table[KeyHadronSUNNPartIrrepOp_t,float64] =
+  ## Flip the sign of the weight for odd charge-conjugation operators
+  #
+  result = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
+
+  # Loop through each op. Only supports 1 op per structure
+  for k,v in pairs(opsMap):
+    if k.Operators.data.len != 1:
+      quit("Only allow 1 operator")
+
+    var C = +1
+    let subopname = k.Operators[1].name
+
+    if match(subopname, re"_a0x"): C *= +1
+    if match(subopname, re"_a1x"): C *= +1
+    if match(subopname, re"_pionx"): C *= +1
+    if match(subopname, re"_pion_2x"): C *= +1
+
+    if match(subopname, re"_b0x"): C *= -1
+    if match(subopname, re"_b1x"): C *= -1
+    if match(subopname, re"_rhox"): C *= -1
+    if match(subopname, re"_rho_2x"): C *= -1
+  
+    if match(subopname, re"xD0_"): C *= +1
+    if match(subopname, re"xD2_J0_"): C *= +1
+    if match(subopname, re"xD2_J2_"): C *= +1
+    if match(subopname, re"xD3_J131_"): C *= +1
+
+    if match(subopname, re"xD1_"): C *= -1
+    if match(subopname, re"xD2_J1_"): C *= -1
+    if match(subopname, re"xD3_J130_"): C *= -1
+    if match(subopname, re"xD3_J132_"): C *= -1
+
+    result[k] = float64(C)*v
+
 
 
 #-----------------------------------------------------------------------------
