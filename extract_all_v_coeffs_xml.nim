@@ -125,18 +125,18 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
     if k.Operators.data.len != 1:
       quit("Only allow 1 operator")
 
-    var C = +1
+    var C = 0   # set to something bogus to trigger a failure if not properly set
     let subopname = k.Operators[1].name
 
-    if contains(subopname, re"_a0x"): C *= +1
-    if contains(subopname, re"_a1x"): C *= +1
-    if contains(subopname, re"_pionx"): C *= +1
-    if contains(subopname, re"_pion_2x"): C *= +1
+    if contains(subopname, re"_a0x"): C = +1
+    if contains(subopname, re"_a1x"): C = +1
+    if contains(subopname, re"_pionx"): C = +1
+    if contains(subopname, re"_pion_2x"): C = +1
 
-    if contains(subopname, re"_b0x"): C *= -1
-    if contains(subopname, re"_b1x"): C *= -1
-    if contains(subopname, re"_rhox"): C *= -1
-    if contains(subopname, re"_rho_2x"): C *= -1
+    if contains(subopname, re"_b0x"): C = -1
+    if contains(subopname, re"_b1x"): C = -1
+    if contains(subopname, re"_rhox"): C = -1
+    if contains(subopname, re"_rho_2x"): C = -1
   
     if contains(subopname, re"xD0_"): C *= +1
     if contains(subopname, re"xD2_J0_"): C *= +1
@@ -147,6 +147,8 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
     if contains(subopname, re"xD2_J1_"): C *= -1
     if contains(subopname, re"xD3_J130_"): C *= -1
     if contains(subopname, re"xD3_J132_"): C *= -1
+
+    if C == 0: quit("Error in flipSignOddCC: found C=0")
 
     result[k] = float64(C)*v
 
