@@ -132,8 +132,19 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
     if k.Operators.data.len != 1:
       quit("Only allow 1 operator")
 
+    # Trigger based on op name
+    # Also must handle the isospin designations that change
+    var kk = k
+    var subopname = kk.Operators[1].name
+    subopname = replace(subopname, "Kneg", "Kbarneg")
+    subopname = replace(subopname, "Kpos", "Kbarpos")
+    subopname = replace(subopname, "Dneg", "Dbarneg")
+    subopname = replace(subopname, "Dpos", "Dbarpos")
+    subopname = replace(subopname, "Eneg", "Ebarneg")
+    subopname = replace(subopname, "Epos", "Ebarpos")
+    kk.Operators.data[0].name = subopname
+    
     var C = 0   # set to something bogus to trigger a failure if not properly set
-    let subopname = k.Operators[1].name
 
     if contains(subopname, re"_a0x"): C = +1
     if contains(subopname, re"_a1x"): C = +1
@@ -157,7 +168,7 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
 
     if C == 0: quit("Error in flipSignOddCC: found C=0")
 
-    result[k] = float64(C)*v
+    result[kk] = float64(C)*v
 
 
 
