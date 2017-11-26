@@ -1,7 +1,7 @@
 #!/usr/bin/env /home/edwards/bin/nimrunner
 ## Extract projected operator coefficients
 
-import hadron_sun_npart_irrep_op, streams, os, xmlparser, re,
+import hadron_sun_npart_irrep_op, particle_op, streams, os, xmlparser, re,
        serializetools/serializexml, tables, xmltree, parseutils, strutils,
        ensem, serializetools/array1d
 
@@ -9,7 +9,7 @@ type
   # We choose some particular structure for the objects
   ProjectedOpWeights* = tuple
     version:      int
-    ProjectedOps: Table[string,Table[KeyHadronSUNNPartIrrepOp_t,float64]]
+    ProjectedOps: Table[KeyParticleOp_t,Table[KeyHadronSUNNPartIrrepOp_t,float64]]
     
   # Structure that drives the extraction routine
   ExtractProjOps_t* = tuple
@@ -87,10 +87,16 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
     result[op] = val
 
 
-proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[string,Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
+proc momType*(mom: string): array[0..2, cint] =
+  ## Extract a mom_type array from a string of momenta
+  result[0] = int32(parseInt($mom[0]))
+  result[1] = int32(parseInt($mom[1]))
+  result[2] = int32(parseInt($mom[2]))
+
+proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[KeyParticleOp_t,Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
   ## Loop over many irreps extract the projects operators for several states `states` within an irrep
   #
-  result = initTable[string, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
+  result = initTable[KeyParticleOp_t, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
 
   # Loop over the irreps
   # For each irrep, extract the weights. 
@@ -109,7 +115,8 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
       # Grab the projected ops, and insert into the big map
       let proj_op_name = channel & "_proj" & $state & "_p" & rep.mom & "_" & rep.ir
       echo "Projected op = ", proj_op_name
-      result[proj_op_name] = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
+      let proj_op_key = KeyParticleOp_t(name: proj_op_name, smear: "", mom_type: momType(rep.mom))
+      result[proj_op_key] = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
 
     # Move back up
     setCurrentDir(cwd)
@@ -169,16 +176,16 @@ when isMainModule:
 
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights("h8", @[
-       (dir:       "000_T1pP.fewer", ir: "T1",     mom: "000", t0: 8, tZ:10, states: @[0]),
-       (dir:       "100_A2P",        ir: "H0D4A2", mom: "100", t0: 8, tZ: 9, states: @[0]),
-       (dir: ot & "/100_E2P",        ir: "H1D4E2", mom: "100", t0: 9, tZ:10, states: @[1]),
-       (dir:       "110_A2P",        ir: "H0D2A2", mom: "110", t0: 8, tZ: 6, states: @[0]),
-       (dir: ot & "/110_B1P",        ir: "H1D2B1", mom: "110", t0: 9, tZ:11, states: @[1]),
-       (dir: ot & "/110_B2P",        ir: "H1D2B2", mom: "110", t0:10, tZ:11, states: @[1]),
-       (dir:       "110_A2P",        ir: "H0D3A2", mom: "111", t0: 8, tZ:10, states: @[0]),
-       (dir: ot & "/111_E2P",        ir: "H1D3E2", mom: "100", t0: 8, tZ:11, states: @[1]),
+       #(dir:       "000_T1pP.fewer", ir: "T1",     mom: "000", t0: 8, tZ:10, states: @[0]),
+       #(dir:       "100_A2P",        ir: "H0D4A2", mom: "100", t0: 8, tZ: 9, states: @[0]),
+       #(dir: ot & "/100_E2P",        ir: "H1D4E2", mom: "100", t0: 9, tZ:10, states: @[1]),
+       #(dir:       "110_A2P",        ir: "H0D2A2", mom: "110", t0: 8, tZ: 6, states: @[0]),
+       #(dir: ot & "/110_B1P",        ir: "H1D2B1", mom: "110", t0: 9, tZ:11, states: @[1]),
+       #(dir: ot & "/110_B2P",        ir: "H1D2B2", mom: "110", t0:10, tZ:11, states: @[1]),
+       #(dir:       "110_A2P",        ir: "H0D3A2", mom: "111", t0: 8, tZ:10, states: @[0]),
+       #(dir: ot & "/111_E2P",        ir: "H1D3E2", mom: "100", t0: 8, tZ:11, states: @[1]),
        (dir:       "200_A2P",        ir: "H0D4A2", mom: "200", t0: 7, tZ:10, states: @[0]),
-       (dir: ot & "/200_E2P",        ir: "H1D4E2", mom: "200", t0: 8, tZ:11, states: @[1])
+       #(dir: ot & "/200_E2P",        ir: "H1D4E2", mom: "200", t0: 8, tZ:11, states: @[1])
        ],
        opsMap)
 
