@@ -34,6 +34,7 @@ proc extractIsoParams*(data: string): IsoDataParams_t =
   stem = stem.replace(re"per\..*$")
   stem = stem.replace(re"non\..*$")
   stem = stem.replace(re"dir\..*$")
+  stem = stem.replace(re"-.*$")
 
   # example of iso filename   cl21_64_128_b6p3_m0p2424_m0p2050
   let F     = stem.split('_')
@@ -77,6 +78,7 @@ proc extractAnisoParams*(data: string): AnisoDataParams_t =
   stem = stem.replace(re"per\..*$")
   stem = stem.replace(re"non\..*$")
   stem = stem.replace(re"dir\..*$")
+  stem = stem.replace(re"-.*$")
 
   # examples of aniso filename
   #   szscl21_32_256_b1p50_t_x4p300_um0p0860_sm0p0743_n1p265
