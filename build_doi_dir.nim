@@ -164,7 +164,7 @@ const
   JLab     = "Jefferson Lab"
   Edwards:  Creator_t  = ("Robert", "G", "Edwards", "edwards@jlab.org", JLab, "0000-0002-5667-291X")
   Winter:   Creator_t  = ("Frank", "T.", "Winter", "fwinter@jlab.org", JLab, "0000-0002-3573-6726")
-  Joo:      Creator_t  = ("Balint", "", "Joo", "bjoo@jlab.org", JLab, "")
+  Joo:      Creator_t  = ("Balint", "", "Joo", "bjoo@jlab.org", JLab, "0000-0002-4229-7960")
   Richards: Creator_t  = ("David", "G.", "Richards", "dgr@jlab.org", JLab, "0000-0001-6971-873X")
   Orginos:  Creator_t  = ("Konstantinos", "N.", "Orginos", "kostas@wm.edu", "Dept. of Physics, College of William and Mary", "")
 
