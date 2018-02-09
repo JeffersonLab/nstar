@@ -100,8 +100,8 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
                                         num_tries: 1)
  
   # Fermion action and inverters
-  #const platform = "OLCF"
-  const platform = "NERSC"
+  const platform = "OLCF"
+  #const platform = "NERSC"
 
   when platform == "OLCF":
     let mg  = newQUDAMGParams24x256()
@@ -130,7 +130,8 @@ proc generateChromaXML(data: var TitanManager_t; t0: int) =
   let input = xmlHeader & xmlToStr(serializeXML(chroma_xml, "chroma"))
   writeFile(genPath(input_file), input)
 
-  let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
+  #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
+  let propCheck = "/Users/edwards/Documents/qcd/git/nim-play/nstar/prop_check"
 
   let run_script = seqDir & "/nersc.t0_" & $t0 & ".sh"
   let script_exe = """
