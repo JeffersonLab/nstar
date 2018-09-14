@@ -39,35 +39,27 @@ proc find_file*(orig_file: string): string =
 
 
 
-#[
 #------------------------------------------------------------------------
 # Copy a lustre file to scratch
-proc copy_lustre_file*($orig_file: string) =
-  var filename = extractFilename(orig_file)
+proc copy_lustre_file*(orig_file: string, use_cp: bool): string =
+  if use_cp:
+    var filename = extractFilename(orig_file)
 
-  # scratch
-  #my $scr = ($scratch_dir ne "") ? $scratch_dir : "/scratch"
-  my scr = ""
+    # scratch
+    let scratch_dir = getScratchPath()
 
-  # Copy files
-  if (! -f $orig_file)
-  {
-    print "Lustre file not found: $orig_file\n"
-    exit(1)
-  }
+    # Copy files
+    if not fileExists(orig_file):
+      quit("Lustre file not found: " & orig_file)
 
-  printf "In function find_file:   copy_lustre_file $orig_file\n"
+    echo "In function find_file:   copy_lustre_file ", orig_file
 
-  my $err = 0xffff & system("cp ${orig_file} $scr")
-  if ($err > 0x00)
-  {
-    print "Some problem copying lustre file $orig_file\n"
-    exit(1)
-  }
-  my $local_file = "$scr/$filename"
+    if execShellCmd("cache_cp " & orig_file & " " & scratch_dir) != 0:
+      quit("Some problem copying with copying " & orig_file)
 
-  return $local_file
-]#
+    result = scratch_dir & "/" & filename
+  else:
+    result = orig_file
 
 
 #[
