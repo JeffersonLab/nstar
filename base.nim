@@ -3,58 +3,24 @@
 import
   system, strutils, os
 
-import
-  op_params, redstar_input, colorvec_hadron_node_input
-  
-import
+import  
+  redstar_chain,
   run/chroma/colorvec_work
 
-##
-type
-  RedstarRuns_t = object
-    mass_l*:                    string
-    mass_s*:                    string
-    layout*:                    Layout_t        ## Lattice size info
-    convertUDtoL*:              bool            ## Convert  u/d  quarks to l quarks
-    convertUDtoS*:              bool            ## Convert  u/d  quarks to s quarks
-    run_mode*:                  string
-    include_all_rows*:          bool
-    output_dir*:                string
-    output_db*:                 string
-    num_vecs*:                  int             ## num_vecs for hadron_node
-    Nt_corr*:                   int             ## length of each correlator
-    use_derivP*:                bool            ## use derivs for meson elementals
-    autoIrrepCG*:               bool            ## Use auto spatial irreps
-    t_sources*:                 seq[int]        ## time sources
-    proj_ops_xmls*:             seq[string]     ## The XML files with projected operator definitions
-    corr_graph_xml*:            string          ## Map of correlator graph-map and weights in xml
-    corr_graph_db*:             string          ## (Required) Map of correlator graph-map and weights
-    hadron_npt_graph_db*:       string          ## Holds graphs - modified on output
-    noneval_graph_xml*:         string          ## Keys of graphs not evaluatable
-    hadron_node_dbs*:           seq[string]     ## Input hadron nodes
-    smeared_hadron_node_xml*:   string          ## Smeared hadron nodes - output
-    smeared_hadron_node_db*:    string          ## Smeared hadron nodes
-    unsmeared_hadron_node_xml*: string          ## Unsmeared hadron nodes - output
-    unsmeared_hadron_node_db*:  string          ## Smeared hadron nodes - output
-    prop_dbs*:                  seq[string]     ## The dbs that contains propagator bits
-    glue_dbs*:                  seq[string]     ## The db that contains glueball colorvector contractions
-    meson_dbs*:                 seq[string]     ## The db that contains meson colorvector contractions
-    baryon_dbs*:                seq[string]     ## The db that contains baryon colorvector contractions
-    tetra_dbs*:                 seq[string]     ## The db that contains tetraquark colorvector contractions
-    ensemble*:                  string          ## Information about this ensemble
-    
-
-
 ## 
-proc basic_setup(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
-  #stem = F[#F-2]
-  #my chan = F[#F-1]
-  #my rep  = F[#F]
+proc basic_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
+  result.stem = stem
+  result.chan = chan
+  result.irrep = irrep
 
   # Extract file params
   result.layout.latt_size  = extractLattSize(stem)
   result.layout.decay_dir  = 3
 
+  # Set time origin in canonical fashion
+  result.t_origin = getTimeOrigin(result.layout.latt_size[3], seqno)
+
+  # base params
   result.num_vecs = 256
   result.Nt_corr  = 40
 #  my use_cp = true
@@ -151,12 +117,4 @@ proc basic_setup(arch: string; stem, chan, irrep: string, seqno: string): Redsta
   result.baryon_dbs = @[]
   result.ensemble = stem
 
-
-#-----------------------------------------------------------------------------
-when isMainModule:
-  # Some simple tests
-#proc basic_setup(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
-  let params = basic_setup("12s", "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265", "Omega", "000_Hg", "1000a")
-
-  echo "Check params"
-  echo $params
+  
