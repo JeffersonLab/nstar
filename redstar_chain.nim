@@ -48,7 +48,7 @@ type
 #-----------------------------------------------------------------------------
 when isMainModule:
   # Some simple tests
-  import base, redstar_input, colorvec_hadron_node_input
+  import base, redstar_input, colorvec_hadron_node_input, serializetools/serializexml, xmltree
 
 #proc basic_setup(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
   let params = basic_setup("12s", "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265", "Omega", "000_Hg", "1000a")
@@ -59,9 +59,21 @@ when isMainModule:
   echo "Build a Colorvec hadron node input"
   let had_node_input = newHadronNodeInput(params)
   echo $had_node_input
+  var col_xml: File
+  if open(col_xml, "colorvec.xml", fmWrite):
+    col_xml.write(xmlHeader)
+    col_xml.write(xmlToStr(serializeXML(had_node_input, "ColorVecHadron")))
+    col_xml.close()
 
   echo "Build a redstar hadron node input"
   let red_input = newRedstarInput(params)
   echo $red_input
+  var red_xml: File
+  if open(red_xml, "redstar.xml", fmWrite):
+    red_xml.write(xmlHeader)
+    red_xml.write(xmlToStr(serializeXML(red_input, "RedstarNPt")))
+    red_xml.close()
+
+
 
   
