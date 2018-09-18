@@ -18,9 +18,9 @@ proc repChar*(this: CubicRep; elem: cint): Complex =
   ## Character for group element
   quit("ERROR: havenot implemented repChar in CubicRep " & rep(this))
 
-proc repMatrix*(this: CubicRep; elem: cint): Array2dO[Complex] =
-  ## Representation matrix for group element
-  quit("ERROR: have not implemented repMatrix in CubicRep " & rep(this))
+#proc repMatrix*(this: CubicRep; elem: cint): Array2dO[Complex] =
+#  ## Representation matrix for group element
+#  quit("ERROR: have not implemented repMatrix in CubicRep " & rep(this))
 
 ## ----------------------------------------------------------------------------------
 ##  LG irreps have some more structure

@@ -1,10 +1,7 @@
-##  -*- C++ -*-
-## ! \file
-##  \brief Two quark operators
-## 
+## Cubic group helicity
 
 import
-  hadron/irreps_cubic
+  irreps_cubic
 
 ## ----------------------------------------------------------------------------------
 ##  Single cover little group irreps
@@ -12,7 +9,7 @@ import
 
 type
   H0D4A1Rep* = object of CubicHelicityRep
-  
+
 
 const
   Size_t* = 1

@@ -133,13 +133,13 @@ import
 
 ##  Irrep names
 type
-  IrrepNames_t* = object
-    with_par*: string          ## Irrep with parity
-    no_par*: string            ## Irrep no parity
-    ferm*: bool                ## Is this a double cover?
-    lg*: bool                  ## LG?
-    dim*: cint                 ## dimension
-    G*: cint                   ## G-parity
+  IrrepNames_t = tuple
+    with_par: string          ## Irrep with parity
+    no_par: string            ## Irrep no parity
+    ferm: bool                ## Is this a double cover?
+    lg: bool                  ## LG?
+    dim: int                 ## dimension
+    G: int                   ## G-parity
   
 
 proc newIrrepNames_t*(no_par: string; ferm: bool; lg: bool; dim: cint; g: cint): IrrepNames_t =
@@ -160,123 +160,98 @@ proc newIrrepNames_t*(with_par: string; no_par: string; ferm: bool; lg: bool;
   result.G        = g
 
 
+## ---------------------------------------------------------------------------
 ##  Initialized
+var initIR = false
 
-proc initIR*(a2: false): bool
 ##  Irrep names
+import tables
 
 type
-  IRNames_t* = OrderedTable[string, IrrepNames_t]
+  IRNames_t = Table[string, IrrepNames_t]
 
-var irrep_names_no_par*: IRNames_t
 
-var irrep_names_with_par*: IRNames_t
+var irrep_names_with_par: IRNames_t
 
-var irrep_names_with_pg*: IRNames_t
+var irrep_names_with_pg: IRNames_t
 
 ## ---------------------------------------------------------------------------
 ##  Initialize irrep names
 
-proc initIrrepNames*() =
-  if initIR:
-    return
-  irrep_names_no_par.insert(make_pair("D4A1",
-                                      IrrepNames_t("D4A1", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D4A2",
-                                      IrrepNames_t("D4A2", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D4E1",
-                                      IrrepNames_t("D4E1", true, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("D4E2",
-                                      IrrepNames_t("D4E2", false, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("D4E3",
-                                      IrrepNames_t("D4E3", true, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("D4B1",
-                                      IrrepNames_t("D4B1", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D4B2",
-                                      IrrepNames_t("D4B2", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D3A1",
-                                      IrrepNames_t("D3A1", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D3A2",
-                                      IrrepNames_t("D3A2", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D3E1",
-                                      IrrepNames_t("D3E1", true, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("D3E2",
-                                      IrrepNames_t("D3E2", false, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("D3B1",
-                                      IrrepNames_t("D3B1", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D3B2",
-                                      IrrepNames_t("D3B2", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D2A1",
-                                      IrrepNames_t("D2A1", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D2A2",
-                                      IrrepNames_t("D2A2", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D2E",
-                                      IrrepNames_t("D2E", true, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("D2B1",
-                                      IrrepNames_t("D2B1", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("D2B2",
-                                      IrrepNames_t("D2B2", false, true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("C4nm0A1", IrrepNames_t("C4nm0A1", false,
-      true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("C4nm0A2", IrrepNames_t("C4nm0A2", false,
-      true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("C4nm0E",
-                                      IrrepNames_t("C4nm0E", true, true, 2, 0)))
-  irrep_names_no_par.insert(make_pair("C4nnmA1", IrrepNames_t("C4nnmA1", false,
-      true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("C4nnmA2", IrrepNames_t("C4nnmA2", false,
-      true, 1, 0)))
-  irrep_names_no_par.insert(make_pair("C4nnmE",
-                                      IrrepNames_t("C4nnmE", true, true, 2, 0)))
-  ##  Oh
-  irrep_names_no_par.insert(make_pair("A1",
-                                      IrrepNames_t("A1", false, false, 1, 0)))
-  irrep_names_no_par.insert(make_pair("A2",
-                                      IrrepNames_t("A2", false, false, 1, 0)))
-  irrep_names_no_par.insert(make_pair("T1",
-                                      IrrepNames_t("T1", false, false, 3, 0)))
-  irrep_names_no_par.insert(make_pair("T2",
-                                      IrrepNames_t("T2", false, false, 3, 0)))
-  irrep_names_no_par.insert(make_pair("E", IrrepNames_t("E", false, false, 2, 0)))
-  irrep_names_no_par.insert(make_pair("G1", IrrepNames_t("G1", true, false, 2, 0)))
-  irrep_names_no_par.insert(make_pair("G2", IrrepNames_t("G2", true, false, 2, 0)))
-  irrep_names_no_par.insert(make_pair("H", IrrepNames_t("H", true, false, 4, 0)))
-  ## for(IRNames_t::const_iterator ir = irrep_names_no_par.begin(); ir != irrep_names_no_par.end(); ++ir)
-  ir = irrep_names_no_par.begin()
-  while ir != irrep_names_no_par.`end`():
-    if not ir.second.lg:
-      var o: var IrrepNames_t = ir.second
-      if ir.second.ferm:
-        irrep_names_with_par.insert(make_pair(ir.first + "g",
-            IrrepNames_t(ir.first + "g", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-        irrep_names_with_par.insert(make_pair(ir.first + "u",
-            IrrepNames_t(ir.first + "u", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-      else:
-        irrep_names_with_par.insert(make_pair(ir.first + "p",
-            IrrepNames_t(ir.first + "p", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-        irrep_names_with_par.insert(make_pair(ir.first + "m",
-            IrrepNames_t(ir.first + "m", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-    else:
-      irrep_names_with_par.insert(make_pair(ir.first, ir.second))
-    inc(ir)
-  ##  Loop over G parity of (-1, 0, +1)
-  ## for(IRNames_t::const_iterator ir = irrep_names_with_par.begin(); ir != irrep_names_with_par.end(); ++ir)
-  ir = irrep_names_with_par.begin()
-  while ir != irrep_names_with_par.`end`():
-    var o: var IrrepNames_t = ir.second
-    if not ir.second.ferm:
-      var ig1: cint = - 1
-      while ig1 <= 1:
-        var g1: string = ""
-        if ig1 == - 1:
-          g1 = "M"
-        elif ig1 == 1:
-          g1 = "P"
-        irrep_names_with_pg.insert(make_pair(ir.first + g1,
-            IrrepNames_t(ir.first + g1, o.no_par, o.ferm, o.lg, o.dim, ig1)))
-        inc(ig1)
-    inc(ir)
-  initIR = true
+var irrep_names_no_par: IRNames_t
+
+irrep_names_no_par = {"D4A1": ("D4A1", "D4A1", false, true, 1, 0),
+                      "D4A2": ("D4A2", "D4A2", false, true, 1, 0),
+                      "D4E1": ("D4E1", "D4E1", true, true, 2, 0),
+                      "D4E2": ("D4E2", "D4E2", false, true, 2, 0),
+                      "D4E3": ("D4E3", "D4E3", true, true, 2, 0),
+                      "D4B1": ("D4B1", "D4B1", false, true, 1, 0),
+                      "D4B2": ("D4B2", "D4B2", false, true, 1, 0),
+                      "D3A1": ("D3A1", "D3A1", false, true, 1, 0),
+                      "D3A2": ("D3A2", "D3A2", false, true, 1, 0),
+                      "D3E1": ("D3E1", "D3E1", true, true, 2, 0),
+                      "D3E2": ("D3E2", "D3E2", false, true, 2, 0),
+                      "D3B1": ("D3B1", "D3B1", false, true, 1, 0),
+                      "D3B2": ("D3B2", "D3B2", false, true, 1, 0),
+                      "D2A1": ("D2A1", "D2A1", false, true, 1, 0),
+                      "D2A2": ("D2A2", "D2A2", false, true, 1, 0),
+                      "D2E": ("D2E", "D2E", true, true, 2, 0),
+                      "D2B1": ("D2B1", "D2B1", false, true, 1, 0),
+                      "D2B2": ("D2B2", "D2B2", false, true, 1, 0),
+                      "C4nm0A1": ("C4nm0A1", "C4nm0A1", false, true, 1, 0),
+                      "C4nm0A2": ("C4nm0A2", "C4nm0A2", false, true, 1, 0),
+                      "C4nm0E": ("C4nm0E", "C4nm0E", true, true, 2, 0),
+                      "C4nnmA1": ("C4nnmA1", "C4nnmA1", false, true, 1, 0),
+                      "C4nnmA2": ("C4nnmA2", "C4nnmA2", false, true, 1, 0),
+                      "C4nnmE": ("C4nnmE", "C4nnmE", true, true, 2, 0)}.toTable
+
+##  Oh
+irrep_names_no_par = {"A1": ("A1", "A1", false, false, 1, 0),
+                      "A2": ("A2", "A2", false, false, 1, 0),
+                      "T1": ("T1", "T1", false, false, 3, 0),
+                      "T2": ("T2", "T2", false, false, 3, 0),
+                      "E":  ("E", "E", false, false, 2, 0),
+                      "G1": ("G1", "G1", true, false, 2, 0),
+                      "G2": ("G2", "G2", true, false, 2, 0),
+                      "H":  ("H", "H", true, false, 4, 0)}.toTable
+
+for ir in items(irrep_names_no_par):
+##  ir = irrep_names_no_par.begin()
+##  while ir != irrep_names_no_par.`end`():
+##    if not ir.second.lg:
+##      var o: var IrrepNames_t = ir.second
+##      if ir.second.ferm:
+##        irrep_names_with_par.insert(make_pair(ir.first + "g",
+##            IrrepNames_t(ir.first + "g", o.no_par, o.ferm, o.lg, o.dim, o.G)))
+##        irrep_names_with_par.insert(make_pair(ir.first + "u",
+##            IrrepNames_t(ir.first + "u", o.no_par, o.ferm, o.lg, o.dim, o.G)))
+##      else:
+##        irrep_names_with_par.insert(make_pair(ir.first + "p",
+##            IrrepNames_t(ir.first + "p", o.no_par, o.ferm, o.lg, o.dim, o.G)))
+##        irrep_names_with_par.insert(make_pair(ir.first + "m",
+##            IrrepNames_t(ir.first + "m", o.no_par, o.ferm, o.lg, o.dim, o.G)))
+##    else:
+##      irrep_names_with_par.insert(make_pair(ir.first, ir.second))
+##    inc(ir)
+##  ##  Loop over G parity of (-1, 0, +1)
+##  ## for(IRNames_t::const_iterator ir = irrep_names_with_par.begin(); ir != irrep_names_with_par.end(); ++ir)
+##  ir = irrep_names_with_par.begin()
+##  while ir != irrep_names_with_par.`end`():
+##    var o: var IrrepNames_t = ir.second
+##    if not ir.second.ferm:
+##      var ig1: cint = - 1
+##      while ig1 <= 1:
+##        var g1: string = ""
+##        if ig1 == - 1:
+##          g1 = "M"
+##        elif ig1 == 1:
+##          g1 = "P"
+##        irrep_names_with_pg.insert(make_pair(ir.first + g1,
+##            IrrepNames_t(ir.first + g1, o.no_par, o.ferm, o.lg, o.dim, ig1)))
+##        inc(ig1)
+##    inc(ir)
+##  initIR = true
+##
 
 ## ----------------------------------------------------------------------------------
 ##  Get irrep
@@ -306,8 +281,7 @@ proc getIrrepIndex*(irrep: string): IrrepNames_t =
         (irrep.compare(0, mm.first.size(), mm.first) == 0):
       return mm.second
     inc(mm)
-  cerr shl __func__ shl ": ERROR: cannot extract irrep " shl irrep shl endl
-  exit(1)
+  quit(": ERROR: cannot extract irrep ", irrep)
 
 ## ----------------------------------------------------------------------------------
 ## Remove helicity from an irrep name
