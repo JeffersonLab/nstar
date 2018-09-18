@@ -4,80 +4,68 @@
 import lists, complex, serializetools/array1d
 
 ## ----------------------------------------------------------------------------------
-## Get little group of irrep
+proc canonicalOrder*(mom: seq[cint]): seq[cint] =
+  ## Canonically order an array of momenta
+  ## return abs(mom[0]) >= abs(mom[1]) >= ... >= abs(mom[mu]) >= ... >= 0
+  ##  first step: make all the components positive
+  var mom_tmp: seq[cint] = mom
+  var mu: int = 0
+  while mu < mom_tmp.len():
+    if mom_tmp[mu] < 0:
+      mom_tmp[mu] = - mom_tmp[mu]
+    inc(mu)
+  mu = 1
+  while mu < mom_tmp.len():
+    ##  Select the item at the beginning of the unsorted region
+    var v = mom_tmp[mu]
+    ##  Work backwards, finding where v should go
+    var nu = mu
+    ##  If this element is less than v, move it up one
+    while mom_tmp[nu - 1] < v:
+      mom_tmp[nu] = mom_tmp[nu - 1]
+      dec(nu)
+      if nu < 1: break
+    ##  Stopped when mom_tmp[nu-1] >= v, so put v at postion nu
+    mom_tmp[nu] = v
+    inc(mu)
+  return mom_tmp
 
-proc getIrrepLG*(irrep: string): string
-## Get dimension of irrep
 
-proc getIrrepDim*(irrep: string): cint
-## Representation including parity if it exists
+proc crtesn*(ipos0: int; latt_size: seq[int]): seq[int] =
+  ## Decompose a lexicographic site into coordinates
+  ##  Calculate the Cartesian coordinates of the VALUE of IPOS where the 
+  ##  value is defined by
+  ## 
+  ##      for i = 0 to NDIM-1  {
+  ##         X_i  <- mod( IPOS, L(i) )
+  ##         IPOS <- int( IPOS / L(i) )
+  ##      }
+  ## 
+  ##  NOTE: here the coord(i) and IPOS have their origin at 0. 
+  ## 
+  result = newSeq[int](latt_size.len())
+  var i: int = 0
+  var ipos = ipos0
+  while i < latt_size.len():
+    result[i] = ipos mod latt_size[i]
+    ipos = ipos div latt_size[i]
+    inc(i)
 
-proc buildIrrepWithParity*(irrep: string; P: cint): string
-## Representation including parity and G-parity if it exists
 
-proc buildIrrepWithPG*(irrep: string; P: cint; G: cint): string
-## Remove helicity from an irrep name
+proc local_site*(coord: seq[int]; latt_size: seq[int]): int =
+  ## Calculates the lexicographic site index from the coordinate of a site
+  ## 
+  ##  Nothing specific about the actual lattice size, can be used for 
+  ##  any kind of latt size 
+  ## 
+  var order: int = 0
+  var mmu: int = latt_size.len() - 1
+  while mmu >= 1:
+    order = latt_size[mmu - 1] * (coord[mmu] + order)
+    dec(mmu)
+  inc(order, coord[0])
+  return order
 
-proc removeHelicity*(irrep: string): string
-## Get parity from an irrep name
-
-proc getIrrepParity*(irrep: string): cint
-## Remove G-parity from an irrep name
-
-proc removeIrrepGParity*(irrep: string): string
-## Get G-parity from an irrep name
-
-proc getIrrepGParity*(irrep: string): cint
-## Get Oh/LG irrep name with no parity from possible helicity name
-
-proc getCubicRepNoParity*(irrep: string): string
-## Remove LG from irrep name
-
-proc removeIrrepLG*(irrep: string): string
-## Irrep names (not including LG) with momentum
-## Turns [D4A1, Array(1,0,0)]  ->  100_A1
-
-proc momIrrepName*(irrep: string; mom: seq[cint]): string
-## Inverse of momIrrepName. Turn an opList name back into irrep names (including LG) and momentum
-## Turns 100_A1 ->  [D4A1, Array(1,0,0)]
-
-proc opListToIrrepMom*(mom_irrep_name: string): tuple[first: string, second: seq[cint]]
-## ----------------------------------------------------------------------------------
-## Canonically order an array of momenta
-## \return abs(mom[0]) >= abs(mom[1]) >= ... >= abs(mom[mu]) >= ... >= 0
-
-proc canonicalOrder*(mom: seq[cint]): seq[cint]
-## Decompose a lexicographic site into coordinates
-
-proc crtesn*(ipos: cint; latt_size: seq[cint]): seq[cint]
-## ----------------------------------------------------------------------------------
-## Generate all momentum up to a maximum
-
-proc generateAllMom*(mom2_min: cint; mom2_max: cint): SinglyLinkedList[seq[cint]]
-## Generate canonical momenta up to some maximum value
-
-proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): SinglyLinkedList[seq[cint]]
-## The name of the little group corresponding to this momentum
-
-proc generateLittleGroup*(mom: seq[cint]): string
-## Generate momentum for a little group from a canonical momentum
-
-proc generateLittleGroupMom*(littleGroup: string; canon_mom: seq[cint]): SinglyLinkedList[
-    seq[cint]]
-## Find number of posible source 1 and source 2 momentum orientations for fixed target momentum
-
-proc numMomentaCombin*(group1: string; group2: string; mom1: seq[cint];
-                      mom2: seq[cint]; momt: seq[cint]): cint
-## Find posible source 1 and source 2 momentum orientations for fixed target momentum
-
-proc allowedMomentaCombin*(group1: string; group2: string; mom1: seq[cint];
-                          mom2: seq[cint]; momt: seq[cint];
-                          allowed_mom1: var SinglyLinkedList[seq[cint]];
-                          allowed_mom2: var SinglyLinkedList[seq[cint]]): cint
-## Generate a canonical combination of momenta for a given target momentum
-
-proc canonMomCombin*(mom1: seq[cint]; mom2: seq[cint]; momt: seq[cint];
-                    canon_mom1: var seq[cint]; canon_mom2: var seq[cint]): cint
 ## ----------------------------------------------------------------------------------
 ## Rotation angles for a vector to a canonical direction
 
@@ -89,42 +77,49 @@ type
 
 
 ## Return rotation angles for a vector to a canonical direction
-
 proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t
+
 ## ----------------------------------------------------------------------------------
 ## Check group elem is within allowed range
+#proc checkIndexLimit*(elem: cint; dim: cint)
 
-proc checkIndexLimit*(elem: cint; dim: cint)
 ## ----------------------------------------------------------------------------------
 ## Conventional reference mom (for CGs) - not the same as canonical mom
-
 proc referenceMom*(mom: seq[cint]): seq[cint]
+
 ## ----------------------------------------------------------------------------------
 ## Scale momentum
-
 proc scaleMom*(mom: seq[cint]): seq[cint]
+
 ## ----------------------------------------------------------------------------------
 ## Unscale momentum
-
 proc unscaleMom*(scaled_mom: seq[cint]; mom: seq[cint]): seq[cint]
-## ----------------------------------------------------------------------------------
-## Helper function
 
-proc Mom3d*(p1: cint; p2: cint; p3: cint): seq[cint]
+## ----------------------------------------------------------------------------------
+proc Mom3d*(p1: cint; p2: cint; p3: cint): seq[cint] =
+  ## Helper function
+  result = newSeq[cint](3)
+  result[0] = p1
+  result[1] = p2
+  result[2] = p3
+
+
+## ----------------------------------------------------------------------------------
+proc Mom3d*(p1: int; p2: int; p3: int): seq[cint] =
+  ## Helper function
+  result = newSeq[cint](3)
+  result[0] = cint(p1)
+  result[1] = cint(p2)
+  result[2] = cint(p3)
+
+
 ## ----------------------------------------------------------------------------------
 ## Helper functions for automated CGs
 type
-  RotateVec_t* = object
-    p1*: cint
-    p2*: cint
-    p3*: cint
+  RotateVec_t* = tuple[p1: cint, p2: cint, p3: cint]
 
 proc newRotateVec_t*(a: cint; b: cint; c: cint): RotateVec_t =
   discard
-
-
-
-
 
 
 ## ----------------------------------------------------------------------------------
@@ -133,281 +128,239 @@ import
 
 ##  Irrep names
 type
-  IrrepNames_t = tuple
-    with_par: string          ## Irrep with parity
-    no_par: string            ## Irrep no parity
-    ferm: bool                ## Is this a double cover?
-    lg: bool                  ## LG?
-    dim: int                 ## dimension
-    G: int                   ## G-parity
+  IrrepNames_t = object
+    wp: string          ## Irrep with parity
+    np: string          ## Irrep no parity
+    ferm: bool          ## Is this a double cover?
+    lg: bool            ## LG?
+    dim: int            ## dimension
+    G: int              ## G-parity
   
 
-proc newIrrepNames_t*(no_par: string; ferm: bool; lg: bool; dim: cint; g: cint): IrrepNames_t =
-  result.with_par = no_par
-  result.no_par   = no_par
-  result.ferm     = ferm
-  result.lg       = lg
-  result.dim      = dim
-  result.G        = g
-
-proc newIrrepNames_t*(with_par: string; no_par: string; ferm: bool; lg: bool;
-                           dim: cint; g: cint): IrrepNames_t =
-  result.with_par = with_par
-  result.no_par   = no_par
-  result.ferm     = ferm
-  result.lg       = lg
-  result.dim      = dim
-  result.G        = g
-
-
 ## ---------------------------------------------------------------------------
-##  Initialized
-var initIR = false
-
 ##  Irrep names
 import tables
 
 type
   IRNames_t = Table[string, IrrepNames_t]
 
-
-var irrep_names_with_par: IRNames_t
-
-var irrep_names_with_pg: IRNames_t
-
 ## ---------------------------------------------------------------------------
 ##  Initialize irrep names
 
-var irrep_names_no_par: IRNames_t
+##  Oh and LG
+let irrep_names_no_par: IRNames_t = {
+  "A1": IrrepNames_t(wp: "A1", np: "A1", ferm: false, lg: false, dim: 1, G: 0),
+  "A2": IrrepNames_t(wp: "A2", np: "A2", ferm: false, lg: false, dim: 1, G: 0),
+  "T1": IrrepNames_t(wp: "T1", np: "T1", ferm: false, lg: false, dim: 3, G: 0),
+  "T2": IrrepNames_t(wp: "T2", np: "T2", ferm: false, lg: false, dim: 3, G: 0),
+  "E":  IrrepNames_t(wp: "E", np: "E", ferm: false, lg: false, dim: 2, G: 0),
+  "G1": IrrepNames_t(wp: "G1", np: "G1", ferm: true, lg: false, dim: 2, G: 0),
+  "G2": IrrepNames_t(wp: "G2", np: "G2", ferm: true, lg: false, dim: 2, G: 0),
+  "H":  IrrepNames_t(wp: "H", np: "H", ferm: true, lg: false, dim: 4, G: 0),
+  "D4A1": IrrepNames_t(wp: "D4A1", np: "D4A1", ferm: false, lg: true, dim: 1, G: 0),
+  "D4A2": IrrepNames_t(wp: "D4A2", np: "D4A2", ferm: false, lg: true, dim: 1, G: 0),
+  "D4E1": IrrepNames_t(wp: "D4E1", np: "D4E1", ferm: true, lg: true, dim: 2, G: 0),
+  "D4E2": IrrepNames_t(wp: "D4E2", np: "D4E2", ferm: false, lg: true, dim: 2, G: 0),
+  "D4E3": IrrepNames_t(wp: "D4E3", np: "D4E3", ferm: true, lg: true, dim: 2, G: 0),
+  "D4B1": IrrepNames_t(wp:"D4B1", np: "D4B1", ferm: false, lg: true, dim: 1, G: 0),
+  "D4B2": IrrepNames_t(wp:"D4B2", np: "D4B2", ferm: false, lg: true, dim: 1, G: 0),
+  "D3A1": IrrepNames_t(wp:"D3A1", np: "D3A1", ferm: false, lg: true, dim: 1, G: 0),
+  "D3A2": IrrepNames_t(wp:"D3A2", np: "D3A2", ferm: false, lg: true, dim: 1, G: 0),
+  "D3E1": IrrepNames_t(wp:"D3E1", np: "D3E1", ferm: true, lg: true, dim: 2, G: 0),
+  "D3E2": IrrepNames_t(wp:"D3E2", np: "D3E2", ferm: false, lg: true, dim: 2, G: 0),
+  "D3B1": IrrepNames_t(wp:"D3B1", np: "D3B1", ferm: false, lg: true, dim: 1, G: 0),
+  "D3B2": IrrepNames_t(wp:"D3B2", np: "D3B2", ferm: false, lg: true, dim: 1, G: 0),
+  "D2A1": IrrepNames_t(wp:"D2A1", np: "D2A1", ferm: false, lg: true, dim: 1, G: 0),
+  "D2A2": IrrepNames_t(wp:"D2A2", np: "D2A2", ferm: false, lg: true, dim: 1, G: 0),
+  "D2E": IrrepNames_t(wp:"D2E", np: "D2E", ferm: true, lg: true, dim: 2, G: 0),
+  "D2B1": IrrepNames_t(wp:"D2B1", np: "D2B1", ferm: false, lg: true, dim: 1, G: 0),
+  "D2B2": IrrepNames_t(wp:"D2B2", np: "D2B2", ferm: false, lg: true, dim: 1, G: 0),
+  "C4nm0A1": IrrepNames_t(wp:"C4nm0A1", np: "C4nm0A1", ferm: false, lg: true, dim: 1, G: 0),
+  "C4nm0A2": IrrepNames_t(wp:"C4nm0A2", np: "C4nm0A2", ferm: false, lg: true, dim: 1, G: 0),
+  "C4nm0E": IrrepNames_t(wp:"C4nm0E", np: "C4nm0E", ferm: true, lg: true, dim: 2, G: 0),
+  "C4nnmA1": IrrepNames_t(wp:"C4nnmA1", np: "C4nnmA1", ferm: false, lg: true, dim: 1, G: 0),
+  "C4nnmA2": IrrepNames_t(wp:"C4nnmA2", np: "C4nnmA2", ferm: false, lg: true, dim: 1, G: 0),
+  "C4nnmE": IrrepNames_t(wp:"C4nnmE", np: "C4nnmE", ferm: true, lg: true, dim: 2, G: 0)}.toTable
 
-irrep_names_no_par = {"D4A1": ("D4A1", "D4A1", false, true, 1, 0),
-                      "D4A2": ("D4A2", "D4A2", false, true, 1, 0),
-                      "D4E1": ("D4E1", "D4E1", true, true, 2, 0),
-                      "D4E2": ("D4E2", "D4E2", false, true, 2, 0),
-                      "D4E3": ("D4E3", "D4E3", true, true, 2, 0),
-                      "D4B1": ("D4B1", "D4B1", false, true, 1, 0),
-                      "D4B2": ("D4B2", "D4B2", false, true, 1, 0),
-                      "D3A1": ("D3A1", "D3A1", false, true, 1, 0),
-                      "D3A2": ("D3A2", "D3A2", false, true, 1, 0),
-                      "D3E1": ("D3E1", "D3E1", true, true, 2, 0),
-                      "D3E2": ("D3E2", "D3E2", false, true, 2, 0),
-                      "D3B1": ("D3B1", "D3B1", false, true, 1, 0),
-                      "D3B2": ("D3B2", "D3B2", false, true, 1, 0),
-                      "D2A1": ("D2A1", "D2A1", false, true, 1, 0),
-                      "D2A2": ("D2A2", "D2A2", false, true, 1, 0),
-                      "D2E": ("D2E", "D2E", true, true, 2, 0),
-                      "D2B1": ("D2B1", "D2B1", false, true, 1, 0),
-                      "D2B2": ("D2B2", "D2B2", false, true, 1, 0),
-                      "C4nm0A1": ("C4nm0A1", "C4nm0A1", false, true, 1, 0),
-                      "C4nm0A2": ("C4nm0A2", "C4nm0A2", false, true, 1, 0),
-                      "C4nm0E": ("C4nm0E", "C4nm0E", true, true, 2, 0),
-                      "C4nnmA1": ("C4nnmA1", "C4nnmA1", false, true, 1, 0),
-                      "C4nnmA2": ("C4nnmA2", "C4nnmA2", false, true, 1, 0),
-                      "C4nnmE": ("C4nnmE", "C4nnmE", true, true, 2, 0)}.toTable
 
-##  Oh
-irrep_names_no_par = {"A1": ("A1", "A1", false, false, 1, 0),
-                      "A2": ("A2", "A2", false, false, 1, 0),
-                      "T1": ("T1", "T1", false, false, 3, 0),
-                      "T2": ("T2", "T2", false, false, 3, 0),
-                      "E":  ("E", "E", false, false, 2, 0),
-                      "G1": ("G1", "G1", true, false, 2, 0),
-                      "G2": ("G2", "G2", true, false, 2, 0),
-                      "H":  ("H", "H", true, false, 4, 0)}.toTable
-
-for ir in items(irrep_names_no_par):
-##  ir = irrep_names_no_par.begin()
-##  while ir != irrep_names_no_par.`end`():
-##    if not ir.second.lg:
-##      var o: var IrrepNames_t = ir.second
-##      if ir.second.ferm:
-##        irrep_names_with_par.insert(make_pair(ir.first + "g",
-##            IrrepNames_t(ir.first + "g", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-##        irrep_names_with_par.insert(make_pair(ir.first + "u",
-##            IrrepNames_t(ir.first + "u", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-##      else:
-##        irrep_names_with_par.insert(make_pair(ir.first + "p",
-##            IrrepNames_t(ir.first + "p", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-##        irrep_names_with_par.insert(make_pair(ir.first + "m",
-##            IrrepNames_t(ir.first + "m", o.no_par, o.ferm, o.lg, o.dim, o.G)))
-##    else:
-##      irrep_names_with_par.insert(make_pair(ir.first, ir.second))
-##    inc(ir)
-##  ##  Loop over G parity of (-1, 0, +1)
-##  ## for(IRNames_t::const_iterator ir = irrep_names_with_par.begin(); ir != irrep_names_with_par.end(); ++ir)
-##  ir = irrep_names_with_par.begin()
-##  while ir != irrep_names_with_par.`end`():
-##    var o: var IrrepNames_t = ir.second
-##    if not ir.second.ferm:
-##      var ig1: cint = - 1
-##      while ig1 <= 1:
-##        var g1: string = ""
-##        if ig1 == - 1:
-##          g1 = "M"
-##        elif ig1 == 1:
-##          g1 = "P"
-##        irrep_names_with_pg.insert(make_pair(ir.first + g1,
-##            IrrepNames_t(ir.first + g1, o.no_par, o.ferm, o.lg, o.dim, ig1)))
-##        inc(ig1)
-##    inc(ir)
-##  initIR = true
-##
+# Convenience for G-parity
+let PG = {-1: "M", 0: "", +1: "P"}.toTable
 
 ## ----------------------------------------------------------------------------------
-##  Get irrep
+# Irreps with parity
+proc createWithParTable(): IRNames_t =
+  ## Create irreps with parity
+  result = initTable[string, IrrepNames_t]()
+  for k,v in pairs(irrep_names_no_par):
+    if not v.lg:
+      if v.ferm:
+        result[k & "g"] = IrrepNames_t(wp: k & "g", np: v.np, ferm: v.ferm, lg: v.lg, dim: v.dim, G: v.G)
+        result[k & "u"] = IrrepNames_t(wp: k & "u", np: v.np, ferm: v.ferm, lg: v.lg, dim: v.dim, G: v.G)
+      else:
+        result[k & "p"] = IrrepNames_t(wp: k & "p", np: v.np, ferm: v.ferm, lg: v.lg, dim: v.dim, G: v.G)
+        result[k & "m"] = IrrepNames_t(wp: k & "m", np: v.np, ferm: v.ferm, lg: v.lg, dim: v.dim, G: v.G)
+    else:
+      result[k] = v
+
+let irrep_names_with_par = createWithParTable()
+
+## ----------------------------------------------------------------------------------
+# Irreps with G-parity
+proc createWithPGTable(): IRNames_t =
+  # Create irreps with G-parity
+  result = initTable[string, IrrepNames_t]()
+  #  Loop over G parity of (-1, 0, +1)
+  for k,v in pairs(irrep_names_no_par):
+    if not v.ferm:
+      for p,g in pairs(PG):
+        result[k & g] = IrrepNames_t(wp: k & g, np: v.np, ferm: v.ferm, lg: v.lg, dim: v.dim, G: p)
+
+let irrep_names_with_pg: IRNames_t = createWithPGTable()
+
+
+## ----------------------------------------------------------------------------------
+import strutils
 
 proc getIrrepIndex*(irrep: string): IrrepNames_t =
-  initIrrepNames()
-  ##  First check the ones with parity and G-parity
-  ## for(IRNames_t::const_iterator mm = irrep_names_with_pg.begin();
-  mm = irrep_names_with_pg.begin()
-  while mm != irrep_names_with_pg.`end`():
-    if (irrep.size() == mm.first.size()) and
-        (irrep.compare(0, mm.first.size(), mm.first) == 0):
-      return mm.second
-    inc(mm)
-  ##  First check the ones with parity
-  ## for(IRNames_t::const_iterator mm = irrep_names_with_par.begin();
-  mm = irrep_names_with_par.begin()
-  while mm != irrep_names_with_par.`end`():
-    if (irrep.size() == mm.first.size()) and
-        (irrep.compare(0, mm.first.size(), mm.first) == 0):
-      return mm.second
-    inc(mm)
-  ##  Next try the non-parity versions
-  mm = irrep_names_no_par.begin()
-  while mm != irrep_names_no_par.`end`():
-    if (irrep.size() == mm.first.size()) and
-        (irrep.compare(0, mm.first.size(), mm.first) == 0):
-      return mm.second
-    inc(mm)
-  quit(": ERROR: cannot extract irrep ", irrep)
+  ## Get irrep
+  # First check the ones with parity and G-parity
+  # for(IRNames_t::const_iterator mm = irrep_names_with_pg.begin();
+  for k,v in pairs(irrep_names_with_pg):
+    if startsWith(irrep, k):
+      return v
+
+  #  Check the ones with parity
+  for k,v in pairs(irrep_names_with_par):
+    if startsWith(irrep, k):
+      return v
+
+  #  Next try the non-parity versions
+  for k,v in pairs(irrep_names_no_par):
+    if startsWith(irrep, k):
+      return v
+
+  quit(": ERROR: cannot extract irrep= " & irrep)
 
 ## ----------------------------------------------------------------------------------
-## Remove helicity from an irrep name
-
 proc removeHelicity*(irrep: string): string =
   ##  Remove the helicity label
-  if (irrep.substr(0, 3) == "H0D") or (irrep.substr(0, 3) == "H1D") or
-      (irrep.substr(0, 3) == "H2D") or (irrep.substr(0, 3) == "H3D") or
-      (irrep.substr(0, 3) == "H4D") or (irrep.substr(0, 3) == "H0C") or
-      (irrep.substr(0, 3) == "H1C") or (irrep.substr(0, 3) == "H2C") or
-      (irrep.substr(0, 3) == "H3C") or (irrep.substr(0, 3) == "H4C"):
-    return irrep.substr(2, npos)
-  if (irrep.substr(0, 5) == "H1o2D") or (irrep.substr(0, 5) == "H3o2D") or
-      (irrep.substr(0, 5) == "H5o2D") or (irrep.substr(0, 5) == "H7o2D") or
-      (irrep.substr(0, 5) == "H1o2C") or (irrep.substr(0, 5) == "H3o2C") or
-      (irrep.substr(0, 5) == "H5o2C") or (irrep.substr(0, 5) == "H7o2C"):
-    return irrep.substr(4, npos)
-  return irrep
+  result = irrep
+  if (irrep.startsWith("H0D") or irrep.startsWith("H1D") or
+      irrep.startsWith("H2D") or irrep.startsWith("H3D") or
+      irrep.startsWith("H4D") or irrep.startsWith("H0C") or
+      irrep.startsWith("H1C") or irrep.startsWith("H2C") or
+      irrep.startsWith("H3C") or irrep.startsWith("H4C")):
+    result.delete(0,2)
+    return
+
+  if (irrep.startsWith("H1o2D") or irrep.startsWith("H3o2D") or
+      irrep.startsWith("H5o2D") or irrep.startsWith("H7o2D") or
+      irrep.startsWith("H1o2C") or irrep.startsWith("H3o2C") or
+      irrep.startsWith("H5o2C") or irrep.startsWith("H7o2C")):
+    result.delete(0,4)
+
+  return
 
 ## ----------------------------------------------------------------------------------
-## Remove LG from irrep name
-
-proc removeIrrepLG*(irrep: string): string =
-  var rep: string = irrep
-  ##  Remove the helicity label
-  if (rep.substr(0, 2) == "D4") or (rep.substr(0, 2) == "D2") or
-      (rep.substr(0, 2) == "D3") or (rep.substr(0, 2) == "C4") or
-      (rep.substr(0, 2) == "C2"):
-    return rep.substr(2, npos)
-  return rep
+proc removeIrrepLG*(rep: string): string =
+  ## Irrep names (not including LG) with momentum
+  ## Turns [D4A1, Array(1,0,0)]  ->  100_A1
+  result = rep
+  if (rep.startsWith("D4") or rep.startsWith("D2") or
+      rep.startsWith("D3") or rep.startsWith("C4") or
+      rep.startsWith("C2")):
+    result.delete(0,1)
+  return
 
 ## ----------------------------------------------------------------------------------
-## Get parity from an irrep name
-
-proc getIrrepParity*(irrep: string): cint =
-  var irrep_noG: string = removeIrrepGParity(irrep)
-  var test_string: string = irrep_noG.substr(irrep_noG.length() - 1)
-  if (test_string == "p") or (test_string == "g"): return 1
-  elif (test_string == "m") or (test_string == "u"): return - 1
-  else: return 0
-  
-## ----------------------------------------------------------------------------------
-## Remove G-parity from an irrep name
-
 proc removeIrrepGParity*(irrep: string): string =
-  var test_string: string = irrep.substr(irrep.length() - 1)
-  if (test_string == "P") or (test_string == "M"):
-    return irrep.substr(0, irrep.length() - 1)
+  ## Remove G-parity from an irrep name
+  result = irrep
+  result.removeSuffix({'P','M'})
+  
+## ----------------------------------------------------------------------------------
+proc getIrrepParity*(irrep: string): int =
+  ## Get parity from an irrep name
+  var irrep_noG = removeIrrepGParity(irrep)
+  if (irrep_noG.endsWith('p') or irrep_noG.endsWith('g')):
+    return 1
+  elif (irrep_noG.endsWith('m') or irrep_noG.endsWith('u')):
+    return -1
   else:
-    return irrep
+    return 0
   
 ## ----------------------------------------------------------------------------------
-## Get G-parity from an irrep name
-
-proc getIrrepGParity*(irrep: string): cint =
-  var test_string: string = irrep.substr(irrep.length() - 1)
-  if test_string == "P": return 1
-  elif test_string == "M": return - 1
-  else: return 0
+proc getIrrepGParity*(irrep: string): int =
+  ## Get Oh/LG irrep name with no parity from possible helicity name
+  if irrep.endsWith('P'):
+    return 1
+  elif irrep.endsWith('M'):
+    return -1
+  else:
+    return 0
   
 ## ----------------------------------------------------------------------------------
-## Get little group of irrep
-
 proc getIrrepLG*(long_irrep: string): string =
-  var irrep: string = removeHelicity(long_irrep)
+  ## Get little group of irrep
   ##  Format of irrep label is D4A1 etc
-  var irrepLG: string = ""
-  var opLG: string = irrep.substr(0, 2)
-  var opLGlong: string = irrep.substr(0, 5)
-  if (opLG == "D2") or (opLG == "D3") or (opLG == "D4"): irrepLG = opLG
-  elif (opLGlong == "C4nm0") or (opLGlong == "C4nnm"): irrepLG = opLGlong
-  else: irrepLG = "Oh"
-  return irrepLG
+  result = removeHelicity(long_irrep)
+  if (result.startsWith("D2") or result.startsWith("D3") or result.startsWith("D4")):
+    result.delete(0,1)
+    return
+  if (result.startsWith("C4nm0") or result.startsWith("C4nnm")): 
+    result.delete(0,4)
+    return
+  result = "Oh"
+
 
 ## ----------------------------------------------------------------------------------
-## Get dimension of irrep
+proc getIrrepDim*(irrep: string): int =
+  ## Get dimension of irrep
+  return getIrrepIndex(irrep).dim
 
-proc getIrrepDim*(irrep: string): cint =
-  var mm: IrrepNames_t = getIrrepIndex(irrep)
-  return mm.dim
 
 ## ----------------------------------------------------------------------------------
-## Get Oh/LG irrep name with no parity from possible helicity name
-
 proc getCubicRepNoParity*(irrep: string): string =
-  var mm: IrrepNames_t = getIrrepIndex(removeHelicity(irrep))
-  return mm.no_par
+  ## Get Oh/LG irrep name with no parity from possible helicity name
+  return getIrrepIndex(removeHelicity(irrep)).np
+
 
 ## ----------------------------------------------------------------------------------
 ## ----------------------------------------------------------------------------------
-## Representation including parity if it exists
-
-proc buildIrrepWithParity*(irrep: string; P: cint): string =
-  var mm: IrrepNames_t = getIrrepIndex(irrep)
+proc buildIrrepWithParity*(irrep: string; P: int): string =
+  ## Representation including parity if it exists
+  let mm = getIrrepIndex(irrep)
   if mm.lg:
     ##  In flight, so no parity
-    return mm.no_par
-  var rep: string = mm.no_par
+    return mm.np
+  var rep = mm.np
   if mm.ferm:
     if P == + 1:
-      inc(rep, "g")
+      rep &= "g"
     elif P == - 1:
-      inc(rep, "u")
+      rep &= "u"
   else:
     if P == + 1:
-      inc(rep, "p")
+      rep &= "p"
     elif P == - 1:
-      inc(rep, "m")
+      rep &= "m"
   return rep
 
-## Representation including parity and G-parity if it exists
-
-proc buildIrrepWithPG*(irrep: string; P: cint; G: cint): string =
+proc buildIrrepWithPG*(irrep: string; P: cint; G: cint): string = 
+  ## Representation including parity and G-parity if it exists
   var rep: string = buildIrrepWithParity(irrep, P)
   var mm: IrrepNames_t = getIrrepIndex(irrep)
   if not mm.ferm:
     ##  Only put in G parity if non-zero
     if G == + 1:
-      inc(rep, "P")
+      rep &= "P"
     elif G == - 1:
-      inc(rep, "M")
+      rep &= "M"
   return rep
 
 ## ----------------------------------------------------------------------------------
-
 proc generateLittleGroup*(mom: seq[cint]): string =
+  ## The name of the little group corresponding to this momentum
   var momCan: seq[cint] = canonicalOrder(mom)
   var littleGroup: string = ""
   if momCan[2] == 0:
@@ -432,78 +385,18 @@ proc generateLittleGroup*(mom: seq[cint]): string =
       littleGroup = "C2"
   return littleGroup
 
-## ----------------------------------------------------------------------------------
-## Canonically order an array of momenta
-## \return abs(mom[0]) >= abs(mom[1]) >= ... >= abs(mom[mu]) >= ... >= 0
 
-proc canonicalOrder*(mom: seq[cint]): seq[cint] =
-  ##  first step: make all the components positive
-  var mom_tmp: seq[cint] = mom
-  var mu: cint = 0
-  while mu < mom_tmp.size():
-    if mom_tmp[mu] < 0:
-      mom_tmp[mu] = - mom_tmp[mu]
-    inc(mu)
-  var mu: cint = 1
-  while mu < mom_tmp.size():
-    ##  Select the item at the beginning of the unsorted region
-    var v: cint = mom_tmp[mu]
-    ##  Work backwards, finding where v should go
-    var nu: cint = mu
-    ##  If this element is less than v, move it up one
-    while mom_tmp[nu - 1] < v:
-      mom_tmp[nu] = mom_tmp[nu - 1]
-      dec(nu)
-      if nu < 1: break
-    ##  Stopped when mom_tmp[nu-1] >= v, so put v at postion nu
-    mom_tmp[nu] = v
-    inc(mu)
-  return mom_tmp
-
-## Decompose a lexicographic site into coordinates
-
-proc crtesn*(ipos: cint; latt_size: seq[cint]): seq[cint] =
-  var coord: seq[cint]
-  coord.resize(latt_size.size())
-  ##  Calculate the Cartesian coordinates of the VALUE of IPOS where the 
-  ##  value is defined by
-  ## 
-  ##      for i = 0 to NDIM-1  {
-  ##         X_i  <- mod( IPOS, L(i) )
-  ##         IPOS <- int( IPOS / L(i) )
-  ##      }
-  ## 
-  ##  NOTE: here the coord(i) and IPOS have their origin at 0. 
-  ## 
-  var i: cint = 0
-  while i < latt_size.size():
-    coord[i] = ipos mod latt_size[i]
-    ipos = ipos div latt_size[i]
-    inc(i)
-  return coord
-
-## Calculates the lexicographic site index from the coordinate of a site
-## 
-##  Nothing specific about the actual lattice size, can be used for 
-##  any kind of latt size 
-## 
-
-proc local_site*(coord: seq[cint]; latt_size: seq[cint]): cint =
-  var order: cint = 0
-  var mmu: cint = latt_size.size() - 1
-  while mmu >= 1:
-    order = latt_size[mmu - 1] * (coord[mmu] + order)
-    dec(mmu)
-  inc(order, coord[0])
-  return order
+proc norm2(mom: seq[cint]): cint =
+  ## Compute norm2 of a sequence
+  result = 0
+  for m in items(mom):
+    result += m*m
 
 ## ----------------------------------------------------------------------------------
-## Generate all momentum up to a maximum
-
-proc generateAllMom*(mom2_min: cint; mom2_max: cint): SinglyLinkedList[seq[cint]] =
-  var dest: SinglyLinkedList[seq[cint]]
-  var mom: seq[cint]
-  mom.resize(3)
+proc generateAllMom*(mom2_min: cint; mom2_max: cint): seq[seq[cint]] =
+  ## Generate all momentum up to a maximum
+  result = newSeq[seq[cint]](0)
+  var mom = newSeq[cint](3)
   mom[0] = - mom2_max
   while mom[0] <= mom2_max:
     mom[1] = - mom2_max
@@ -512,298 +405,292 @@ proc generateAllMom*(mom2_min: cint; mom2_max: cint): SinglyLinkedList[seq[cint]
       while mom[2] <= mom2_max:
         if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):
           continue
-        dest.push_back(mom)
+        result.add(mom)
         inc(mom[2])
       inc(mom[1])
     inc(mom[0])
-  return dest
 
 ## ----------------------------------------------------------------------------
-##  Generate canonical momenta up to some maximum value
-
-proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): SinglyLinkedList[seq[cint]] =
-  var canon_moms: SinglyLinkedList[seq[cint]]
+proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): seq[seq[cint]] =
+  ##  Generate canonical momenta up to some maximum value
+  result = newSeq[seq[cint]](0)
   ##  Loop over all desired canonical momentum
   ##  This loop allows us to have, for example,  p= 100, 200, 300,  which all fall in D4
-  var mom: seq[cint]
-  mom.resize(3)
-  mom[0] = 0
-  while mom[0] <= mom2_max:
-    mom[1] = 0
-    while mom[1] <= mom[0]:
-      mom[2] = 0
-      while mom[2] <= mom[1]:
+  var mom = newSeq[cint](3)
+  for px in -mom2_max .. mom2_max:
+    for py in -mom2_max .. mom2_max:
+      for pz in -mom2_max .. mom2_max:
+        ##  Check if valid
+        mom[0] = px
+        mom[1] = py
+        mom[2] = pz
         if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):
           continue
-        canon_moms.push_back(mom)
+        result.add(mom)
         inc(mom[2])
       inc(mom[1])
     inc(mom[0])
-  return canon_moms
+  return
 
 ## ----------------------------------------------------------------------------------
-## Generate momentum for a little group from a canonical momentum
-
-proc generateLittleGroupMom*(littleGroup0: string; canon_mom0: seq[cint]): SinglyLinkedList[
-    seq[cint]] =
-  var dest: SinglyLinkedList[seq[cint]]
-  var littleGroup: string = getIrrepLG(littleGroup0)
-  var canon_mom: seq[cint] = canonicalOrder(canon_mom0)
-  var mom2: cint = norm2(canon_mom)
+proc generateLittleGroupMom*(littleGroup0: string; canon_mom0: seq[cint]): seq[seq[cint]] =
+  ## Generate momentum for a little group from a canonical momentum
+  result = newSeq[seq[cint]](0)
+  var littleGroup = getIrrepLG(littleGroup0)
+  var canon_mom = canonicalOrder(canon_mom0)
+  var mom2 = norm2(canon_mom)
   if generateLittleGroup(canon_mom) != littleGroup:
-    cerr shl __func__ shl ": little group name= " shl littleGroup shl
-        " inconsistent with canonical mom= " shl canon_mom shl "\x0A"
-    exit(1)
-  var px: cint = - mom2
-  while px <= mom2:
-    var py: cint = - mom2
-    while py <= mom2:
-      var pz: cint = - mom2
-      while pz <= mom2:
+    quit("little group name= " & littleGroup & " inconsistent with canonical mom= " & $canon_mom)
+
+  var mom = newSeq[cint](3)
+  for px in -mom2 .. mom2:
+    for py in -mom2 .. mom2:
+      for pz in -mom2 .. mom2:
         ##  Check if valid
-        var mom: seq[cint]
-        mom.resize(3)
         mom[0] = px
         mom[1] = py
         mom[2] = pz
         if norm2(mom) != mom2:
           continue
-        var momCan: seq[cint] = canonicalOrder(mom)
+        var momCan = canonicalOrder(mom)
         if momCan != canon_mom:
           continue
         if generateLittleGroup(momCan) != littleGroup:
           continue
-        dest.push_back(mom)
-        inc(pz)
-      inc(py)
-    inc(px)
-  return dest
+        result.add(mom)
+
+
+proc addSeq(m1, m2: seq[cint]): seq[cint] =
+  ## Add two sequences
+  result = newSeq[cint](3)
+  for i in 0..3:
+    result[i] = m1[i] + m2[i]
+
+
+proc multSeq(m1: seq[cint], n: cint): seq[cint] =
+  ## Add two sequences
+  result = newSeq[cint](3)
+  for i in 0..3:
+    result[i] = m1[i] * n
+
+
+proc divSeq(m1: seq[cint], n: cint): seq[cint] =
+  ## Divide a sequence
+  result = newSeq[cint](3)
+  for i in 0..3:
+    result[i] = m1[i] div n
+
 
 ## ----------------------------------------------------------------------------------
-## Find number of posible source 1 and source 2 momentum orientations for fixed target momentum
+proc numMomentaCombin*(group1: string; group2: string;
+                       mom1, mom2, momt: seq[cint]): int =
+  ## Find number of possible source 1 and source 2 momentum orientations for fixed target momentum
+  result = 0
+  var mom_list1 = generateLittleGroupMom(group1, mom1)
+  var mom_list2 = generateLittleGroupMom(group2, mom2)
+  for m1 in items(mom_list1):
+    for m2 in items(mom_list2):
+      if momt == addSeq(m1, m2):
+        inc(result)
 
-proc numMomentaCombin*(group1: string; group2: string; mom1: seq[cint];
-                      mom2: seq[cint]; momt: seq[cint]): cint =
-  var num: cint = 0
-  var mom_list1: SinglyLinkedList[seq[cint]] = generateLittleGroupMom(group1, mom1)
-  var mom_list2: SinglyLinkedList[seq[cint]] = generateLittleGroupMom(group2, mom2)
-  var iterator1: const_iterator
-  var iterator2: const_iterator
-  iterator1 = mom_list1.begin()
-  while iterator1 != mom_list1.`end`():
-    iterator2 = mom_list2.begin()
-    while iterator2 != mom_list2.`end`():
-      if momt == ((iterator1[]) + (iterator2[])): inc(num)
-      inc(iterator2)
-    inc(iterator1)
-  return num
 
 ## ----------------------------------------------------------------------------------
-## Find posible source 1 and source 2 momentum orientations for fixed target momentum
+proc allowedMomentaCombin*(group1, group2: string;
+                           mom1, mom2, momt: seq[cint],
+                           allowed_mom1, allowed_mom2: var seq[seq[cint]]): int = 
+  ## Find posible source 1 and source 2 momentum orientations for fixed target momentum
+  result = 0
+  allowed_mom1 = newSeq[seq[cint]](0)
+  allowed_mom2 = newSeq[seq[cint]](0)
+  var mom_list1 = generateLittleGroupMom(group1, mom1)
+  var mom_list2 = generateLittleGroupMom(group2, mom2)
+  for m1 in items(mom_list1):
+    for m2 in items(mom_list2):
+      if momt == addSeq(m1,m2):
+        inc(result)
+        allowed_mom1.add(m1)
+        allowed_mom2.add(m2)
 
-proc allowedMomentaCombin*(group1: string; group2: string; mom1: seq[cint];
-                          mom2: seq[cint]; momt: seq[cint];
-                          allowed_mom1: var SinglyLinkedList[seq[cint]];
-                          allowed_mom2: var SinglyLinkedList[seq[cint]]): cint =
-  var num: cint = 0
-  allowed_mom1.clear()
-  allowed_mom2.clear()
-  var mom_list1: SinglyLinkedList[seq[cint]] = generateLittleGroupMom(group1, mom1)
-  var mom_list2: SinglyLinkedList[seq[cint]] = generateLittleGroupMom(group2, mom2)
-  var iterator1: const_iterator
-  var iterator2: const_iterator
-  iterator1 = mom_list1.begin()
-  while iterator1 != mom_list1.`end`():
-    iterator2 = mom_list2.begin()
-    while iterator2 != mom_list2.`end`():
-      if momt == ((iterator1[]) + (iterator2[])):
-        inc(num)
-        allowed_mom1.push_back(iterator1[])
-        allowed_mom2.push_back(iterator2[])
-      nil
-      inc(iterator2)
-    inc(iterator1)
-  return num
 
 ## ----------------------------------------------------------------------------------
-## Generate a canonical combination of momenta for a given target momentum
-
-proc canonMomCombin*(mom1: seq[cint]; mom2: seq[cint]; momt: seq[cint];
-                    canon_mom1: var seq[cint]; canon_mom2: var seq[cint]): cint =
-  var group1: string = generateLittleGroup(mom1)
-  var group2: string = generateLittleGroup(mom2)
-  var groupt: string = generateLittleGroup(momt)
-  var allowed_mom1: SinglyLinkedList[seq[cint]]
-  allowed_mom1.clear()
-  var allowed_mom2: SinglyLinkedList[seq[cint]]
-  allowed_mom2.clear()
-  var normalisation: cint = allowedMomentaCombin(group1, group2, mom1, mom2, momt,
+proc canonMomCombin*(mom1, mom2, momt: seq[cint];
+                     canon_mom1, canon_mom2: var seq[cint]): int =
+  ## Generate a canonical combination of momenta for a given target momentum
+  var group1 = generateLittleGroup(mom1)
+  var group2 = generateLittleGroup(mom2)
+  var groupt = generateLittleGroup(momt)
+  var allowed_mom1: seq[seq[cint]]
+  var allowed_mom2: seq[seq[cint]]
+  var normalisation = allowedMomentaCombin(group1, group2, mom1, mom2, momt,
       allowed_mom1, allowed_mom2)
   if normalisation == 0: return normalisation
   if groupt == "Oh":
     canon_mom1 = referenceMom(mom1)
-    canon_mom2 = - canon_mom1
+    canon_mom2 = canon_mom1
+    for m in mitems(canon_mom2):
+      m = -m
   else:
-    canon_mom1 = allowed_mom1.front()
-    canon_mom2 = allowed_mom2.front()
+    canon_mom1 = allowed_mom1[0]
+    canon_mom2 = allowed_mom2[0]
   return normalisation
 
-## ----------------------------------------------------------------------------------
-## Return rotation angles for a seq to a canonical direction
+import math
 
+## ----------------------------------------------------------------------------------
 proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
+  ## Return rotation angles for a seq to a canonical direction
   var pi: cdouble = 3.14159265359
   ##  Lists of momentum directions
-  var momListD2: ptr array[3, cint] = [[1, 1, 0], [0, 1, 1], [1, 0, 1], [1, - 1, 0], [0, 1, - 1],
+  var momListD2 = [[1, 1, 0], [0, 1, 1], [1, 0, 1], [1, - 1, 0], [0, 1, - 1],
                                  [- 1, 0, 1], [- 1, 1, 0], [0, - 1, 1], [1, 0, - 1],
                                  [- 1, - 1, 0], [0, - 1, - 1], [- 1, 0, - 1]]
-  var dimMomListD2: cint = 12
-  var rotAnglesListD2: ptr array[3, cdouble] = [[1.0 div 4.0, 1.0 div 2.0, 0],
-      [1.0 div 2.0, 1.0 div 4.0, - (1.0 div 2.0)], [0, 1.0 div 4.0, - (1.0 div 2.0)],
-      [- (1.0 div 4.0), 1.0 div 2.0, 0],
-      [- (1.0 div 2.0), - (3.0 div 4.0), - (1.0 div 2.0)],
-      [- 1.0, 1.0 div 4.0, - (1.0 div 2.0)], [- (1.0 div 4.0), - (1.0 div 2.0), 0],
-      [- (1.0 div 2.0), 1.0 div 4.0, - (1.0 div 2.0)], [0, 3.0 div 4.0, - (1.0 div 2.0)],
-      [1.0 div 4.0, - (1.0 div 2.0), 0],
-      [1.0 div 2.0, - (3.0 div 4.0), - (1.0 div 2.0)],
-      [- 1.0, 3.0 div 4.0, - (1.0 div 2.0)]]
+  var dimMomListD2: int = 12
+  var rotAnglesListD2 = [[1.0/4.0, 1.0/2.0, 0.0],
+      [1.0/2.0, 1.0/4.0, - (1.0/2.0)], [0.0, 1.0/4.0, - (1.0/2.0)],
+      [- (1.0/4.0), 1.0/2.0, 0.0],
+      [- (1.0/2.0), - (3.0/4.0), - (1.0/2.0)],
+      [- 1.0, 1.0/4.0, - (1.0/2.0)], [- (1.0/4.0), - (1.0/2.0), 0.0],
+      [- (1.0/2.0), 1.0/4.0, - (1.0/2.0)], [0.0, 3.0/4.0, - (1.0/2.0)],
+      [1.0/4.0, - (1.0/2.0), 0],
+      [1.0/2.0, - (3.0/4.0), - (1.0/2.0)],
+      [- 1.0, 3.0/4.0, - (1.0/2.0)]]
   ##  {phi, theta, psi} in units of pi
-  var momListD3: ptr array[3, cint] = [[1, 1, 1], [- 1, 1, 1], [1, - 1, 1], [1, 1, - 1],
+  var momListD3 = [[1, 1, 1], [- 1, 1, 1], [1, - 1, 1], [1, 1, - 1],
                                  [- 1, - 1, 1], [1, - 1, - 1], [- 1, 1, - 1], [- 1, - 1, - 1]]
-  var dimMomListD3: cint = 8
-  var rotAnglesListD3: ptr array[3, cdouble] = [
-      [pi div 4.0, acos(1 div sqrt(3.0)), 0.0],
-      [(3 * pi) div 4.0, acos(1 div sqrt(3.0)), 0.0],
-      [- (pi div 4.0), acos(1 div sqrt(3.0)), 0.0],
-      [pi div 4.0, acos(- (1 div sqrt(3.0))), - (pi div 3.0)],
-      [(- (3 * pi)) div 4.0, acos(1 div sqrt(3.0)), 0.0],
-      [(3 * pi) div 4.0, - acos(- (1 div sqrt(3.0))), 0.0],
-      [- (pi div 4.0), - acos(- (1 div sqrt(3.0))), 0.0],
-      [pi div 4.0, - acos(- (1 div sqrt(3.0))), 0.0]]
-  var momListC4nm0: ptr array[3, cint] = [[0, 1, 2], [1, 2, 0], [2, 0, 1], [0, 2, 1], [2, 1, 0],
+  var dimMomListD3: int = 8
+  var rotAnglesListD3 = [
+      [pi/4.0, arccos(1/sqrt(3.0)), 0.0],
+      [(3 * pi)/4.0, arccos(1/sqrt(3.0)), 0.0],
+      [- (pi/4.0), arccos(1/sqrt(3.0)), 0.0],
+      [pi/4.0, arccos(- (1/sqrt(3.0))), - (pi/3.0)],
+      [(- (3 * pi))/4.0, arccos(1/sqrt(3.0)), 0.0],
+      [(3 * pi)/4.0, - arccos(- (1/sqrt(3.0))), 0.0],
+      [- (pi/4.0), - arccos(- (1/sqrt(3.0))), 0.0],
+      [pi/4.0, - arccos(- (1/sqrt(3.0))), 0.0]]
+  var momListC4nm0 = [[0, 1, 2], [1, 2, 0], [2, 0, 1], [0, 2, 1], [2, 1, 0],
                                     [1, 0, 2], [0, 1, - 2], [1, - 2, 0], [- 2, 0, 1],
                                     [0, - 2, 1], [- 2, 1, 0], [1, 0, - 2], [0, - 1, 2],
                                     [- 1, 2, 0], [2, 0, - 1], [0, 2, - 1], [2, - 1, 0],
                                     [- 1, 0, 2], [0, - 1, - 2], [- 1, - 2, 0], [- 2, 0, - 1],
                                     [0, - 2, - 1], [- 2, - 1, 0], [- 1, 0, - 2]]
-  var dimMomListC4nm0: cint = 24
-  var rotAnglesListC4nm0: ptr array[3, cdouble] = [
-      [pi div 2.0, acos(2.0 div sqrt(5.0)), 0.0],
-      [- acos(- (1.0 div sqrt(5.0))), - (pi div 2.0), pi div 2.0],
-      [- pi, - acos(1.0 div sqrt(5.0)), 0.0],
-      [- (pi div 2.0), - acos(1.0 div sqrt(5.0)), 0.0],
-      [acos(2.0 div sqrt(5.0)), pi div 2.0, pi div 2.0],
-      [0.0, acos(2.0 div sqrt(5.0)), 0.0],
-      [- (pi div 2.0), - acos(- (2.0 div sqrt(5.0))), 0.0],
-      [- acos(1.0 div sqrt(5.0)), pi div 2.0, pi div 2.0],
-      [0.0, - acos(1.0 div sqrt(5.0)), 0.0],
-      [pi div 2.0, - acos(1.0 div sqrt(5.0)), 0.0],
-      [- acos(2.0 div sqrt(5.0)), - (pi div 2.0), pi div 2.0],
-      [- pi, - acos(- (2.0 div sqrt(5.0))), 0.0],
-      [- (pi div 2.0), acos(2.0 div sqrt(5.0)), 0.0],
-      [acos(- (1.0 div sqrt(5.0))), pi div 2.0, pi div 2.0],
-      [0.0, acos(- (1.0 div sqrt(5.0))), 0.0],
-      [pi div 2.0, acos(- (1.0 div sqrt(5.0))), 0.0],
-      [acos(- (2.0 div sqrt(5.0))), - (pi div 2.0), pi div 2.0],
-      [- pi, acos(2.0 div sqrt(5.0)), 0.0],
-      [pi div 2.0, - acos(- (2.0 div sqrt(5.0))), 0.0],
-      [acos(1.0 div sqrt(5.0)), - (pi div 2.0), pi div 2.0],
-      [- pi, acos(- (1.0 div sqrt(5.0))), 0.0],
-      [- (pi div 2.0), acos(- (1.0 div sqrt(5.0))), 0.0],
-      [- acos(- (2.0 div sqrt(5.0))), pi div 2.0, pi div 2.0],
-      [0.0, - acos(- (2.0 div sqrt(5.0))), 0.0]]
-  var momListC4nnm: ptr array[3, cint] = [[1, 1, 2], [1, 2, 1], [2, 1, 1], [- 1, 1, 2],
+  var dimMomListC4nm0: int = 24
+  var rotAnglesListC4nm0 = [
+      [pi/2.0, arccos(2.0/sqrt(5.0)), 0.0],
+      [- arccos(- (1.0/sqrt(5.0))), - (pi/2.0), pi/2.0],
+      [- pi, - arccos(1.0/sqrt(5.0)), 0.0],
+      [- (pi/2.0), - arccos(1.0/sqrt(5.0)), 0.0],
+      [arccos(2.0/sqrt(5.0)), pi/2.0, pi/2.0],
+      [0.0, arccos(2.0/sqrt(5.0)), 0.0],
+      [- (pi/2.0), - arccos(- (2.0/sqrt(5.0))), 0.0],
+      [- arccos(1.0/sqrt(5.0)), pi/2.0, pi/2.0],
+      [0.0, - arccos(1.0/sqrt(5.0)), 0.0],
+      [pi/2.0, - arccos(1.0/sqrt(5.0)), 0.0],
+      [- arccos(2.0/sqrt(5.0)), - (pi/2.0), pi/2.0],
+      [- pi, - arccos(- (2.0/sqrt(5.0))), 0.0],
+      [- (pi/2.0), arccos(2.0/sqrt(5.0)), 0.0],
+      [arccos(- (1.0/sqrt(5.0))), pi/2.0, pi/2.0],
+      [0.0, arccos(- (1.0/sqrt(5.0))), 0.0],
+      [pi/2.0, arccos(- (1.0/sqrt(5.0))), 0.0],
+      [arccos(- (2.0/sqrt(5.0))), - (pi/2.0), pi/2.0],
+      [- pi, arccos(2.0/sqrt(5.0)), 0.0],
+      [pi/2.0, - arccos(- (2.0/sqrt(5.0))), 0.0],
+      [arccos(1.0/sqrt(5.0)), - (pi/2.0), pi/2.0],
+      [- pi, arccos(- (1.0/sqrt(5.0))), 0.0],
+      [- (pi/2.0), arccos(- (1.0/sqrt(5.0))), 0.0],
+      [- arccos(- (2.0/sqrt(5.0))), pi/2.0, pi/2.0],
+      [0.0, - arccos(- (2.0/sqrt(5.0))), 0.0]]
+  var momListC4nnm = [[1, 1, 2], [1, 2, 1], [2, 1, 1], [- 1, 1, 2],
                                     [- 1, 2, 1], [1, - 1, 2], [1, 2, - 1], [2, - 1, 1],
                                     [2, 1, - 1], [1, 1, - 2], [1, - 2, 1], [- 2, 1, 1],
                                     [- 1, - 1, 2], [- 1, 2, - 1], [2, - 1, - 1], [- 1, 1, - 2],
                                     [- 1, - 2, 1], [1, - 1, - 2], [1, - 2, - 1], [- 2, - 1, 1],
                                     [- 2, 1, - 1], [- 1, - 1, - 2], [- 1, - 2, - 1],
                                     [- 2, - 1, - 1]]
-  var dimMomListC4nnm: cint = 24
-  var rotAnglesListC4nnm: ptr array[3, cdouble] = [
-      [(- (3.0 * pi)) div 4.0, - acos(sqrt(2.0 div 3.0)), 0.0], [
-      - acos(- (1.0 div sqrt(5.0))), - acos(1.0 div sqrt(6.0)),
-      pi div 2.0 + acos(- sqrt(3.0 div 5.0))], [acos(2.0 div sqrt(5.0)),
-                                        acos(1.0 div sqrt(6.0)),
-                                        pi div 2.0 - acos(- sqrt(3.0 div 5.0))],
-      [- (pi div 4.0), - acos(sqrt(2.0 div 3.0)), 0.0], [acos(- (1.0 div sqrt(5.0))),
-      acos(1.0 div sqrt(6.0)), pi div 2.0 - acos(- sqrt(3.0 div 5.0))],
-      [(3.0 * pi) div 4.0, - acos(sqrt(2.0 div 3.0)), 0.0], [
-      - acos(- (1.0 div sqrt(5.0))), - acos(- (1.0 div sqrt(6.0))),
-      pi div 2.0 - acos(- sqrt(3.0 div 5.0))], [acos(- (2.0 div sqrt(5.0))),
-                                        - acos(1.0 div sqrt(6.0)),
-                                        pi div 2.0 + acos(- sqrt(3.0 div 5.0))], [
-      acos(2.0 div sqrt(5.0)), acos(- (1.0 div sqrt(6.0))),
-      pi div 2.0 + acos(- sqrt(3.0 div 5.0))],
-      [pi div 4.0, acos(- sqrt(2.0 div 3.0)), 0.0], [- acos(1.0 div sqrt(5.0)),
-      acos(1.0 div sqrt(6.0)), pi div 2.0 - acos(- sqrt(3.0 div 5.0))], [
-      - acos(2.0 div sqrt(5.0)), - acos(1.0 div sqrt(6.0)),
-      pi div 2.0 + acos(- sqrt(3.0 div 5.0))],
-      [pi div 4.0, - acos(sqrt(2.0 div 3.0)), 0.0], [acos(- (1.0 div sqrt(5.0))),
-      acos(- (1.0 div sqrt(6.0))), pi div 2.0 + acos(- sqrt(3.0 div 5.0))], [
-      acos(- (2.0 div sqrt(5.0))), - acos(- (1.0 div sqrt(6.0))),
-      pi div 2.0 - acos(- sqrt(3.0 div 5.0))],
-      [(3.0 * pi) div 4.0, acos(- sqrt(2.0 div 3.0)), 0.0], [acos(1.0 div sqrt(5.0)),
-      - acos(1.0 div sqrt(6.0)), pi div 2.0 + acos(- sqrt(3.0 div 5.0))],
-      [- (pi div 4.0), acos(- sqrt(2.0 div 3.0)), 0.0], [- acos(1.0 div sqrt(5.0)),
-      acos(- (1.0 div sqrt(6.0))), pi div 2.0 + acos(- sqrt(3.0 div 5.0))], [
-      - acos(- (2.0 div sqrt(5.0))), acos(1.0 div sqrt(6.0)),
-      pi div 2.0 - acos(- sqrt(3.0 div 5.0))], [- acos(2.0 div sqrt(5.0)),
-                                        - acos(- (1.0 div sqrt(6.0))),
-                                        pi div 2.0 - acos(- sqrt(3.0 div 5.0))],
-      [(- (3.0 * pi)) div 4.0, acos(- sqrt(2.0 div 3.0)), 0.0], [acos(1.0 div sqrt(5.0)),
-      - acos(- (1.0 div sqrt(6.0))), pi div 2.0 - acos(- sqrt(3.0 div 5.0))], [
-      - acos(- (2.0 div sqrt(5.0))), acos(- (1.0 div sqrt(6.0))),
-      pi div 2.0 + acos(- sqrt(3.0 div 5.0))]]
-  var momListC4nnm113: ptr array[3, cint] = [[1, 1, 3], [1, 3, 1], [3, 1, 1], [- 1, 1, 3],
+  var dimMomListC4nnm: int = 24
+  var rotAnglesListC4nnm = [
+      [(- (3.0 * pi))/4.0, - arccos(sqrt(2.0/3.0)), 0.0], [
+      - arccos(- (1.0/sqrt(5.0))), - arccos(1.0/sqrt(6.0)),
+      pi/2.0 + arccos(- sqrt(3.0/5.0))], [arccos(2.0/sqrt(5.0)),
+                                        arccos(1.0/sqrt(6.0)),
+                                        pi/2.0 - arccos(- sqrt(3.0/5.0))],
+      [- (pi/4.0), - arccos(sqrt(2.0/3.0)), 0.0], [arccos(- (1.0/sqrt(5.0))),
+      arccos(1.0/sqrt(6.0)), pi/2.0 - arccos(- sqrt(3.0/5.0))],
+      [(3.0 * pi)/4.0, - arccos(sqrt(2.0/3.0)), 0.0], [
+      - arccos(- (1.0/sqrt(5.0))), - arccos(- (1.0/sqrt(6.0))),
+      pi/2.0 - arccos(- sqrt(3.0/5.0))], [arccos(- (2.0/sqrt(5.0))),
+                                        - arccos(1.0/sqrt(6.0)),
+                                        pi/2.0 + arccos(- sqrt(3.0/5.0))], [
+      arccos(2.0/sqrt(5.0)), arccos(- (1.0/sqrt(6.0))),
+      pi/2.0 + arccos(- sqrt(3.0/5.0))],
+      [pi/4.0, arccos(- sqrt(2.0/3.0)), 0.0], [- arccos(1.0/sqrt(5.0)),
+      arccos(1.0/sqrt(6.0)), pi/2.0 - arccos(- sqrt(3.0/5.0))], [
+      - arccos(2.0/sqrt(5.0)), - arccos(1.0/sqrt(6.0)),
+      pi/2.0 + arccos(- sqrt(3.0/5.0))],
+      [pi/4.0, - arccos(sqrt(2.0/3.0)), 0.0], [arccos(- (1.0/sqrt(5.0))),
+      arccos(- (1.0/sqrt(6.0))), pi/2.0 + arccos(- sqrt(3.0/5.0))], [
+      arccos(- (2.0/sqrt(5.0))), - arccos(- (1.0/sqrt(6.0))),
+      pi/2.0 - arccos(- sqrt(3.0/5.0))],
+      [(3.0 * pi)/4.0, arccos(- sqrt(2.0/3.0)), 0.0], [arccos(1.0/sqrt(5.0)),
+      - arccos(1.0/sqrt(6.0)), pi/2.0 + arccos(- sqrt(3.0/5.0))],
+      [- (pi/4.0), arccos(- sqrt(2.0/3.0)), 0.0], [- arccos(1.0/sqrt(5.0)),
+      arccos(- (1.0/sqrt(6.0))), pi/2.0 + arccos(- sqrt(3.0/5.0))], [
+      - arccos(- (2.0/sqrt(5.0))), arccos(1.0/sqrt(6.0)),
+      pi/2.0 - arccos(- sqrt(3.0/5.0))], [- arccos(2.0/sqrt(5.0)),
+                                        - arccos(- (1.0/sqrt(6.0))),
+                                        pi/2.0 - arccos(- sqrt(3.0/5.0))],
+      [(- (3.0 * pi))/4.0, arccos(- sqrt(2.0/3.0)), 0.0], [arccos(1.0/sqrt(5.0)),
+      - arccos(- (1.0/sqrt(6.0))), pi/2.0 - arccos(- sqrt(3.0/5.0))], [
+      - arccos(- (2.0/sqrt(5.0))), arccos(- (1.0/sqrt(6.0))),
+      pi/2.0 + arccos(- sqrt(3.0/5.0))]]
+  var momListC4nnm113 = [[1, 1, 3], [1, 3, 1], [3, 1, 1], [- 1, 1, 3],
                                        [- 1, 3, 1], [1, - 1, 3], [1, 3, - 1], [3, - 1, 1],
                                        [3, 1, - 1], [1, 1, - 3], [1, - 3, 1], [- 3, 1, 1],
                                        [- 1, - 1, 3], [- 1, 3, - 1], [3, - 1, - 1],
                                        [- 1, 1, - 3], [- 1, - 3, 1], [1, - 1, - 3],
                                        [1, - 3, - 1], [- 3, - 1, 1], [- 3, 1, - 1],
                                        [- 1, - 1, - 3], [- 1, - 3, - 1], [- 3, - 1, - 1]]
-  var rotAnglesListC4nnm113: ptr array[3, cdouble] = [
-      [(- (3 * pi)) div 4.0, - atan(sqrt(2) div 3.0), 0],
-      [atan(3), atan(sqrt(10)), atan(sqrt(11) div 3.0)],
-      [atan(1.0 div 3.0), atan(sqrt(10)), - atan(sqrt(11) div 3.0)],
-      [- (pi div 4.0), - atan(sqrt(2) div 3.0), 0],
-      [- atan(3), - atan(sqrt(10)), pi - atan(sqrt(11) div 3.0)],
-      [- (pi div 4.0), atan(sqrt(2) div 3.0), pi],
-      [atan(3), pi - atan(sqrt(10)), pi - atan(sqrt(11) div 3.0)],
-      [- atan(1.0 div 3.0), atan(sqrt(10)), atan(sqrt(11) div 3.0)],
-      [atan(1.0 div 3.0), pi - atan(sqrt(10)), - pi + atan(sqrt(11) div 3.0)],
-      [(- (3 * pi)) div 4.0, - pi + atan(sqrt(2) div 3.0), pi],
-      [- atan(3), atan(sqrt(10)), - atan(sqrt(11) div 3.0)],
-      [- atan(1.0 div 3.0), - atan(sqrt(10)), - pi + atan(sqrt(11) div 3.0)],
-      [(- (3 * pi)) div 4.0, atan(sqrt(2) div 3.0), pi],
-      [- atan(3), - pi + atan(sqrt(10)), atan(sqrt(11) div 3.0)],
-      [- atan(1.0 div 3.0), pi - atan(sqrt(10)), pi - atan(sqrt(11) div 3.0)],
-      [- (pi div 4.0), - pi + atan(sqrt(2) div 3.0), pi],
-      [atan(3), - atan(sqrt(10)), - pi + atan(sqrt(11) div 3.0)],
-      [- (pi div 4.0), pi - atan(sqrt(2) div 3.0), 0],
-      [- atan(3), pi - atan(sqrt(10)), - pi + atan(sqrt(11) div 3.0)],
-      [atan(1.0 div 3.0), - atan(sqrt(10)), pi - atan(sqrt(11) div 3.0)],
-      [- atan(1.0 div 3.0), - pi + atan(sqrt(10)), - atan(sqrt(11) div 3.0)],
-      [(- (3 * pi)) div 4.0, pi - atan(sqrt(2) div 3.0), 0],
-      [atan(3), - pi + atan(sqrt(10)), - atan(sqrt(11) div 3.0)],
-      [atan(1.0 div 3.0), - pi + atan(sqrt(10)), atan(sqrt(11) div 3.0)]]
-  var momMag: cdouble = sqrt(pow(double(mom[0]), 2) + pow(double(mom[1]), 2) +
-      pow(double(mom[2]), 2))
+  var rotAnglesListC4nnm113 = [
+      [(- (3 * pi))/4.0, - arctan(sqrt(2.0)/3.0), 0],
+      [arctan(3.0), arctan(sqrt(10.0)), arctan(sqrt(11.0)/3.0)],
+      [arctan(1.0/3.0), arctan(sqrt(10.0)), - arctan(sqrt(11.0)/3.0)],
+      [- (pi/4.0), - arctan(sqrt(2.0)/3.0), 0],
+      [- arctan(3.0), - arctan(sqrt(10.0)), pi - arctan(sqrt(11.0)/3.0)],
+      [- (pi/4.0), arctan(sqrt(2.0)/3.0), pi],
+      [arctan(3.0), pi - arctan(sqrt(10.0)), pi - arctan(sqrt(11.0)/3.0)],
+      [- arctan(1.0/3.0), arctan(sqrt(10.0)), arctan(sqrt(11.0)/3.0)],
+      [arctan(1.0/3.0), pi - arctan(sqrt(10.0)), - pi + arctan(sqrt(11.0)/3.0)],
+      [(- (3 * pi))/4.0, - pi + arctan(sqrt(2.0)/3.0), pi],
+      [- arctan(3.0), arctan(sqrt(10.0)), - arctan(sqrt(11.0)/3.0)],
+      [- arctan(1.0/3.0), - arctan(sqrt(10.0)), - pi + arctan(sqrt(11.0)/3.0)],
+      [(- (3 * pi))/4.0, arctan(sqrt(2.0)/3.0), pi],
+      [- arctan(3.0), - pi + arctan(sqrt(10.0)), arctan(sqrt(11.0)/3.0)],
+      [- arctan(1.0/3.0), pi - arctan(sqrt(10.0)), pi - arctan(sqrt(11.0)/3.0)],
+      [- (pi/4.0), - pi + arctan(sqrt(2.0)/3.0), pi],
+      [arctan(3.0), - arctan(sqrt(10.0)), - pi + arctan(sqrt(11.0)/3.0)],
+      [- (pi/4.0), pi - arctan(sqrt(2.0)/3.0), 0],
+      [- arctan(3.0), pi - arctan(sqrt(10.0)), - pi + arctan(sqrt(11.0)/3.0)],
+      [arctan(1.0/3.0), - arctan(sqrt(10.0)), pi - arctan(sqrt(11.0)/3.0)],
+      [- arctan(1.0/3.0), - pi + arctan(sqrt(10.0)), - arctan(sqrt(11.0)/3.0)],
+      [(- (3 * pi))/4.0, pi - arctan(sqrt(2.0)/3.0), 0],
+      [arctan(3.0), - pi + arctan(sqrt(10.0)), - arctan(sqrt(11.0)/3.0)],
+      [arctan(1.0/3.0), - pi + arctan(sqrt(10.0)), arctan(sqrt(11.0)/3.0)]]
+  var momMag: cdouble = sqrt(pow(cdouble(mom[0]), 2) + pow(cdouble(mom[1]), 2) +
+      pow(cdouble(mom[2]), 2))
   var alpha: cdouble = 0.0
   var beta: cdouble = 0.0
   var gamma: cdouble = 0.0
   var littleGroup: string = generateLittleGroup(mom)
   if littleGroup == "D4":
-    alpha = atan2(double(mom[1]), double(mom[0]))
-    beta = acos(double(mom[2]) div momMag)
+    alpha = arctan2(cdouble(mom[1]), cdouble(mom[0]))
+    beta = arccos(cdouble(mom[2])/momMag)
     gamma = 0.0
   elif littleGroup == "D2":
-    var momIndex: cint = - 1
-    var i: cint = 0
+    var momIndex: int = - 1
+    var i: int = 0
     while i < dimMomListD2:
-      if (momListD2[i][0] == int(double(mom[0]) * sqrt(2.0) div momMag)) and
-          (momListD2[i][1] == int(double(mom[1]) * sqrt(2.0) div momMag)) and
-          (momListD2[i][2] == int(double(mom[2]) * sqrt(2.0) div momMag)):
+      if (momListD2[i][0] == int(cdouble(mom[0]) * sqrt(2.0)/momMag)) and
+          (momListD2[i][1] == int(cdouble(mom[1]) * sqrt(2.0)/momMag)) and
+          (momListD2[i][2] == int(cdouble(mom[2]) * sqrt(2.0)/momMag)):
         alpha = rotAnglesListD2[i][0] * pi
         beta = rotAnglesListD2[i][1] * pi
         gamma = rotAnglesListD2[i][2] * pi
@@ -811,16 +698,15 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
         break
       inc(i)
     if momIndex < 0:
-      cerr shl __func__ shl ": ERROR: can\'t find match for LG= " shl littleGroup shl
-          "  and momentum " shl mom[0] shl " " shl mom[1] shl " " shl mom[2] shl "\x0A"
-      exit(1)
+      quit(": ERROR: cannot find match for LG= " & littleGroup & "  and momentum " &
+           $mom[0] & " " & $mom[1] & " " & $mom[2])
   elif littleGroup == "D3":
-    var momIndex: cint = - 1
-    var i: cint = 0
+    var momIndex: int = - 1
+    var i: int = 0
     while i < dimMomListD3:
-      if (momListD3[i][0] == int(double(mom[0]) * sqrt(3.0) div momMag)) and
-          (momListD3[i][1] == int(double(mom[1]) * sqrt(3.0) div momMag)) and
-          (momListD3[i][2] == int(double(mom[2]) * sqrt(3.0) div momMag)):
+      if (momListD3[i][0] == int(cdouble(mom[0]) * sqrt(3.0)/momMag)) and
+          (momListD3[i][1] == int(cdouble(mom[1]) * sqrt(3.0)/momMag)) and
+          (momListD3[i][2] == int(cdouble(mom[2]) * sqrt(3.0)/momMag)):
         ## 		std::cout << __func__ << ": momentum direction " << momListD3[i][0] << momListD3[i][1] << momListD3[i][2] << "\n";
         alpha = rotAnglesListD3[i][0]
         beta = rotAnglesListD3[i][1]
@@ -829,16 +715,15 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
         break
       inc(i)
     if momIndex < 0:
-      cerr shl __func__ shl ": ERROR: can\'t find match for LG= " shl littleGroup shl
-          "  and momentum " shl mom[0] shl " " shl mom[1] shl " " shl mom[2] shl "\x0A"
-      exit(1)
+      quit(": ERROR: cannot find match for LG= " & littleGroup &
+        "  and momentum " & $mom[0] & " " & $mom[1] & " " & $mom[2])
   elif littleGroup == "C4nm0":
-    var momIndex: cint = - 1
-    var i: cint = 0
+    var momIndex: int = - 1
+    var i: int = 0
     while i < dimMomListC4nm0:
-      if (momListC4nm0[i][0] == int(double(mom[0]) * sqrt(5.0) div momMag)) and
-          (momListC4nm0[i][1] == int(double(mom[1]) * sqrt(5.0) div momMag)) and
-          (momListC4nm0[i][2] == int(double(mom[2]) * sqrt(5.0) div momMag)):
+      if (momListC4nm0[i][0] == int(cdouble(mom[0]) * sqrt(5.0)/momMag)) and
+          (momListC4nm0[i][1] == int(cdouble(mom[1]) * sqrt(5.0)/momMag)) and
+          (momListC4nm0[i][2] == int(cdouble(mom[2]) * sqrt(5.0)/momMag)):
         ## 		std::cout << __func__ << ": momentum direction " << momListC4nm0[i][0] << momListC4nm0[i][1] << momListC4nm0[i][2] << "\n";
         alpha = rotAnglesListC4nm0[i][0]
         beta = rotAnglesListC4nm0[i][1]
@@ -847,25 +732,24 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
         break
       inc(i)
     if momIndex < 0:
-      cerr shl __func__ shl ": ERROR: can\'t find match for LG= " shl littleGroup shl
-          "  and momentum " shl mom[0] shl " " shl mom[1] shl " " shl mom[2] shl "\x0A"
-      exit(1)
+      quit(": ERROR: cannot find match for LG= " & littleGroup &
+        "  and momentum " & $mom[0] & " " & $mom[1] & " " & $mom[2])
   elif littleGroup == "C4nnm":
-    var momIndex: cint = - 1
-    var i: cint = 0
+    var momIndex: int = - 1
+    var i: int = 0
     while i < dimMomListC4nnm:
-      if (momListC4nnm[i][0] == int(double(mom[0]) * sqrt(6.0) div momMag)) and
-          (momListC4nnm[i][1] == int(double(mom[1]) * sqrt(6.0) div momMag)) and
-          (momListC4nnm[i][2] == int(double(mom[2]) * sqrt(6.0) div momMag)):
+      if (momListC4nnm[i][0] == int(cdouble(mom[0]) * sqrt(6.0)/momMag)) and
+          (momListC4nnm[i][1] == int(cdouble(mom[1]) * sqrt(6.0)/momMag)) and
+          (momListC4nnm[i][2] == int(cdouble(mom[2]) * sqrt(6.0)/momMag)):
         ## std::cout << __func__ << ": momentum direction " << momListC4nnm[i][0] << momListC4nnm[i][1] << momListC4nnm[i][2] << "\n";
         alpha = rotAnglesListC4nnm[i][0]
         beta = rotAnglesListC4nnm[i][1]
         gamma = rotAnglesListC4nnm[i][2]
         momIndex = i
         break
-      elif (momListC4nnm113[i][0] == int(double(mom[0]) * sqrt(11.0) div momMag)) and
-          (momListC4nnm113[i][1] == int(double(mom[1]) * sqrt(11.0) div momMag)) and
-          (momListC4nnm113[i][2] == int(double(mom[2]) * sqrt(11.0) div momMag)): ##  Momenta proportional to 113 etc
+      elif (momListC4nnm113[i][0] == int(cdouble(mom[0]) * sqrt(11.0)/momMag)) and
+          (momListC4nnm113[i][1] == int(cdouble(mom[1]) * sqrt(11.0)/momMag)) and
+          (momListC4nnm113[i][2] == int(cdouble(mom[2]) * sqrt(11.0)/momMag)): ##  Momenta proportional to 113 etc
         ## std::cout << __func__ << ": momentum direction " << momListC4nnm113[i][0] << momListC4nnm113[i][1] << momListC4nnm113[i][2] << "\n";
         alpha = rotAnglesListC4nnm113[i][0]
         beta = rotAnglesListC4nnm113[i][1]
@@ -874,13 +758,10 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
         break
       inc(i)
     if momIndex < 0:
-      cerr shl __func__ shl ": ERROR: can\'t find match for LG= " shl littleGroup shl
-          "  and momentum " shl mom[0] shl " " shl mom[1] shl " " shl mom[2] shl "\x0A"
-      exit(1)
+      quit(": ERROR: cannot find match for LG= " & littleGroup &
+          "  and momentum " & $mom[0] & " " & $mom[1] & " " & $mom[2])
   else:
-    cerr shl __func__ shl ": ERROR: unsupported momentum " shl mom[0] shl " " shl
-        mom[1] shl " " shl mom[2] shl "\x0A"
-    exit(1)
+    quit(": ERROR: unsupported momentum " & $mom[0] & " " & $mom[1] & " " & $mom[2])
   ##     std::cout << "alpha= " << alpha << ", beta= " << beta << ", gamma= " << gamma << "\n";
   var rot: CubicCanonicalRotation_t
   rot.alpha = alpha
@@ -889,70 +770,61 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
   return rot
 
 ## ----------------------------------------------------------------------------
-##  Build a short version of momentum
-
 proc shortMom*(mom: seq[cint]): string =
-  var os: ostringstream
-  os shl mom[0] shl mom[1] shl mom[2]
-  return os.str()
+  ##  Build a short version of momentum
+  result = $mom[0] & $mom[1] & $mom[2]
 
 ## ----------------------------------------------------------------------------
-## Irrep names (not including LG) with momentum used for opLists
-## Turns [D4A1, Array(1,0,0)]  ->  100_A1
-
 proc momIrrepName*(irrep: string; mom: seq[cint]): string =
-  var f: string = shortMom(mom) + "_" + removeIrrepLG(irrep)
-  return f
+  ## Irrep names (not including LG) with momentum used for opLists
+  ## Turns [D4A1, Array(1,0,0)]  ->  100_A1
+  result = shortMom(mom) & "_" & removeIrrepLG(irrep)
 
 ## ----------------------------------------------------------------------------
-## Inverse of momIrrepName. Turn an opList name back into irrep names (including LG) and momentum
-## Turns 100_A1 ->  [D4A1, Array(1,0,0)]
+type
+  IrrepMom_t* = tuple[rep: string, mom: seq[cint]]  ## Meant for datatypes  [D4A1, Array(1,0,0)]
 
-proc opListToIrrepMom*(mom_irrep_name: string): pair[string, seq[cint]] =
-  var mom_str: string = mom_irrep_name.substr(0, 3)
-  var rep: string = mom_irrep_name.substr(4, npos)
-  var mom: seq[cint]
-  mom.resize(3)
-  mom[0] = stoi(mom_str.substr(0, 1))
-  mom[1] = stoi(mom_str.substr(1, 1))
-  mom[2] = stoi(mom_str.substr(2, 1))
-  var lg: string = generateLittleGroup(mom)
-  var f: string
+proc opListToIrrepMom*(mom_irrep_name: string): IrrepMom_t =
+  ## Inverse of momIrrepName. Turn an opList name back into irrep names (including LG) and momentum
+  ## Turns 100_A1 ->  [D4A1, Array(1,0,0)]
+  var rep = mom_irrep_name
+  rep.delete(0,3)
+  result.mom = Mom3d(parseInt($mom_irrep_name[0]),
+                     parseInt($mom_irrep_name[1]),
+                     parseInt($mom_irrep_name[2]))
+  var lg = generateLittleGroup(result.mom)
   if lg == "Oh":
-    f = removeIrrepLG(rep)
+    result.rep = removeIrrepLG(result.rep)
   else:
-    f = lg + removeIrrepLG(rep)
-  return make_pair(f, mom)
+    result.rep = lg & removeIrrepLG(result.rep)
+
 
 ## ----------------------------------------------------------------------------------
-##  Check group elem is within allowed range
-
-proc checkIndexLimit*(el: cint; dd: cint) =
+proc checkIndexLimit*(el: int; dd: int) =
+  ##  Check group elem is within allowed range
   if (el < 1) or (el > dd):
-    cerr shl __func__ shl ": ERROR: index= " shl el shl
-        " is outside range of 1-based elements, dimension= " shl dd shl "\x0A"
-    exit(1)
+    quit(": ERROR: index= " & $el & " is outside range of 1-based elements, dimension= " & $dd)
+
 
 ## ----------------------------------------------------------------------------------
-## Conventional reference mom (for CGs) - not the same as canonical mom
-
 proc referenceMom*(mom: seq[cint]): seq[cint] =
-  var group: string = generateLittleGroup(mom)
-  var momCan: seq[cint] = canonicalOrder(mom)
-  var momRef: seq[cint] = Mom3d(0, 0, 0)
+  ## Conventional reference mom (for CGs) - not the same as canonical mom
+  var group = generateLittleGroup(mom)
+  var momCan = canonicalOrder(mom)
+  var momRef = Mom3d(0, 0, 0)
   if group == "Oh":
     momRef = mom
   elif group == "D4":            ##  n00 -> 00n
-    var n: cint = momCan[0]
+    var n: int = momCan[0]
     momRef = Mom3d(0, 0, n)
   elif group == "D2":            ##  nn0 -> 0nn
-    var n: cint = momCan[0]
+    var n: int = momCan[0]
     momRef = Mom3d(0, n, n)
   elif group == "D3":            ##  nnn -> nnn
     momRef = momCan
   elif group == "C4nm0":         ##  nm0 -> 0mn
-    var n: cint = momCan[0]
-    var m: cint = momCan[1]
+    var n: int = momCan[0]
+    var m: int = momCan[1]
     momRef = Mom3d(0, m, n)
   elif group == "C4nnm":         ##  nnm/mnn -> nnm
     var n: cint = 0
@@ -967,38 +839,33 @@ proc referenceMom*(mom: seq[cint]): seq[cint] =
   elif group == "C2":            ##  nmp
     momRef = momCan
   else:
-    cerr shl __func__ shl ": ERROR: unknown group= " shl group shl " for mom= " shl
-        mom shl "\x0A"
-    exit(1)
+    quit(": ERROR: unknown group= " & group & " for mom= " & $mom)
   return momRef
 
 ## ----------------------------------------------------------------------------------
-## Scale momentum to get to form 100, 110, 111, 210, 221 or 321
-
 proc scaleMom*(mom: seq[cint]): seq[cint] =
-  var group: string = generateLittleGroup(mom)
-  var momCan: seq[cint] = canonicalOrder(mom)
-  var scaled_mom: seq[cint] = Mom3d(0, 0, 0)
+  ## Scale momentum to get to form 100, 110, 111, 210, 221 or 321
+  var group = generateLittleGroup(mom)
+  var momCan = canonicalOrder(mom)
+  var scaled_mom = Mom3d(0, 0, 0)
   if group == "Oh":
     scaled_mom = mom
   elif (group == "D4") or (group == "D3") or (group == "D2"): ##  n00,nn0,nnn -> 100,110,111
-    var n: cint = momCan[0]
-    scaled_mom = mom div n
+    var n = momCan[0]
+    scaled_mom = divSeq(mom,n)
   elif group == "C4nm0":         ##  nm0 -> 210
-    var n: cint = momCan[0]
-    var m: cint = momCan[1]
-    var i: cint = 0
+    var n = momCan[0]
+    var m = momCan[1]
+    var i = 0
     while i < 3:
       if abs(mom[i]) == n:
-        scaled_mom[i] = 2 * mom[i] div n
+        scaled_mom[i] = 2 * (mom[i] div n)
       elif abs(mom[i]) == m:
-        scaled_mom[i] = 1 * mom[i] div m
+        scaled_mom[i] = 1 * (mom[i] div m)
       elif mom[i] == 0:
         scaled_mom[i] = 0
       else:
-        cerr shl __func__ shl
-            ": ERROR: shouldn\'t reach here - something is broken" shl "\x0A"
-        exit(1)
+        quit(": ERROR: shouldnot reach here - something is broken")
       inc(i)
   elif group == "C4nnm":         ##  nnm -> 221
     var n: cint = 0
@@ -1009,73 +876,62 @@ proc scaleMom*(mom: seq[cint]): seq[cint] =
     else:
       n = momCan[1]
       m = momCan[0]
-    var i: cint = 0
+    var i: int = 0
     while i < 3:
       if abs(mom[i]) == n:
-        scaled_mom[i] = 2 * mom[i] div n
+        scaled_mom[i] = 2 * (mom[i] div n)
       elif abs(mom[i]) == m:
-        scaled_mom[i] = 1 * mom[i] div m
+        scaled_mom[i] = 1 * (mom[i] div m)
       elif mom[i] == 0:
         scaled_mom[i] = 0
       else:
-        cerr shl __func__ shl
-            ": ERROR: shouldn\'t reach here - something is broken" shl "\x0A"
-        exit(1)
+        quit(": ERROR: shouldnot reach here - something is broken")
       inc(i)
   elif group == "C2":            ##  nmp -> 321
-    var n: cint = momCan[0]
-    var m: cint = momCan[1]
-    var p: cint = momCan[2]
-    var i: cint = 0
+    var n = momCan[0]
+    var m = momCan[1]
+    var p = momCan[2]
+    var i: int = 0
     while i < 3:
       if abs(mom[i]) == n:
-        scaled_mom[i] = 3 * mom[i] div n
+        scaled_mom[i] = 3 * (mom[i] div n)
       elif abs(mom[i]) == m:
-        scaled_mom[i] = 2 * mom[i] div m
+        scaled_mom[i] = 2 * (mom[i] div m)
       elif abs(mom[i]) == p:
-        scaled_mom[i] = 1 * mom[i] div p
+        scaled_mom[i] = 1 * (mom[i] div p)
       else:
-        cerr shl __func__ shl
-            ": ERROR: shouldn\'t reach here - something is broken" shl "\x0A"
-        exit(1)
+        quit(": ERROR: shouldnot reach here - something is broken")
       inc(i)
   else:
-    cerr shl __func__ shl ": ERROR: unknown group= " shl group shl " for mom= " shl
-        mom shl "\x0A"
-    exit(1)
+    quit(": ERROR: unknown group= " & group & " for mom= " & $mom)
   return scaled_mom
 
 ## ----------------------------------------------------------------------------------
-## Unscale momentum from form 100, 110, 111, 210, 221 or 321
-
 proc unscaleMom*(scaled_mom: seq[cint]; mom: seq[cint]): seq[cint] =
+  ## Unscale momentum from form 100, 110, 111, 210, 221 or 321
   var group: string = generateLittleGroup(mom)
   if group != generateLittleGroup(scaled_mom):
-    cerr shl __func__ shl ": ERROR: scaled_mom= " shl scaled_mom shl
-        " is not consistent with mom= " shl mom shl "\x0A"
-    exit(1)
-  var momCan: seq[cint] = canonicalOrder(mom)
-  var unscaled_mom: seq[cint] = Mom3d(0, 0, 0)
+    quit(": ERROR: scaled_mom= " & $scaled_mom & " is not consistent with mom= " & $mom)
+  var momCan = canonicalOrder(mom)
+  var unscaled_mom = Mom3d(0, 0, 0)
   if group == "Oh":
     unscaled_mom = mom
   elif (group == "D4") or (group == "D3") or (group == "D2"): ##  100,110,111 -> n00,nn0,nnn
-    var n: cint = momCan[0]
-    unscaled_mom = scaled_mom * n
+    var n = momCan[0]
+    unscaled_mom = multSeq(scaled_mom,n)
   elif group == "C4nm0":         ##  210 -> nm0
-    var n: cint = momCan[0]
-    var m: cint = momCan[1]
-    var i: cint = 0
+    var n = momCan[0]
+    var m = momCan[1]
+    var i: int = 0
     while i < 3:
       if abs(scaled_mom[i]) == 2:
-        unscaled_mom[i] = n * scaled_mom[i] div 2
+        unscaled_mom[i] = n * (scaled_mom[i] div 2)
       elif abs(scaled_mom[i]) == 1:
-        unscaled_mom[i] = m * scaled_mom[i] div 1
+        unscaled_mom[i] = m * (scaled_mom[i] div 1)
       elif scaled_mom[i] == 0:
         unscaled_mom[i] = 0
       else:
-        cerr shl __func__ shl
-            ": ERROR: shouldn\'t reach here - something is broken" shl "\x0A"
-        exit(1)
+        quit(": ERROR: shouldnot reach here - something is broken")
       inc(i)
   elif group == "C4nnm":         ##  nnm -> 221
     var n: cint = 0
@@ -1086,170 +942,152 @@ proc unscaleMom*(scaled_mom: seq[cint]; mom: seq[cint]): seq[cint] =
     else:
       n = momCan[1]
       m = momCan[0]
-    var i: cint = 0
+    var i: int = 0
     while i < 3:
       if abs(scaled_mom[i]) == 2:
-        unscaled_mom[i] = n * scaled_mom[i] div 2
+        unscaled_mom[i] = n * (scaled_mom[i] div 2)
       elif abs(scaled_mom[i]) == 1:
-        unscaled_mom[i] = m * scaled_mom[i] div 1
+        unscaled_mom[i] = m * (scaled_mom[i] div 1)
       elif scaled_mom[i] == 0:
         unscaled_mom[i] = 0
       else:
-        cerr shl __func__ shl
-            ": ERROR: shouldn\'t reach here - something is broken" shl "\x0A"
-        exit(1)
+        quit(": ERROR: shouldnot reach here - something is broken")
       inc(i)
   elif group == "C2":            ##  nmp -> 321
-    var n: cint = momCan[0]
-    var m: cint = momCan[1]
-    var p: cint = momCan[2]
-    var i: cint = 0
+    var n = momCan[0]
+    var m = momCan[1]
+    var p = momCan[2]
+    var i: int = 0
     while i < 3:
       if abs(scaled_mom[i]) == 3:
-        unscaled_mom[i] = n * scaled_mom[i] div 3
+        unscaled_mom[i] = n * (scaled_mom[i] div 3)
       elif abs(scaled_mom[i]) == 2:
-        unscaled_mom[i] = m * scaled_mom[i] div 2
+        unscaled_mom[i] = m * (scaled_mom[i] div 2)
       elif abs(scaled_mom[i]) == 1:
-        unscaled_mom[i] = p * scaled_mom[i] div 1
+        unscaled_mom[i] = p * (scaled_mom[i] div 1)
       else:
-        cerr shl __func__ shl
-            ": ERROR: shouldn\'t reach here - something is broken" shl "\x0A"
-        exit(1)
+        quit(": ERROR: shouldnot reach here - something is broken")
       inc(i)
   else:
-    cerr shl __func__ shl ": ERROR: unknown group= " shl group shl " for mom= " shl
-        mom shl "\x0A"
-    exit(1)
+    quit(": ERROR: unknown group= " & group & " for mom= " & $mom)
   return unscaled_mom
 
 ## ----------------------------------------------------------------------------------
-##  Helper function
-
-proc Mom3d*(p1: cint; p2: cint; p3: cint): seq[cint] =
-  var d = newSeq[cint](3)
-  d[0] = p1
-  d[1] = p2
-  d[2] = p3
-  return d
-
-## ----------------------------------------------------------------------------------
 ##  Shortcut
-
-##  Helper functions for automated CGs
 proc isZeroArray*(a: Array1dO[Complex]): bool =
-  var i: cint = 1
-  while i <= a.size():
-    if real(a[i]) != 0.0 or imag(a[i]) != 0.0: return false
+  ##  Helper functions for automated CGs
+  var i: int = 1
+  while i <= a.data.len():
+    if a[i].re != 0.0 or a[i].im != 0.0: return false
     inc(i)
   return true
 
-proc modsqArray*(a: Array1dO[Complex]): Complex =
-  var modsq: Complex = 0.0
-  var i: cint = 1
-  while i <= a.size():
-    inc(modsq, real(a[i]) * real(a[i]))
-    inc(modsq, imag(a[i]) * imag(a[i]))
+proc modsqArray*(a: Array1dO[Complex]): float =
+  ##  Helper functions for automated CGs
+  result = 0.0
+  var i: int = 1
+  while i <= a.data.len():
+    result += a[i].re * a[i].re
+    result += a[i].im * a[i].im
     inc(i)
-  return modsq
 
 proc dotArrays*(a1: Array1dO[Complex]; a2: Array1dO[Complex]): Complex =
-  var result: Complex = 0.0
-  if a1.size() != a2.size():
+  result.re = 0.0
+  result.im = 0.0
+  if a1.data.len() != a2.data.len():
     quit("ERROR: arrays have different sizes")
-  var i: cint = 1
-  while i <= a1.size():
-    inc(result, conj(a1[i]) * a2[i])
+  var i: int = 1
+  while i <= a1.data.len():
+    result += conjugate(a1[i]) * a2[i]
     inc(i)
-  return result
 
 
 proc generateLGRotation*(rep: string): seq[RotateVec_t] =
   ## Return the rotations for a LG
-  var rot: seq[RotateVec_t]
+  result = newSeq[RotateVec_t](0)
   if rep == "D4":
-    rot.push_back(RotateVec_t(3, 2, - 1))
-    rot.push_back(RotateVec_t(- 2, 3, - 1))
-    rot.push_back(RotateVec_t(1, 2, 3))
-    rot.push_back(RotateVec_t(- 3, - 2, - 1))
-    rot.push_back(RotateVec_t(2, - 3, - 1))
-    rot.push_back(RotateVec_t(- 1, 2, - 3))
+    result.add(newRotateVec_t(3, 2, - 1))
+    result.add(newRotateVec_t(- 2, 3, - 1))
+    result.add(newRotateVec_t(1, 2, 3))
+    result.add(newRotateVec_t(- 3, - 2, - 1))
+    result.add(newRotateVec_t(2, - 3, - 1))
+    result.add(newRotateVec_t(- 1, 2, - 3))
   elif rep == "D2":
-    rot.push_back(RotateVec_t(3, 2, - 1))
-    rot.push_back(RotateVec_t(1, 2, 3))
-    rot.push_back(RotateVec_t(2, - 1, 3))
-    rot.push_back(RotateVec_t(2, - 3, - 1))
-    rot.push_back(RotateVec_t(- 1, 2, - 3))
-    rot.push_back(RotateVec_t(- 2, 1, 3))
-    rot.push_back(RotateVec_t(- 3, 2, 1))
-    rot.push_back(RotateVec_t(- 1, - 2, 3))
-    rot.push_back(RotateVec_t(3, - 1, - 2))
-    rot.push_back(RotateVec_t(- 2, - 3, 1))
-    rot.push_back(RotateVec_t(1, - 2, - 3))
-    rot.push_back(RotateVec_t(- 3, 1, - 2))
+    result.add(newRotateVec_t(3, 2, - 1))
+    result.add(newRotateVec_t(1, 2, 3))
+    result.add(newRotateVec_t(2, - 1, 3))
+    result.add(newRotateVec_t(2, - 3, - 1))
+    result.add(newRotateVec_t(- 1, 2, - 3))
+    result.add(newRotateVec_t(- 2, 1, 3))
+    result.add(newRotateVec_t(- 3, 2, 1))
+    result.add(newRotateVec_t(- 1, - 2, 3))
+    result.add(newRotateVec_t(3, - 1, - 2))
+    result.add(newRotateVec_t(- 2, - 3, 1))
+    result.add(newRotateVec_t(1, - 2, - 3))
+    result.add(newRotateVec_t(- 3, 1, - 2))
   elif rep == "D3":
-    rot.push_back(RotateVec_t(1, 2, 3))
-    rot.push_back(RotateVec_t(- 2, 1, 3))
-    rot.push_back(RotateVec_t(2, - 1, 3))
-    rot.push_back(RotateVec_t(1, 3, - 2))
-    rot.push_back(RotateVec_t(- 1, - 2, 3))
-    rot.push_back(RotateVec_t(1, - 2, - 3))
-    rot.push_back(RotateVec_t(- 1, 2, - 3))
-    rot.push_back(RotateVec_t(- 2, - 1, - 3))
+    result.add(newRotateVec_t(1, 2, 3))
+    result.add(newRotateVec_t(- 2, 1, 3))
+    result.add(newRotateVec_t(2, - 1, 3))
+    result.add(newRotateVec_t(1, 3, - 2))
+    result.add(newRotateVec_t(- 1, - 2, 3))
+    result.add(newRotateVec_t(1, - 2, - 3))
+    result.add(newRotateVec_t(- 1, 2, - 3))
+    result.add(newRotateVec_t(- 2, - 1, - 3))
   elif rep == "C4nm0":
-    rot.push_back(RotateVec_t(1, 2, 3))
-    rot.push_back(RotateVec_t(2, 3, 1))
-    rot.push_back(RotateVec_t(3, 1, 2))
-    rot.push_back(RotateVec_t(- 1, 3, 2))
-    rot.push_back(RotateVec_t(3, 2, - 1))
-    rot.push_back(RotateVec_t(2, - 1, 3))
-    rot.push_back(RotateVec_t(- 1, 2, - 3))
-    rot.push_back(RotateVec_t(2, - 3, - 1))
-    rot.push_back(RotateVec_t(- 3, - 1, 2))
-    rot.push_back(RotateVec_t(1, - 3, 2))
-    rot.push_back(RotateVec_t(- 3, 2, 1))
-    rot.push_back(RotateVec_t(2, 1, - 3))
-    rot.push_back(RotateVec_t(- 1, - 2, 3))
-    rot.push_back(RotateVec_t(- 2, 3, - 1))
-    rot.push_back(RotateVec_t(3, - 1, - 2))
-    rot.push_back(RotateVec_t(1, 3, - 2))
-    rot.push_back(RotateVec_t(3, - 2, 1))
-    rot.push_back(RotateVec_t(- 2, 1, 3))
-    rot.push_back(RotateVec_t(1, - 2, - 3))
-    rot.push_back(RotateVec_t(- 2, - 3, 1))
-    rot.push_back(RotateVec_t(- 3, 1, - 2))
-    rot.push_back(RotateVec_t(- 1, - 3, - 2))
-    rot.push_back(RotateVec_t(- 3, - 2, - 1))
-    rot.push_back(RotateVec_t(- 2, - 1, - 3))
+    result.add(newRotateVec_t(1, 2, 3))
+    result.add(newRotateVec_t(2, 3, 1))
+    result.add(newRotateVec_t(3, 1, 2))
+    result.add(newRotateVec_t(- 1, 3, 2))
+    result.add(newRotateVec_t(3, 2, - 1))
+    result.add(newRotateVec_t(2, - 1, 3))
+    result.add(newRotateVec_t(- 1, 2, - 3))
+    result.add(newRotateVec_t(2, - 3, - 1))
+    result.add(newRotateVec_t(- 3, - 1, 2))
+    result.add(newRotateVec_t(1, - 3, 2))
+    result.add(newRotateVec_t(- 3, 2, 1))
+    result.add(newRotateVec_t(2, 1, - 3))
+    result.add(newRotateVec_t(- 1, - 2, 3))
+    result.add(newRotateVec_t(- 2, 3, - 1))
+    result.add(newRotateVec_t(3, - 1, - 2))
+    result.add(newRotateVec_t(1, 3, - 2))
+    result.add(newRotateVec_t(3, - 2, 1))
+    result.add(newRotateVec_t(- 2, 1, 3))
+    result.add(newRotateVec_t(1, - 2, - 3))
+    result.add(newRotateVec_t(- 2, - 3, 1))
+    result.add(newRotateVec_t(- 3, 1, - 2))
+    result.add(newRotateVec_t(- 1, - 3, - 2))
+    result.add(newRotateVec_t(- 3, - 2, - 1))
+    result.add(newRotateVec_t(- 2, - 1, - 3))
   elif rep == "C4nnm":
-    rot.push_back(RotateVec_t(1, 2, 3))
-    rot.push_back(RotateVec_t(2, 3, 1))
-    rot.push_back(RotateVec_t(3, 1, 2))
-    rot.push_back(RotateVec_t(- 2, 1, 3))
-    rot.push_back(RotateVec_t(- 1, 3, 2))
-    rot.push_back(RotateVec_t(2, - 1, 3))
-    rot.push_back(RotateVec_t(1, 3, - 2))
-    rot.push_back(RotateVec_t(3, - 2, 1))
-    rot.push_back(RotateVec_t(3, 2, - 1))
-    rot.push_back(RotateVec_t(2, 1, - 3))
-    rot.push_back(RotateVec_t(1, - 3, 2))
-    rot.push_back(RotateVec_t(- 3, 2, 1))
-    rot.push_back(RotateVec_t(- 1, - 2, 3))
-    rot.push_back(RotateVec_t(- 2, 3, - 1))
-    rot.push_back(RotateVec_t(3, - 1, - 2))
-    rot.push_back(RotateVec_t(- 1, 2, - 3))
-    rot.push_back(RotateVec_t(- 2, - 3, 1))
-    rot.push_back(RotateVec_t(1, - 2, - 3))
-    rot.push_back(RotateVec_t(2, - 3, - 1))
-    rot.push_back(RotateVec_t(- 3, - 1, 2))
-    rot.push_back(RotateVec_t(- 3, 1, - 2))
-    rot.push_back(RotateVec_t(- 2, - 1, - 3))
-    rot.push_back(RotateVec_t(- 1, - 3, - 2))
-    rot.push_back(RotateVec_t(- 3, - 2, - 1))
+    result.add(newRotateVec_t(1, 2, 3))
+    result.add(newRotateVec_t(2, 3, 1))
+    result.add(newRotateVec_t(3, 1, 2))
+    result.add(newRotateVec_t(- 2, 1, 3))
+    result.add(newRotateVec_t(- 1, 3, 2))
+    result.add(newRotateVec_t(2, - 1, 3))
+    result.add(newRotateVec_t(1, 3, - 2))
+    result.add(newRotateVec_t(3, - 2, 1))
+    result.add(newRotateVec_t(3, 2, - 1))
+    result.add(newRotateVec_t(2, 1, - 3))
+    result.add(newRotateVec_t(1, - 3, 2))
+    result.add(newRotateVec_t(- 3, 2, 1))
+    result.add(newRotateVec_t(- 1, - 2, 3))
+    result.add(newRotateVec_t(- 2, 3, - 1))
+    result.add(newRotateVec_t(3, - 1, - 2))
+    result.add(newRotateVec_t(- 1, 2, - 3))
+    result.add(newRotateVec_t(- 2, - 3, 1))
+    result.add(newRotateVec_t(1, - 2, - 3))
+    result.add(newRotateVec_t(2, - 3, - 1))
+    result.add(newRotateVec_t(- 3, - 1, 2))
+    result.add(newRotateVec_t(- 3, 1, - 2))
+    result.add(newRotateVec_t(- 2, - 1, - 3))
+    result.add(newRotateVec_t(- 1, - 3, - 2))
+    result.add(newRotateVec_t(- 3, - 2, - 1))
   else:
-    cerr shl __func__ shl ": unsupported LG= " shl rep shl "\x0A"
-    exit(1)
-  return rot
+    quit(": unsupported LG= " & rep)
 
-proc isign*(x: cint): cint =
-  return if (x > 0): + 1 else: - 1
+
+#proc isign*(x: int): int =
+#  return if (x > 0): + 1 else: - 1
 
