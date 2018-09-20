@@ -457,60 +457,6 @@ proc generateOneHadronOps*(cont_ops: vector[string]; canon_moms: list[vector[cin
   return targets
 
 ## ----------------------------------------------------------------------------------
-## ----------------------------------------------------------------------------------
-## ----------------------------------------------------------------------------------
-## ! Read ops list
-
-proc readOpsList*(opslistfile: string): vector[pair[string, string]] =
-  ##  Read in list of operators to use at source and sink
-  ##  Format is "irrep opname"
-  var opsListData: ifstream
-  opsListData.open(opslistfile.c_str())
-  var opsList: vector[pair[string, string]]
-  if not opsListData:
-    cerr shl __func__ shl ": opslistfile " shl opslistfile shl " read error" shl endl
-    exit(1)
-  var irrep: string
-  var op: string
-  opsListData shr irrep shr op
-  while not opsListData.eof():
-    opsList.push_back(make_pair(irrep, op))
-    opsListData shr irrep shr op
-  ##  end while
-  when 0:
-    var dim: cint = opsList.size()
-    cout shl __func__ shl ": using " shl dim shl " operators from " shl opslistfile shl
-        ": "
-    var i: cint = 0
-    while i < dim:
-      cout shl opsList[i].second
-      if i != dim - 1: cout shl ", "
-      inc(i)
-    cout shl endl
-  return opsList
-
-## ----------------------------------------------------------------------------------
-##  Read operator operator map from XML
-
-proc readOpsMap*(opsxmlfiles: vector[string]): map[string,
-    KeyHadronSUNNPartIrrepOp_t] =
-  if opsxmlfiles.empty():
-    cerr shl __func__ shl ": ERROR: there must be at least one opsxmlfile" shl
-        endl
-    exit(1)
-  var opsmap: map[string, KeyHadronSUNNPartIrrepOp_t]
-  xml = opsxmlfiles.begin()
-  while xml != opsxmlfiles.`end`():
-    ##  Continually read into the same map
-    var xml_in: XMLReader
-    xml_in.open(xml)
-    read(xml_in, "/OpsList", opsmap)
-    cout shl __func__ shl ": currently at " shl opsmap.size() shl
-        " elems in after reading " shl xml[] shl endl
-    inc(xml)
-  return opsmap
-
-## ----------------------------------------------------------------------------------
 ## ! Check if this pair is legal
 
 proc checkContOpPair*(left_op: string; right_op: string; target_F: string;
