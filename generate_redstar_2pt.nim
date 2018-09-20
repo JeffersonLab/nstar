@@ -271,7 +271,6 @@ when isMainModule:
 
   # Deserialize this table
   let params = deserializeXML[Param_t](xml)
-#  read(xml_in, "/GenerateXML", params)
 
   ##  Read the operator list file
   echo "Read source ops = ", params.source_ops_list
