@@ -9,7 +9,7 @@ type
     slot*:      string            ## At first level, the HadronOp index, at higher levels, the temporary 
     F*:         string            ## Target SU(N) flavor irrep - of form for SU(2) "3,1", or for SU(3) "8,1" 
     irrep*:     string            ## Target Octahedral/little-group irrep - of form   "Lambda,embed" 
-    mom_type*:  array[0..2,cint]  ## Target D-1 Canonical momentum type 
+    mom_type*:  seq[cint]         ## Target D-1 Canonical momentum type 
     
   CGPair_t* = object
     left*:      string            ## Left side of CG 
