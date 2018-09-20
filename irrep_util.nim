@@ -224,7 +224,6 @@ import strutils
 proc getIrrepIndex*(irrep: string): IrrepNames_t =
   ## Get irrep
   # First check the ones with parity and G-parity
-  # for(IRNames_t::const_iterator mm = irrep_names_with_pg.begin();
   for k,v in pairs(irrep_names_with_pg):
     if startsWith(irrep, k):
       return v
