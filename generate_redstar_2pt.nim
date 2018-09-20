@@ -48,7 +48,7 @@ proc printRedstarIrrep*(ops_list: seq[OpsList_t];
   #  Only select the irreps compatible with the mom_type
   let canon_mom = canonicalOrder(mom)
   #  Sink ops
-  result = newSeq[IrrepOpList_t](0)
+  result.setLen(0)
   for irrep_op in items(ops_list):
     if not ops_map.has_key(irrep_op.op):
       quit(": missing op= " & irrep_op.op & " is not in ops_map")
@@ -78,7 +78,7 @@ proc printRedstar2PtsDiag*(source_ops_list: seq[OpsList_t];
   #  Sink & source ops - determined completely by source ops
   let source_ops = printRedstarIrrep(source_ops_list, ops_map, mom, include_all_rows, true, true)
   #  Output
-  result = newSeq[KeyHadronSUNNPartNPtCorr_t](0)
+  result.setLen(0)
   #  Outer product of sink and source ops
   for src in items(source_ops):
     ##  Loop over time sources
@@ -103,7 +103,7 @@ proc printRedstar2PtsOffDiag*(source_ops_list: seq[OpsList_t];
   let sink_ops   = printRedstarIrrep(sink_ops_list, ops_map, mom, include_all_rows, false, true)
   let source_ops = printRedstarIrrep(source_ops_list, ops_map, mom, include_all_rows, true, true)
   #  Output
-  result = newSeq[KeyHadronSUNNPartNPtCorr_t](0)
+  result.setLen(0)
   #  All source ops to sink ops, independent of irrep
   for snk in items(sink_ops):
     for src in items(source_ops):
@@ -128,7 +128,7 @@ proc printRedstar2PtsDefault*(source_ops_list: seq[OpsList_t];
   let sink_ops   = printRedstarIrrep(sink_ops_list, ops_map, mom, include_all_rows, false, true)
   let source_ops = printRedstarIrrep(source_ops_list, ops_map, mom, include_all_rows, true, true)
   ##  Output
-  result = newSeq[KeyHadronSUNNPartNPtCorr_t](0)
+  result.setLen(0)
   ##  Outer product of sink and source ops
   for snk in items(sink_ops):
     for src in items(source_ops):
