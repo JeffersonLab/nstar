@@ -272,19 +272,19 @@ when isMainModule:
   # Deserialize this table
   let params = deserializeXML[Param_t](xml)
 
-  ##  Read the operator list file
+  #  Read the operator list file
   echo "Read source ops = ", params.source_ops_list
   let source_ops_list = readOpsListFiles(@[params.source_ops_list])
 
   echo "Read sink ops = ", params.sink_ops_list
   let sink_ops_list = readOpsListFiles(@[params.sink_ops_list])
 
-  ##  Read the operator maps
+  #  Read the operator maps
   echo "Read ops map"
   let ops_map = readOpsMapFiles(params.ops_xmls)
 
-  ##  Output corrs
-  ##  Select the irreps commensurate with the momentum
+  #  Output corrs
+  #  Select the irreps commensurate with the momentum
   echo "Build 2pt correlation functions"
   var corrs = newSeq[KeyHadronSUNNPartNPtCorr_t](0)
 
@@ -294,11 +294,7 @@ when isMainModule:
     echo "Found ", tmp.len(), "  corr funcs compatible with mom= ", mom
     corrs.add(tmp)
 
-  ##  Print keys
+  #  Print keys
   echo "\nWrite out ", corrs.len(), " total number of corr funcs 2pt xml"
   # Write the xml
-  var f: File
-  if open(f, output_xml, fmWrite):
-    f.write(xmlHeader)
-    f.write(serializeXML(corrs, "NPointList"))
-    f.close()
+  writeFile(output_xml, xmlHeader & $serializeXML(corrs, "NPointList"))
