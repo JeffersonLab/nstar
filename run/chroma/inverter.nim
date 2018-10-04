@@ -4,16 +4,27 @@ import clover_fermact
 import serializetools/serializexml
 import xmltree
 
+
+#---------------------------------------------------------------------
 type
-  CGInverter_t* = object
+  CloverParams_t* = object
+    Mass*:          float
+    clovCoeffR*:    float
+    clovCoeffT*:    float
+    AnisoParam*:    AnisoParam_t
+
+#---------------------------------------------------------------------
+type
+  CGInverter_t* = object        ## Vanilla clover inverter
     invType*:          string   ## CG_INVERTER
     RsdCG*:            float
     MaxCG*:            int
 
 
+#---------------------------------------------------------------------
 type
-  QOPCloverMultigridInverter_t* = object
-    invType*:          string   ## QOP_CLOVER_MULTIGRID_INVERTER
+  QOPCloverMultigridInverter_t* = object   ## QOP_CLOVER_MULTIGRID_INVERTER
+    invType*:          string  
     Mass*:             float
     Clover*:           float
     CloverT*:          float
@@ -72,15 +83,9 @@ type
 
 
 
+#---------------------------------------------------------------------
 type
-  CloverParams_t* = object
-    Mass*:         float
-    clovCoeffR*:   float
-    clovCoeffT*:   float
-    AnisoParam*:   AnisoParam_t
-
-
-  MULTIGRIDParams_t* = object
+  MULTIGRIDParams_t* = object          ## Parameters within QUDA AMG
     Residual*:              float
     CycleType*:             string
     RelaxationOmegaMG*:     float
@@ -100,7 +105,7 @@ type
 
 
   QUDA_MULTIGRID_CLOVER_INVERTER_t* =  object
-    invType*:               string      # <invType>QUDA_MULTIGRID_CLOVER_INVERTER</invType>
+    invType*:               string      # QUDA_MULTIGRID_CLOVER_INVERTER
     MULTIGRIDParams*:       MULTIGRIDParams_t    
     CloverParams*:          CloverParams_t
     RsdTarget*:             float
@@ -175,9 +180,10 @@ type
 ]#
 
 
+#---------------------------------------------------------------------
 type
-  QPhiXCloverIterRefineBICGstabInverter_t* = object
-    invType*:               string      # QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER
+  QPhiXCloverIterRefineBICGstabInverter_t* = object  ## QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER
+    invType*:               string      
     SolverType*:            string
     MaxIter*:               int
     RsdTarget*:             float
@@ -211,4 +217,98 @@ type
           <RsdToleranceFactor>${HMCParam::RsdToleranceFactor}</RsdToleranceFactor>
          </InvertParam>
 
+]#
+
+
+
+#---------------------------------------------------------------------
+type
+  QPhiXCloverMGInverter_t* = object  ## MG_PROTO_QPHIX_EO_CLOVER_INVERTER
+    invType*:                        string      
+    CloverParams*:                   CloverParams_t
+    AntiPeriodicT*:                  bool
+    MGLevels*:                       int
+    Blocking*:                       seq[seq[int]]
+    NullVecs*:                       seq[int]
+    NullSolverMaxIters*:             seq[int]
+    NullSolverRsdTarget*:            seq[float]
+    NullSolverVerboseP*:             seq[int]
+    OuterSolverNKrylov*:             int
+    OuterSolverRsdTarget*:           float
+    OuterSolverMaxIters*:            int
+    OuterSolverVerboseP*:            bool
+    VCyclePreSmootherMaxIters*:      seq[int]
+    VCyclePreSmootherRsdTarget*:     seq[float]
+    VCyclePreSmootherRelaxOmega*:    seq[float]
+    VCyclePreSmootherVerboseP*:      seq[int]
+    VCyclePostSmootherMaxIters*:     seq[int]
+    VCyclePostSmootherRsdTarget*:    seq[float]
+    VCyclePostSmootherRelaxOmega*:   seq[float]
+    VCyclePostSmootherVerboseP*:     seq[int]
+    VCycleBottomSolverMaxIters*:     seq[int]
+    VCycleBottomSolverRsdTarget*:    seq[float]
+    VCycleBottomSolverNKrylov*:      seq[int]
+    VCycleBottomSolverVerboseP*:     seq[int]
+    VCycleMaxIters*:                 seq[int]
+    VCycleRsdTarget*:                seq[float]
+    VCycleVerboseP*:                 seq[int]
+    SubspaceId*:                     string
+
+
+#[
+        <InvertParam>
+	<invType>MG_PROTO_QPHIX_EO_CLOVER_INVERTER</invType>
+	<CloverParams>
+              <Mass>-0.0856</Mass>
+              <clovCoeffR>1.589327</clovCoeffR>
+              <clovCoeffT>0.902784</clovCoeffT>
+              <AnisoParam>
+                <anisoP>true</anisoP>
+                <t_dir>3</t_dir>
+                <xi_0>4.3</xi_0>
+                <nu>1.265</nu>
+              </AnisoParam>
+	</CloverParams>
+
+	<AntiPeriodicT>true</AntiPeriodicT>
+
+	<MGLevels>3</MGLevels>
+	<Blocking>
+	  <elem>3 3 3 4</elem>
+	  <elem>2 2 2 2</elem>
+	</Blocking>
+
+	<NullVecs>24 32</NullVecs>
+	<NullSolverMaxIters>100 100</NullSolverMaxIters>
+	<NullSolverRsdTarget>5e-6 5e-6</NullSolverRsdTarget>
+	<NullSolverVerboseP>0 0</NullSolverVerboseP>
+
+	<OuterSolverNKrylov>8</OuterSolverNKrylov>
+	<OuterSolverRsdTarget>1.0e-8</OuterSolverRsdTarget>
+	<OuterSolverMaxIters>100</OuterSolverMaxIters>
+	<OuterSolverVerboseP>true</OuterSolverVerboseP>
+	
+	<VCyclePreSmootherMaxIters>0 0</VCyclePreSmootherMaxIters>
+	<VCyclePreSmootherRsdTarget>0.1 0.1</VCyclePreSmootherRsdTarget>
+	<VCyclePreSmootherRelaxOmega>1.1 1.1</VCyclePreSmootherRelaxOmega>
+	<VCyclePreSmootherVerboseP>0 0</VCyclePreSmootherVerboseP>
+
+
+	<VCyclePostSmootherMaxIters>8 8</VCyclePostSmootherMaxIters>
+	<VCyclePostSmootherRsdTarget>0.1 0.1</VCyclePostSmootherRsdTarget>
+	<VCyclePostSmootherRelaxOmega>1.1 1.1</VCyclePostSmootherRelaxOmega>
+	<VCyclePostSmootherVerboseP>0 0</VCyclePostSmootherVerboseP>
+
+	<VCycleBottomSolverMaxIters>8 24</VCycleBottomSolverMaxIters>
+	<VCycleBottomSolverRsdTarget>0.1 0.1</VCycleBottomSolverRsdTarget>
+	<VCycleBottomSolverNKrylov>8 8</VCycleBottomSolverNKrylov>
+	<VCycleBottomSolverVerboseP>0 0</VCycleBottomSolverVerboseP>
+	
+	<VCycleMaxIters>1 1</VCycleMaxIters>
+	<VCycleRsdTarget>0.1 0.1</VCycleRsdTarget>
+	<VCycleVerboseP>0 0</VCycleVerboseP>
+
+	<SubspaceId>foo_eo</SubspaceId>
+
+        </InvertParam>
 ]#
