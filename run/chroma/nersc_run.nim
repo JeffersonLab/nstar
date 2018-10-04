@@ -3,8 +3,6 @@
 import os, xmltree, strutils
 
 import colorvec_work, serializetools/serializexml
-import build_t0_list
-
 import config
 
 import chroma
@@ -14,7 +12,6 @@ import fermbc, fermstate
 import inverter
 import clover_fermact
 import propagator
-import build_t0_list
 
 
 const basedir = strip(staticExec("pwd"))
@@ -163,7 +160,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   # Common stuff
   let Rsd         = 1.0e-8
-  let MaxIter     = 1000
+  let MaxIter     = 8
 
   let lattSize = extractLattSize(run_paths.stem)
   let Lt = lattSize[3]
@@ -312,6 +309,13 @@ when isMainModule:
       echo "Check t0= ", t0
       let run_paths = constructPathNames(t0)
       let outputFile = genPath(run_paths.prop_op_file)
+
+      # Empty files are bad
+      if existsFile(outputFile):
+        if getFileSize(outputFile) == 0:
+          discard tryRemoveFile(outputFile)
+
+      # If the outputFile does not exist, do the thang!
       if fileExists(outputFile): continue
       echo "Generate job for prop= ", outputFile
       generateChromaXML(run_paths)
