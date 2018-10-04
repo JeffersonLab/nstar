@@ -7,11 +7,16 @@ import
   redstar_chain,
   run/chroma/colorvec_work
 
-## 
-proc basic_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
+# Hacks
+let debug = false
+
+#----------------------------------------------------------------------------------------------
+proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
+  ## Construct parameters for redstar
   result.stem = stem
   result.chan = chan
   result.irrep = irrep
+  result.arch  = arch
 
   # Extract file params
   result.layout.latt_size  = extractLattSize(stem)
@@ -23,8 +28,6 @@ proc basic_setup*(arch: string; stem, chan, irrep: string, seqno: string): Redst
   # base params
   result.num_vecs = 256
   result.Nt_corr  = 40
-#  my use_cp = true
-  var use_cp = false
   result.use_derivP = true
   result.autoIrrepCG = false
 
@@ -34,18 +37,13 @@ proc basic_setup*(arch: string; stem, chan, irrep: string, seqno: string): Redst
 
   #----------------------------------------
 # Hacks
-  let debug = false
   if debug:
     result.num_vecs = 3
     result.Nt_corr  = 4
     result.t_sources = @[0]
-    use_cp = false
 # end of hacks
 
   #----------------------------------------
-  result.mass_l   = "U-0.0860"
-  result.mass_s   = "U-0.0743"
-
   let cache_dir = "/cache/Spectrum/Clover/NF2+1"
   let lhpc_dir = "/cache/LHPC/Spectrum/Clover/NF2+1"
   let volatile_dir = "/volatile/Spectrum/Clover/NF2+1"
@@ -94,11 +92,32 @@ proc basic_setup*(arch: string; stem, chan, irrep: string, seqno: string): Redst
   result.hadron_npt_graph_db = volatile_dir & "/" & stem & "/rge_temp/graphs/" & stem & ".n" & $result.num_vecs & ".graph.sdb" & seqno
   discard tryRemoveFile(result.hadron_npt_graph_db)     # Check me
 
+  result.ensemble = stem
+
+  
+#----------------------------------------------------------------------------------------------
+proc colorvec_setup*(redstar: RedstarRuns_t, seqno: string): ColorvecRuns_t =
+  ## Construct parameters for colorvec hadron node
+  let stem = redstar.stem
+
+# var use_cp = true
+  var use_cp = false
+
+  #----------------------------------------
+# Hacks
+  if debug:
+    use_cp = false
+# end of hacks
+
+  result.mass_l   = "U-0.0860"
+  result.mass_s   = "U-0.0743"
+
+  let cache_dir = "/cache/Spectrum/Clover/NF2+1"
   let nn = ".n384"
   for quark_type in ["light", "strange"]:
     result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db_diagt0/" & stem & ".prop" & nn & "." & quark_type & ".diag_t0.sdb" & seqno, use_cp))
 
-    for tt in result.t_sources:
+    for tt in redstar.t_sources:
       result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db/" & stem & ".prop" & nn & "." & quark_type & ".t0_" & $tt & ".sdb" & seqno, use_cp))
 
   result.meson_dbs = @[]
@@ -115,6 +134,5 @@ proc basic_setup*(arch: string; stem, chan, irrep: string, seqno: string): Redst
   result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.d_2.sdb" & seqno, use_cp))
 
   result.baryon_dbs = @[]
-  result.ensemble = stem
 
   

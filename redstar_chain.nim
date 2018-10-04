@@ -1,18 +1,16 @@
-## Generate params for redstar_npt
+## Parameters used by the redstar chain, including redstar_gen_graph, hadron_node, redstar_npt
 
 import
   op_params
   
-##
+#
 type
-  RedstarRuns_t* = object
+  RedstarRuns_t* = object                       ## Parameters for redstar
+    arch*:                      string          ## Architecture description ("12s", etc.)
     stem*:                      string          ## Convenience copy
     chan*:                      string          ## Channel like "Omega"
     irrep*:                     string          ## Irrep name of form 000_Hg, etc.
     t_origin*:                  int             ## Time origin
-    mass_l*:                    string          ## Light quark label
-    mass_s*:                    string          ## Strange quark label
-    mass_c*:                    string          ## Charm quark label
     layout*:                    Layout_t        ## Lattice size info
     convertUDtoL*:              bool            ## Convert  u/d  quarks to l quarks
     convertUDtoS*:              bool            ## Convert  u/d  quarks to s quarks
@@ -36,44 +34,20 @@ type
     smeared_hadron_node_db*:    string          ## Smeared hadron nodes
     unsmeared_hadron_node_xml*: string          ## Unsmeared hadron nodes - output
     unsmeared_hadron_node_db*:  string          ## Smeared hadron nodes - output
+    ensemble*:                  string          ## Information about this ensemble
+
+
+# 
+type
+  ColorvecRuns_t* = object                      ## Parameters for colorvec
+    mass_l*:                    string          ## Light quark label
+    mass_s*:                    string          ## Strange quark label
+    mass_c*:                    string          ## Charm quark label
     prop_dbs*:                  seq[string]     ## The dbs that contains propagator bits
     glue_dbs*:                  seq[string]     ## The db that contains glueball colorvector contractions
     meson_dbs*:                 seq[string]     ## The db that contains meson colorvector contractions
     baryon_dbs*:                seq[string]     ## The db that contains baryon colorvector contractions
     tetra_dbs*:                 seq[string]     ## The db that contains tetraquark colorvector contractions
-    ensemble*:                  string          ## Information about this ensemble
     
 
-
-#-----------------------------------------------------------------------------
-when isMainModule:
-  # Some simple tests
-  import base, redstar_input, colorvec_hadron_node_input, serializetools/serializexml, xmltree
-
-#proc basic_setup(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
-  let params = basic_setup("12s", "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265", "Omega", "000_Hg", "1000a")
-
-  echo "Check params"
-  echo $params
-
-  echo "Build a Colorvec hadron node input"
-  let had_node_input = newHadronNodeInput(params)
-  echo $had_node_input
-  var col_xml: File
-  if open(col_xml, "colorvec.xml", fmWrite):
-    col_xml.write(xmlHeader)
-    col_xml.write(xmlToStr(serializeXML(had_node_input, "ColorVecHadron")))
-    col_xml.close()
-
-  echo "Build a redstar hadron node input"
-  let red_input = newRedstarInput(params)
-  echo $red_input
-  var red_xml: File
-  if open(red_xml, "redstar.xml", fmWrite):
-    red_xml.write(xmlHeader)
-    red_xml.write(xmlToStr(serializeXML(red_input, "RedstarNPt")))
-    red_xml.close()
-
-
-
-  
+      
