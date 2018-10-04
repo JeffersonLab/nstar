@@ -104,6 +104,7 @@ proc constructPathNames*(t0: int): RunPaths_t =
   result.cache    = getEnsemblePath()
   result.num_vecs = getNumVecs()
   result.scratch  = getScratchPath()
+  result.t0       = t0
 
   # shortcuts
   let stem    = result.stem
@@ -230,7 +231,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   ## Generate input file
   # Common stuff
   #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
-  let propCheck = "/Users/edwards/Documents/qcd/git/nim-play/nstar/prop_check"
+  let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
   let wallTime = "00:30:00"
 
   # This particular job
@@ -247,6 +248,8 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 #SBATCH -A m2156
 #SBATCH -S 2
 
+cd """ & run_paths.seqDir & "\n" & """
+
 export OMP_NUM_THREADS=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
@@ -258,7 +261,7 @@ out="""" & genPath(run_paths.out_file) & """"
 
 exe="$HOME/bin/exe/cori/hmc.cori.double.parscalar.oct_3_2018"
 
-gsource """ & basedir & """/env_qphix.sh
+source """ & basedir & """/env_qphix.sh
 
 rm -f ./ops_out/*
 srun -n 32 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 2 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
@@ -273,9 +276,10 @@ then
 fi
 """
 
+  # Will hopefully remove writing any specific file
   let run_script = run_paths.seqDir & "/nersc.t0_" & $run_paths.t0 & ".sh"
+  echo "writing run_script = ", run_script
   writeFile(run_script, result.command)
-
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
 
@@ -286,7 +290,9 @@ when isMainModule:
   echo "paramCount()= ", paramCount()
 
   # The t0 list filename is always the same for each config
-  let list = getStem() & ".list"
+  let stem = getStem()
+  let lattSize = extractLattSize(stem)
+  let Lt = lattSize[3]
 
   # This vesion assumes the arguments are the pre-existing directories
   for dir in commandLineParams():
@@ -299,13 +305,15 @@ when isMainModule:
     echo dir
     let cwd = getCurrentDir()
     setCurrentDir(dir)
-    buildT0List()
 
-    for t0str in splitLines(readFile(list)):
-      if t0str.len == 0: continue
-      let t0 = parseInt(t0str)
-      echo "  t0= ", t0
+    #for t0 in 0 .. Lt-1:
+    for t0 in 0 .. 3:
+      if (t0 mod 16) == 0: continue
+      echo "Check t0= ", t0
       let run_paths = constructPathNames(t0)
+      let outputFile = genPath(run_paths.prop_op_file)
+      if fileExists(outputFile): continue
+      echo "Generate job for prop= ", outputFile
       generateChromaXML(run_paths)
       let jj = generateNERSCRunScript(run_paths)
       Data.jobs.add(jj)
