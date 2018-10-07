@@ -39,35 +39,27 @@ proc find_file*(orig_file: string): string =
 
 
 
-#[
 #------------------------------------------------------------------------
 # Copy a lustre file to scratch
-proc copy_lustre_file*($orig_file: string) =
-  var filename = extractFilename(orig_file)
+proc copy_lustre_file*(orig_file: string, use_cp: bool): string =
+  if use_cp:
+    var filename = extractFilename(orig_file)
 
-  # scratch
-  #my $scr = ($scratch_dir ne "") ? $scratch_dir : "/scratch"
-  my scr = ""
+    # scratch
+    let scratch_dir = getScratchPath()
 
-  # Copy files
-  if (! -f $orig_file)
-  {
-    print "Lustre file not found: $orig_file\n"
-    exit(1)
-  }
+    # Copy files
+    if not fileExists(orig_file):
+      quit("Lustre file not found: " & orig_file)
 
-  printf "In function find_file:   copy_lustre_file $orig_file\n"
+    echo "In function find_file:   copy_lustre_file ", orig_file
 
-  my $err = 0xffff & system("cp ${orig_file} $scr")
-  if ($err > 0x00)
-  {
-    print "Some problem copying lustre file $orig_file\n"
-    exit(1)
-  }
-  my $local_file = "$scr/$filename"
+    if execShellCmd("cache_cp " & orig_file & " " & scratch_dir) != 0:
+      quit("Some problem copying with copying " & orig_file)
 
-  return $local_file
-]#
+    result = scratch_dir & "/" & filename
+  else:
+    result = orig_file
 
 
 #[
@@ -337,7 +329,7 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t)
                                                 SubspaceID: "foo"), "InvertParam")
 
 
-proc newQPhiXInv*(mass: float, rsd: float, MaxIter: int): XmlNode =
+proc newQPhiXBiCGInv*(mass: float, rsd: float, MaxIter: int): XmlNode =
   ## QPHIX BICGstab inverter, with some parameters hardwired
   serializeXML(QPhiXCloverIterRefineBICGstabInverter_t(invType: "QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER",
                                                        SolverType: "BICGSTAB",
@@ -349,6 +341,39 @@ proc newQPhiXInv*(mass: float, rsd: float, MaxIter: int): XmlNode =
                                                        AntiPeriodicT: true,
                                                        Verbose: true), "InvertParam")
 
+
+
+proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int): XmlNode =
+  ## QPHIX BICGstab inverter, with some parameters hardwired
+  serializeXML(QPhiXCloverMGInverter_t(invType: "MG_PROTO_QPHIX_EO_CLOVER_INVERTER",
+                                       CloverParams: newAnisoCloverParams(mass),
+                                       AntiPeriodicT: true,
+                                       MGLevels: 3,
+                                       Blocking: @[@[3,3,3,4], @[2,2,2,2]],
+                                       NullVecs: @[24, 32],
+                                       NullSolverMaxIters: @[100, 100],
+                                       NullSolverRsdTarget: @[5e-6, 5e-6],
+                                       NullSolverVerboseP: @[0, 0],
+                                       OuterSolverNKrylov: 8,
+                                       OuterSolverRsdTarget: 1.0e-8,
+                                       OuterSolverMaxIters: 100,
+                                       OuterSolverVerboseP: true,
+                                       VCyclePreSmootherMaxIters: @[0, 0],
+                                       VCyclePreSmootherRsdTarget: @[0.1, 0.1],
+                                       VCyclePreSmootherRelaxOmega: @[1.1, 1.1],
+                                       VCyclePreSmootherVerboseP: @[0, 0],
+                                       VCyclePostSmootherMaxIters: @[8, 8],
+                                       VCyclePostSmootherRsdTarget: @[0.1, 0.1],
+                                       VCyclePostSmootherRelaxOmega: @[1.1, 1.1],
+                                       VCyclePostSmootherVerboseP: @[0, 0],
+                                       VCycleBottomSolverMaxIters: @[8, 24],
+                                       VCycleBottomSolverRsdTarget: @[0.1, 0.1],
+                                       VCycleBottomSolverNKrylov: @[8, 8],
+                                       VCycleBottomSolverVerboseP: @[0, 0],
+                                       VCycleMaxIters: @[1, 1],
+                                       VCycleRsdTarget: @[0.1, 0.1],
+                                       VCycleVerboseP: @[0, 0],
+                                       SubspaceId: "foo_eo"), "InvertParam")
 
 
 

@@ -4,14 +4,14 @@ stem=$1
 tt=$2
 seqno=$3
 
-scratch_dir="$HOME/scratch/${stem}/run.prop"
-pref="${scratch_dir}/${stem}/prop.strange.singlet.${seqno}/${stem}.t0_${tt}"
+scratch_dir="$HOME/scratch"
+pref="${scratch_dir}/${stem}/run.prop/prop.strange.singlet.${seqno}/${stem}.t0_${tt}"
 input="${pref}.prop.ini.xml${seqno}"
 output="${pref}.prop.out.xml${seqno}"
 out="${pref}.prop.out${seqno}"
 
-#basedir="$HOME/qcd/git/bw.3/scripts_rge/run/chroma"
-basedir="$HOME/qcd/git/nim-play/nstar/run/chroma"
+basedir="$HOME/qcd/git/bw.3/scripts_rge/run/chroma"
+#basedir="$HOME/qcd/git/nim-play/nstar/run/chroma"
 exe="$HOME/bin/exe/ib9q/chroma.cori2.scalar.qphix.aug_28_2017"
 
 source ${basedir}/env_qphix.sh

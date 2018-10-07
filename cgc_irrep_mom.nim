@@ -11,7 +11,7 @@ import hashes
 type
   KeyCGCIrrepMom_t* = object
     row*: cint
-    mom*: array[0..2, cint]
+    mom*: seq[cint]
 
 #proc constructKeyCGCIrrepMom_t*(): KeyCGCIrrepMom_t {.constructor.}
 #proc constructKeyCGCIrrepMom_t*(row_: cint; mom_: Array[cint]): KeyCGCIrrepMom_t {.
