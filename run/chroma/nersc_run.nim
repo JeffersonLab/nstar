@@ -200,7 +200,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   var chroma_param = chroma.Param_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
   #echo "Param:\n", xmlToStr(serializeXML(chromaParam, "chroma"))
-  let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: genPath(run_paths.cfg_file), parallel_io: true)
+  let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: genPath(run_paths.cfg_file), reunit: true, parallel_io: true)
 
   let chroma_xml = chroma.Chroma_t(Param: chroma_param, Cfg: cfg)
   let input = xmlHeader & xmlToStr(serializeXML(chroma_xml, "chroma"))
@@ -229,7 +229,8 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   # Common stuff
   #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
-  let wallTime = "00:30:00"
+  let queue    = "regular"
+  let wallTime = "02:00:00"
 
   # This particular job
   result.nodes          = 1
@@ -240,7 +241,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 #!/bin/bash
 #SBATCH -N 2
 #SBATCH -C knl,quad,cache
-#SBATCH -q debug
+#SBATCH -q """ & queue & "\n" & """
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -A m2156
 #SBATCH -S 2
@@ -256,11 +257,10 @@ output="""" & genPath(run_paths.output_file) & """"
 out="""" & genPath(run_paths.out_file) & """"
 /bin/rm -f """ & genPath(run_paths.prop_op_tmp) & """
 
-exe="$HOME/bin/exe/cori/hmc.cori.double.parscalar.oct_3_2018"
+exe="$HOME/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
 
 source """ & basedir & """/env_qphix.sh
 
-rm -f ./ops_out/*
 srun -n 32 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 2 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
 
 """ & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & """
@@ -303,8 +303,7 @@ when isMainModule:
     let cwd = getCurrentDir()
     setCurrentDir(dir)
 
-    #for t0 in 0 .. Lt-1:
-    for t0 in 0 .. 3:
+    for t0 in 0 .. Lt-1:
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0
       let run_paths = constructPathNames(t0)
