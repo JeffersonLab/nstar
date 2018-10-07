@@ -9,7 +9,7 @@ import serializetools/serializebin, serializetools/serialstring, serializetools/
 import strutils, posix, os, hashes, complex, re
   
 #------------------------------------------------------------------------
-proc extractLattSize(data: string): array[4,int] =
+proc extractLattSize*(data: string): array[4,int] =
   ## Determine the lattice size
   # Yuk, do some file name surgery
   var stem = data.replace(re"\..*$")
@@ -23,7 +23,7 @@ proc extractLattSize(data: string): array[4,int] =
   result = [Ls, Ls, Ls, Lt]
 
 
-proc getTimeOrigin(Lt: int, trajj: string): int =
+proc getTimeOrigin*(Lt: int, trajj: string): int =
   ## Displace the origin of the time slices using the trajectory as a seed to a RNG
   # Clean out characters and set the rng with the traj number as an int
   var traj = parseInt(trajj.replace(re"[a-zA-Z]"))
