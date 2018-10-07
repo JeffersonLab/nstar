@@ -17,6 +17,7 @@ type
     cfg_type*:      string              ## Type
     cfg_file*:      string              ## File name, if it exists
     parallel_io*:   bool                ## Whether we can use parallel io
+    reunit*:        bool                ## Whether we can use parallel io
 
 
 #------------------------------------------------------------------------
