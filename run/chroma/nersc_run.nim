@@ -214,8 +214,8 @@ type
     nodes:            int
     walltime:         string
     queuename:        string
-    outputFile:       string
     iterable:         string
+    outputFile:       string
     command:          string
 
   PandaSubmitter_t = object
@@ -235,7 +235,9 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   # This particular job
   result.nodes          = 1
   result.wallTime       = wallTime
+  result.queuename      = "ANALY_TJLAB_LQCD"
   result.outputFile     = genPath(run_paths.prop_op_file)
+  result.iterable       = $run_paths.t0
 
   result.command = """
 #!/bin/bash
@@ -284,6 +286,7 @@ fi
 
 #------------------------------------------------------------------------------
 when isMainModule:
+  import marshal
   echo "paramCount()= ", paramCount()
 
   # The t0 list filename is always the same for each config
@@ -322,7 +325,8 @@ when isMainModule:
       Data.jobs.add(jj)
 
     # Dump the job script to titanManager
-    writeFile("campaign.xml", xmlToStr(serializeXML(Data)))
+    #writeFile("campaign.xml", xmlToStr(serializeXML(Data)))
+    writeFile("campaign.json", $$Data)
 
     # popd
     setCurrentDir(cwd)
