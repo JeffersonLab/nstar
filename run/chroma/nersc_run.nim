@@ -28,11 +28,11 @@ type
 
 
 #------------------------------------------------------------------------------
-proc genPath(file: PathFile_t): string =
+proc genPath*(file: PathFile_t): string =
   ## Convenience to generate a path
   result = file.fileDir & "/" & file.name
 
-proc genPath(files: seq[PathFile_t]): seq[string] =
+proc genPath*(files: seq[PathFile_t]): seq[string] =
   ## Convenience to generate a path
   result = newSeq[string](0)
   for f in items(files):
@@ -45,11 +45,11 @@ let mass_s = -0.0743
 let mass_l = -0.0856
 
 type
-  QuarkMass_t = object
-    mass:         float
-    mass_label:   string
+  QuarkMass_t* = object
+    mass*:         float
+    mass_label*:   string
 
-proc quarkMass(stem: string, quark: string): QuarkMass_t =
+proc quarkMass*(stem: string, quark: string): QuarkMass_t =
   # Pull out the mass and label
   case quark:
     of "strange":
@@ -62,7 +62,6 @@ proc quarkMass(stem: string, quark: string): QuarkMass_t =
       quit("Unknown quark = " & quark)
 
   result.mass_label  = "U" & formatFloat(result.mass, ffDecimal, 4)
-  echo "mass_label= ", result.mass_label
 
 
 
@@ -70,7 +69,7 @@ proc quarkMass(stem: string, quark: string): QuarkMass_t =
 #------------------------------------------------------------------------------
 # Paths to all the various files
 type
-  RunPaths_t = object    ## Paths used for running
+  RunPaths_t* = object    ## Paths used for running
     stem*:             string
     cache*:            string
     scratch*:          string
@@ -109,17 +108,11 @@ proc constructPathNames*(t0: int): RunPaths_t =
   let scratch = result.scratch
   let t0      = result.t0
 
-  echo "stem= ", stem
-  echo "cache= ", cache
-  echo "scratch= ", scratch
-
   result.quark = readFile("quark_mass")
   removeSuffix(result.quark)
-  echo "quark= ", result.quark
 
   result.seqno = readFile("list")
   removeSuffix(result.seqno)
-  echo "seqno= ", result.seqno
   let seqno = result.seqno
 
   # Pull out the mass and label
@@ -130,8 +123,6 @@ proc constructPathNames*(t0: int): RunPaths_t =
   result.workDir    = scratch
   result.seqName    = result.seqno & "." & formatFloat(result.mm.mass, ffDecimal, 4) & ".allt"
   result.seqDir     = result.workdir & "/" & result.seqName
-  echo "workDir= ", result.workDir
-  echo "seqDir= ",  result.seqDir
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
@@ -153,8 +144,6 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let mass        = run_paths.mm.mass
 
   # Main paths
-  echo "workDir= ", run_paths.workDir
-  echo "seqDir= ", run_paths.seqDir
   createDir(run_paths.workDir)
   createDir(run_paths.seqDir)
 
@@ -165,7 +154,6 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let lattSize = extractLattSize(run_paths.stem)
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
-  echo "Lt= ", Lt, "   t_origin= ", t_origin
 
   var (Nt_forward, Nt_backward) = if run_paths.t0 mod 16 == 0: (48, 0) else: (1, 0)
 
@@ -199,7 +187,6 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let inline_dist   = matelem.newPropAndMatelemDistillation(mat_param, mat_named_obj)
 
   var chroma_param = chroma.Param_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
-  #echo "Param:\n", xmlToStr(serializeXML(chromaParam, "chroma"))
   let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: genPath(run_paths.cfg_file), reunit: true, parallel_io: true)
 
   let chroma_xml = chroma.Chroma_t(Param: chroma_param, Cfg: cfg)
@@ -210,17 +197,17 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 #-----------------------------------------------------------------------------
 # Types need for submitter
 type
-  PandaJob_t = object
-    nodes:            int
-    walltime:         string
-    queuename:        string
-    iterable:         string
-    outputFile:       string
-    command:          string
+  PandaJob_t* = object
+    nodes*:            int
+    walltime*:         string
+    queuename*:        string
+    iterable*:         string
+    outputFile*:       string
+    command*:          string
 
-  PandaSubmitter_t = object
-    campaign:         string
-    jobs:             seq[PandaJob_t]
+  PandaSubmitter_t* = object
+    campaign*:         string
+    jobs*:             seq[PandaJob_t]
 
 
 #------------------------------------------------------------------------------
@@ -257,7 +244,14 @@ export OMP_PROC_BIND=spread
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
 out="""" & genPath(run_paths.out_file) & """"
-/bin/rm -f """ & genPath(run_paths.prop_op_tmp) & """
+prop_tmp="""" & genPath(run_paths.prop_op_tmp) & """"
+prop_op="""" & genPath(run_paths.prop_op_file) & """"
+/bin/rm -f $prop_tmp
+
+if [ -e $prop_op ]
+then
+  exit 0
+fi
 
 exe="$HOME/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
 
@@ -265,19 +259,17 @@ source """ & basedir & """/env_qphix.sh
 
 srun -n 32 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 2 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
 
-""" & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & """
+""" & propCheck & " 0.5 $prop_tmp > " & genPath(run_paths.check_file) & """
 
 stat=$?
 if [ $stat -eq 0 ]
 then
-  /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & """
-
+  /bin/mv $prop_tmp $prop_op
 fi
 """
 
   # Will hopefully remove writing any specific file
   let run_script = run_paths.seqDir & "/nersc.t0_" & $run_paths.t0 & ".sh"
-  echo "writing run_script = ", run_script
   writeFile(run_script, result.command)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
