@@ -42,7 +42,7 @@ proc genPath*(files: seq[PathFile_t]): seq[string] =
 #------------------------------------------------------------------------------
 # Mass params - need to fix this stuff up to have the datasets and their masses
 let mass_s = -0.0743
-let mass_l = -0.0856
+let mass_l = -0.0850
 
 type
   QuarkMass_t* = object
