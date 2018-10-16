@@ -220,7 +220,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   let wallTime = "02:00:00"
 
   # This particular job
-  result.nodes          = 1
+  result.nodes          = 2
   result.wallTime       = wallTime
   result.queuename      = "ANALY_TJLAB_LQCD"
   result.outputFile     = genPath(run_paths.prop_op_file)
@@ -228,10 +228,10 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 
   result.command = """
 #!/bin/bash
-#SBATCH -N 2
+#SBATCH -N """ & result.nodes & "\n" & """
+#SBATCH -q """ & result.queue & "\n" & """
+#SBATCH -t """ & result.wallTime & "\n" & """
 #SBATCH -C knl,quad,cache
-#SBATCH -q """ & queue & "\n" & """
-#SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -A m2156
 #SBATCH -S 2
 
@@ -253,7 +253,7 @@ then
   exit 0
 fi
 
-exe="$HOME/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
+exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
 
 source """ & basedir & """/env_qphix.sh
 
@@ -298,7 +298,8 @@ when isMainModule:
     let cwd = getCurrentDir()
     setCurrentDir(dir)
 
-    for t0 in 0 .. Lt-1:
+    #for t0 in 0 .. Lt-1:
+    for t0 in 0 .. 2:
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0
       let run_paths = constructPathNames(t0)
