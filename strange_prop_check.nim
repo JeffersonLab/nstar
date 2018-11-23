@@ -26,9 +26,9 @@ when isMainModule:
     
   let cutoff = parseFloat(paramStr(1))
   echo "cutoff= ", cutoff
-  #let stem = "/lustre/cache/Spectrum/Clover/NF2+1/szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265/prop_db_diagt0/szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265.prop.n162.strange.diag_t0.sdb"
+  let stem = "/lustre/cache/Spectrum/Clover/NF2+1/szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265/prop_db_diagt0/szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265.prop.n162.strange.diag_t0.sdb"
   #let stem = "/lustre/cache/Spectrum/Clover/NF2+1/szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265/prop_db_diagt0/szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265.prop.n162.light.diag_t0.sdb"
-  #echo stem
+  echo stem
 
   # Loop over configs
   for n in 2..paramCount():
