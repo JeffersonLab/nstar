@@ -155,28 +155,19 @@ proc readSDB*(edb: string): auto =
   echo "found num pairs= ", bin_pairs.len
   echo "here are all the pairs: len= ", bin_pairs.len, "  keys:\n"
   
-  echo "deserialize the first val"
-  let foov = deserializeBinary[V](bin_pairs[0].val)
-  echo "foov= ", $foov
+  #echo "deserialize the first val"
+  #let foov = deserializeBinary[V](bin_pairs[0].val)
+  #echo "foov= ", $foov
 
-  echo "deserialize the first key"
-  let fook = deserializeBinary[K](bin_pairs[0].key)
-  echo "fook= ", $fook
+  #echo "deserialize the first key"
+  #let fook = deserializeBinary[K](bin_pairs[0].key)
+  #echo "fook= ", $fook
 
-#[
-  # Loop over all the keys, and find the t-to-t perams. Check their values.
-  for k in des_keys:
-    if (k.t_source == k.t_slice) and (k.spin_l == 0) and (k.spin_r == 0):
-      # Read the prop elemental
-      var v: V
-      if db.get(k,v) != 0: quit("Error reading " & $k)
-      #let N = v.mat.nrows
-      #for i in 0..N-1:
-      var i = 0
-      if v.mat[0,0].re < cutoff:
-        echo "k= ", k, "  v[", i, ",",i,"]= ",v.mat[i,i], "  bad"
-        bad = true
-]#
+  # Loop over all the pairs and build a Table
+  for k,v in items(bin_pairs):
+    let kk = deserializeBinary[K](k)
+    let vv = deserializeBinary[V](v)
+    result.add(kk, vv)
       
   # Close
   if db.close() != 0:
@@ -213,6 +204,8 @@ when isMainModule:
   echo "Read edb = ", input_edb
   let corrs = readSDB(input_edb)
   
+  #echo "Here is the contents of corrs\n", $corrs
+  echo "Here is the xml version of corrs\n", serializeXML(corrs)
 
 #[
   #  Output corrs
