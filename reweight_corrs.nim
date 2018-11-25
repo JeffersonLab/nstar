@@ -130,7 +130,7 @@ proc readSDB*(edb: string): auto =
   echo "edb= ", edb
 
   type K = KeyHadronSUNNPartNPtCorr_t
-  type V = seq[Complex]
+  type V = seq[Complex64]
 
   result = initTable[K,V]()
 
@@ -143,9 +143,9 @@ proc readSDB*(edb: string): auto =
 
   # Read all the keys
   echo "try getting all the keys"
-  #let des_keys = allKeys[K](db)
-  #echo "found num keys= ", des_keys.len
-  #echo "here are all the keys: len= ", des_keys.len, "  keys:\n"
+  let des_keys = allKeys[K](db)
+  echo "found num keys= ", des_keys.len
+  echo "here are all the keys: len= ", des_keys.len, "  keys:\n"
 
   let bin_keys = allBinaryKeys(db)
   echo "found num keys= ", bin_keys.len
