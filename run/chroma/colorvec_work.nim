@@ -207,9 +207,38 @@ import prop_and_matelem_distillation as matelem
 import fermbc, fermstate
 import inverter
 import clover_fermact
+import link_smearing
 import propagator
 
 
+proc newStandardStoutLinkSmear*(): XmlNode =
+  ## Standard link smearing we use for in distillation
+  newStoutLinkSmearing(0.1, 10, 3)
+
+#------------------------------------------------------------------------------
+proc flipMom(mom: seq[cint]): seq[cint] =
+  ## flip momenta
+  result.setLen(3)
+  result[0] = -mom[0]
+  result[1] = -mom[1]
+  result[2] = -mom[2]
+
+proc newMaxMomDispGammaMom*(mom2_min: int, mom2_max: int): seq[DispGammaMom_t] =
+  ## Generate canonical momenta
+  result.setLen(0)
+  let canon_mom = generateCanonMoms(mom2_min, mom2_max)
+  # loop over mom
+  var mom = newSeq[cint](3)
+  for mom in items(canon_mom):
+    if norm2(mom) == 0:
+      result.add(mom)
+    else:
+      # add both moms
+      result.add(mom)
+      result.add(flipMom(mom))
+
+
+#------------------------------------------------------------------------------
 proc newAnisoParams*(): AnisoParam_t =
   ## Anisotropic clover params for light and strange quarks
   AnisoParam_t(anisoP: true, xi_0: 4.3, nu: 1.265, t_dir: 3)
