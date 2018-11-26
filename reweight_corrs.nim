@@ -163,43 +163,95 @@ proc readSDB*(edb: string): auto =
   # Close
   if db.close() != 0:
     quit("error closing db")
+
       
+## ----------------------------------------------------------------------------
+proc writeSDB*(meta: string, file: string, corrs: Table[KeyHadronSUNNPartNPtCorr_t, seq[Complex64]]) =
+  ## Write the db
+  echo "Declare conf db"
+  var db = newConfDataStoreDB()
+
+  # Let us write a file
+  if fileExists(file):
+    echo "It exists, so remove it"
+    removeFile(file)
+  else:
+    echo "Does not exist"
+
+  # Meta-data
+  db.setMaxUserInfoLen(meta.len)
+
+  # Number of configs
+  echo "Set max configs= ", 1
+  #db.setMaxNumberConfigs(nbins)
+
+  echo "open the db = ", file
+  var ret = db.open(file, O_RDWR or O_TRUNC or O_CREAT, 0o664)
+  echo "open = ", file, "  return type= ", ret
+  if ret != 0:
+    quit("strerror= " & $strerror(errno))
+
+  # Insert new DB-meta
+  ret = db.insertUserdata(meta)
+  if ret != 0:
+    quit("strerror= " & $strerror(errno))
+ 
+  # For each key, built up some values and insert them
+  for k,v in pairs(corrs):
+    # Insert
+    ret = db.insert(k,v)
+    if ret != 0:
+      echo "Ooops, ret= ", ret
+      quit("Error in insertion")
+
+  # Close
+  discard db.close()
+
+
+
+## ----------------------------------------------------------------------------
+proc newVal(Lt: int): seq[Complex64] =
+  result.setLen(Lt)
+  for v in mitems(result):
+    v = complex64(0.0)
+  
+
+## ----------------------------------------------------------------------------
+proc newIrrepOp*(op: KeyParticleOp_t): KeyHadronSUNNPartIrrepOp_t =
+  ## Construct a 2pt correlator key from the sink and source ops
+  result.Operators.setLen(1)
+  result.Operators[1] = op
+  
+
+## ----------------------------------------------------------------------------
+proc newSnkIrrep*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; op: KeyHadronSUNNPartIrrepOp_t): KeyHadronSUNNPartIrrep_t =
+  ## Construct a 2pt correlator key from the sink and source ops
+  result.creation_op = false
+  result.smearedP    = true
+  result.flavor      = flavor
+  result.irmom       = irmom
+  result.Op          = op
+  
+
+## ----------------------------------------------------------------------------
+proc newSrcIrrep*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; op: KeyHadronSUNNPartIrrepOp_t): KeyHadronSUNNPartIrrep_t =
+  ## Construct a 2pt correlator key from the sink and source ops
+  result.creation_op = true
+  result.smearedP    = true
+  result.flavor      = flavor
+  result.irmom       = irmom
+  result.Op          = op
+  
 
 ## ----------------------------------------------------------------------------
 proc constructCorr*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; snk, src: KeyHadronSUNNPartIrrepOp_t): KeyHadronSUNNPartNPtCorr_t =
   ## Construct a 2pt correlator key from the sink and source ops
   result.NPoint.setLen(2)
   result.NPoint[1].t_slice = -2
-  result.NPoint[1].Irrep.creation_op = false
-  result.NPoint[1].Irrep.smearedP    = true
-  result.NPoint[1].Irrep.flavor      = flavor
-  result.NPoint[1].Irrep.irmom       = irmom
-  result.NPoint[1].Irrep.Op          = snk
+  result.NPoint[1].Irrep = newSnkIrrep(flavor, irmom, snk)
   result.NPoint[2].t_slice = 0    # FIXME
-  result.NPoint[2].Irrep.creation_op = true
-  result.NPoint[2].Irrep.smearedP    = true
-  result.NPoint[2].Irrep.flavor      = flavor
-  result.NPoint[2].Irrep.irmom       = irmom
-  result.NPoint[2].Irrep.Op          = src
+  result.NPoint[2].Irrep = newSrcIrrep(flavor, irmom, src)
 
-
-## ----------------------------------------------------------------------------
-proc constructCorr*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; snk, src: KeyParticleOp_t): KeyHadronSUNNPartNPtCorr_t =
-  ## Construct a 2pt correlator key from the sink and source ops
-  var op1: KeyHadronSUNNPartIrrepOp_t
-  op1.Operators.setLen(1)
-  op1.Operators[1] = snk
-  var op2: KeyHadronSUNNPartIrrepOp_t
-  op2.Operators.setLen(1)
-  op2.Operators[1] = src
-  return constructCorr(flavor, irmom, op1, op2)
-  
-
-proc newVal(Lt: int): seq[Complex64] =
-  result.setLen(Lt)
-  for v in mitems(result):
-    v = complex64(0.0)
-  
 
 ## ----------------------------------------------------------------------------
 ##  Read database and an opslist file. Reweight the corrs
@@ -241,16 +293,17 @@ when isMainModule:
     f.close()
   
 
-  echo "Grab the flavor and irrepmom from the first npt of the first correlator"
-  var flavor: KeyCGCSU3_t
-  var irmom:  KeyCGCIrrepMom_t
-  var Lt:     int
+  echo "Grab the flavor, irrepmom, and ops from the first npt of the first correlator"
+  var flavor:   KeyCGCSU3_t
+  var irmom:    KeyCGCIrrepMom_t
+  var Lt:       int
+  var irrep_ops = initTable[KeyHadronSUNNPartIrrepOp_t,int]()
 
   for k,v in pairs(corrs):
     flavor = k.NPoint[1].Irrep.flavor
     irmom  = k.NPoint[1].Irrep.irmom
     Lt     = v.len()
-    break
+    irrep_ops.add(k.NPoint[1].Irrep.Op,1)
 
   echo "flavor= ", $flavor
   echo "irmom= ",  $irmom
@@ -265,7 +318,7 @@ when isMainModule:
   for nk1,nv1 in pairs(projOpsMap):
     for nk2,nv2 in pairs(projOpsMap):
       echo "key1= ",nk1, "  key2= ",nk2
-      let key = constructCorr(flavor, irmom, nk1, nk2)
+      let key = constructCorr(flavor, irmom, newIrrepOp(nk1), newIrrepOp(nk2))
       var val = newVal(Lt)
       
       for kk1,vv1 in pairs(nv1):
@@ -283,28 +336,65 @@ when isMainModule:
       new_corrs.add(key, val)
 
 
+  # Construct a new projop-projop submatrix
+  for nk1,nv1 in pairs(projOpsMap):
+    for nk2 in keys(irrep_ops):
+      echo "key1= ",nk1
+      let key = constructCorr(flavor, irmom, newIrrepOp(nk1), nk2)
+      var val = newVal(Lt)
+      
+      for kk1,vv1 in pairs(nv1):
+        #echo $serializeXML(kk1)
+        echo "Construct this corr"
+        let cr = constructCorr(flavor, irmom, kk1, nk2)
+        echo $serializeXML(cr)
+        if not corrs.hasKey(cr):
+          quit("oops, corr does not exist: cr= " & $cr)
+        # Accumulate
+        for i in 0..Lt-1:
+          val[i] += corrs[cr][i] * vv1
+
+      new_corrs.add(key, val)
+
+
+  # Construct a new vanilla-projop submatrix
+  for nk1 in keys(irrep_ops):
+    for nk2,nv2 in pairs(projOpsMap):
+      echo "  key2= ",nk2
+      let key = constructCorr(flavor, irmom, nk1, newIrrepOp(nk2))
+      var val = newVal(Lt)
+      
+      for kk2,vv2 in pairs(nv2):
+        #echo $serializeXML(kk1)
+        echo "Construct this corr"
+        let cr = constructCorr(flavor, irmom, nk1, kk2)
+        echo $serializeXML(cr)
+        if not corrs.hasKey(cr):
+          quit("oops, corr does not exist: cr= " & $cr)
+        # Accumulate
+        for i in 0..Lt-1:
+          val[i] += corrs[cr][i] * vv2
+
+      new_corrs.add(key, val)
+
   # More debugging
   if open(f, "new_corrs.xml", fmWrite):
     f.write(xmlHeader)
     f.write(serializeXML(new_corrs, "NewCorrs"))
     f.close()
-  
+ 
+  # Write the new db
+  #<?xml version="1.0"?>
 
+  let meta = """
+<DBMetaData>
+  <id>hadronSUNNPartNPtCorr</id>
+  <lattSize>4 4 4 16</lattSize>
+  <decay_dir>3</decay_dir>
+  <t_origin>0</t_origin>
+  <version>3</version>
+  <ensemble></ensemble>
+</DBMetaData>
+"""
 
-#[
-  #  Output corrs
-  #  Select the irreps commensurate with the momentum
-  echo "Build 2pt correlation functions"
-  var corrs = newSeq[KeyHadronSUNNPartNPtCorr_t](0)
-
-  for mom in items(params.moms):
-    let tmp = printRedstar2Pts(params.runmode, source_ops_list, sink_ops_list, ops_map, mom,
-                               params.include_all_rows, params.t_sources)
-    echo "Found ", tmp.len(), "  corr funcs compatible with mom= ", mom
-    corrs.add(tmp)
-
-  #  Print keys
-  echo "\nWrite out ", corrs.len(), " total number of corr funcs 2pt xml"
-  # Write the xml
-  writeFile(output_xml, xmlHeader & $serializeXML(corrs, "NPointList"))
-]#
+  writeSDB(meta, "new_corrs.sdb", new_corrs)
