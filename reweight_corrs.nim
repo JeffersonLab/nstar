@@ -166,7 +166,7 @@ proc readSDB*(edb: string): auto =
 
       
 ## ----------------------------------------------------------------------------
-proc writeSDB*(meta: string, file: string, corrs: Table[KeyHadronSUNNPartNPtCorr_t, seq[Complex64]]) =
+proc writeSDB*(meta, file: string; new_corrs, corrs: Table[KeyHadronSUNNPartNPtCorr_t, seq[Complex64]]) =
   ## Write the db
   echo "Declare conf db"
   var db = newConfDataStoreDB()
@@ -196,7 +196,15 @@ proc writeSDB*(meta: string, file: string, corrs: Table[KeyHadronSUNNPartNPtCorr
   if ret != 0:
     quit("strerror= " & $strerror(errno))
  
-  # For each key, built up some values and insert them
+  # Write out the new corrs
+  for k,v in pairs(new_corrs):
+    # Insert
+    ret = db.insert(k,v)
+    if ret != 0:
+      echo "Ooops, ret= ", ret
+      quit("Error in insertion")
+
+  # Write out the old corrs
   for k,v in pairs(corrs):
     # Insert
     ret = db.insert(k,v)
@@ -397,4 +405,4 @@ when isMainModule:
 </DBMetaData>
 """
 
-  writeSDB(meta, "new_corrs.sdb", new_corrs)
+  writeSDB(meta, "new_corrs.sdb", new_corrs, corrs)
