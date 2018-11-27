@@ -125,14 +125,14 @@ proc openTheEDB(out_file: string): AllConfDataStoreDB =
 
 
 ## ----------------------------------------------------------------------------------
-proc readSDB*(edb: string): auto = 
+proc readSDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[Complex64]]] =
   ## Read an edb
   echo "edb= ", edb
 
   type K = KeyHadronSUNNPartNPtCorr_t
   type V = seq[Complex64]
 
-  result = initTable[K,V]()
+  result.corrs = initTable[K,V]()
 
   # Quick sanity check
   if getFileSize(edb) == 0:
@@ -140,6 +140,9 @@ proc readSDB*(edb: string): auto =
 
   # Open it
   var db = openTheSDB(edb)
+
+  # Try metadata
+  result.meta = db.getUserdata()
 
   # Read all the key/values
   let bin_pairs = allBinaryPairs(db)
@@ -158,7 +161,7 @@ proc readSDB*(edb: string): auto =
   for k,v in items(bin_pairs):
     let kk = deserializeBinary[K](k)
     let vv = deserializeBinary[V](v)
-    result.add(kk, vv)
+    result.corrs.add(kk, vv)
       
   # Close
   if db.close() != 0:
@@ -288,7 +291,9 @@ when isMainModule:
   let opsMap = readOpsMapFiles(ops_map_files)
 
   echo "Read edb = ", input_edb
-  let corrs = readSDB(input_edb)
+  let meta_corrs = readSDB(input_edb)
+  let meta  = meta_corrs.meta
+  let corrs = meta_corrs.corrs
   
   #echo "Here is the contents of corrs\n", $corrs
   #echo "Here is the xml version of corrs\n", serializeXML(corrs)
@@ -392,17 +397,4 @@ when isMainModule:
     f.close()
  
   # Write the new db
-  #<?xml version="1.0"?>
-
-  let meta = """
-<DBMetaData>
-  <id>hadronSUNNPartNPtCorr</id>
-  <lattSize>4 4 4 16</lattSize>
-  <decay_dir>3</decay_dir>
-  <t_origin>0</t_origin>
-  <version>3</version>
-  <ensemble></ensemble>
-</DBMetaData>
-"""
-
   writeSDB(meta, "new_corrs.sdb", new_corrs, corrs)
