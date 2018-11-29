@@ -81,6 +81,14 @@ proc printRedstar2PtsDefault*(source_ops_list: seq[OpsList_t];
 ]#  
 
 
+## ----------------------------------------------------------------------------
+proc getNbins*(corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]): int =
+  ## Construct a 2pt correlator key from the sink and source ops
+  for k,v in pairs(corrs):
+    result  = v.len()
+    break
+
+
 ## ----------------------------------------------------------------------------------
 proc readProjectOpWeights*(files: seq[string]): auto =
   ## Read proj ops files
@@ -125,12 +133,13 @@ proc openTheEDB(out_file: string): AllConfDataStoreDB =
 
 
 ## ----------------------------------------------------------------------------------
-proc readSDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[Complex64]]] =
+proc readEDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]] =
   ## Read an edb
   echo "edb= ", edb
 
   type K = KeyHadronSUNNPartNPtCorr_t
-  type V = seq[Complex64]
+  type D = seq[Complex64]
+  type V = seq[D]
 
   result.corrs = initTable[K,V]()
 
@@ -139,13 +148,17 @@ proc readSDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNP
     quit("BAD EDB= " & edb)
 
   # Open it
-  var db = openTheSDB(edb)
+  var db = openTheEDB(edb)
 
   # Try metadata
   result.meta = db.getUserdata()
 
+  # Number of configs
+  let nbins = db.getMaxNumberConfigs()
+  echo "nbins= ", nbins
+
   # Read all the key/values
-  let bin_pairs = allBinaryPairs(db)
+  var bin_pairs = allBinaryPairs(db)
   echo "found num pairs= ", bin_pairs.len
   echo "here are all the pairs: len= ", bin_pairs.len, "  keys:\n"
   
@@ -158,10 +171,33 @@ proc readSDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNP
   #echo "fook= ", $fook
 
   # Loop over all the pairs and build a Table
-  for k,v in items(bin_pairs):
-    let kk = deserializeBinary[K](k)
-    let vv = deserializeBinary[V](v)
-    result.corrs.add(kk, vv)
+  var bytesize: int
+  var Lt: int
+
+  for dd in mitems(bin_pairs):
+    let kk = deserializeBinary[K](dd.key)
+    echo "kk= ", kk
+    #echo "kk= ", kk,  "   v= ", printBin(dd.val)
+
+    # If first time through, we may reset the bytesize
+    if bytesize == 0:
+      bytesize = dd.val.len div nbins
+      Lt = bytesize div sizeof(Complex64)
+      echo "bytesize= ", bytesize, "  Lt= ", Lt
+
+    # Split up the val-string into nbin chunks
+    var data = newSeq[seq[Complex64]](nbins)
+
+    for n in 0..nbins-1:
+      # convert object into a string and deserialize it
+      data[n].setLen(Lt)
+      var dbd = newString(bytesize)
+      copyMem(addr(dbd[0]), addr(dd.val[n*bytesize]), bytesize)
+      data[n] = deserializeBinary[seq[Complex64]]($dbd)
+
+    #echo "data= ", $data
+    result.corrs.add(kk, data)
+    #quit("stop")
       
   # Close
   if db.close() != 0:
@@ -169,10 +205,10 @@ proc readSDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNP
 
       
 ## ----------------------------------------------------------------------------
-proc writeSDB*(meta, file: string; new_corrs, corrs: Table[KeyHadronSUNNPartNPtCorr_t, seq[Complex64]]) =
+proc writeEDB*(meta, file: string; new_corrs, old_corrs: Table[KeyHadronSUNNPartNPtCorr_t, seq[seq[Complex64]]]) =
   ## Write the db
   echo "Declare conf db"
-  var db = newConfDataStoreDB()
+  var db = newAllConfDataStoreDB()
 
   # Let us write a file
   if fileExists(file):
@@ -185,8 +221,9 @@ proc writeSDB*(meta, file: string; new_corrs, corrs: Table[KeyHadronSUNNPartNPtC
   db.setMaxUserInfoLen(meta.len)
 
   # Number of configs
-  echo "Set max configs= ", 1
-  #db.setMaxNumberConfigs(nbins)
+  let nbins = getNbins(old_corrs)
+  echo "Set max configs= ", nbins
+  db.setMaxNumberConfigs(nbins)
 
   echo "open the db = ", file
   var ret = db.open(file, O_RDWR or O_TRUNC or O_CREAT, 0o664)
@@ -208,7 +245,7 @@ proc writeSDB*(meta, file: string; new_corrs, corrs: Table[KeyHadronSUNNPartNPtC
       quit("Error in insertion")
 
   # Write out the old corrs
-  for k,v in pairs(corrs):
+  for k,v in pairs(old_corrs):
     # Insert
     ret = db.insert(k,v)
     if ret != 0:
@@ -221,12 +258,15 @@ proc writeSDB*(meta, file: string; new_corrs, corrs: Table[KeyHadronSUNNPartNPtC
 
 
 ## ----------------------------------------------------------------------------
-proc newVal(Lt: int): seq[Complex64] =
-  result.setLen(Lt)
+proc newVal(nbins, Lt: int): seq[seq[Complex64]] =
+  ## Initialize a proper size ensemble with 0
+  result.setLen(nbins)
   for v in mitems(result):
-    v = complex64(0.0)
-  
+    v.setLen(Lt)
+    for t in 0..v.len()-1:
+      v[t] = complex64(0.0)
 
+  
 ## ----------------------------------------------------------------------------
 proc newIrrepOp*(op: KeyParticleOp_t): KeyHadronSUNNPartIrrepOp_t =
   ## Construct a 2pt correlator key from the sink and source ops
@@ -260,7 +300,7 @@ proc constructCorr*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; snk, src: KeyH
   result.NPoint.setLen(2)
   result.NPoint[1].t_slice = -2
   result.NPoint[1].Irrep = newSnkIrrep(flavor, irmom, snk)
-  result.NPoint[2].t_slice = 0    # FIXME
+  result.NPoint[2].t_slice = -2
   result.NPoint[2].Irrep = newSrcIrrep(flavor, irmom, src)
 
 
@@ -291,7 +331,7 @@ when isMainModule:
   let opsMap = readOpsMapFiles(ops_map_files)
 
   echo "Read edb = ", input_edb
-  let meta_corrs = readSDB(input_edb)
+  let meta_corrs = readEDB(input_edb)
   let meta  = meta_corrs.meta
   let corrs = meta_corrs.corrs
   
@@ -310,29 +350,32 @@ when isMainModule:
   var flavor:   KeyCGCSU3_t
   var irmom:    KeyCGCIrrepMom_t
   var Lt:       int
+  var nbins:    int
   var irrep_ops = initTable[KeyHadronSUNNPartIrrepOp_t,int]()
 
   for k,v in pairs(corrs):
     flavor = k.NPoint[1].Irrep.flavor
     irmom  = k.NPoint[1].Irrep.irmom
-    Lt     = v.len()
+    nbins  = v.len()
+    Lt     = v[0].len()
     irrep_ops.add(k.NPoint[1].Irrep.Op,1)
 
   echo "flavor= ", $flavor
   echo "irmom= ",  $irmom
   echo "Lt= ",     Lt
+  echo "nbins= ",  nbins
   echo "\n\n"
 
   # Construct a new project correlator
   # Table[KeyParticleOp_t, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
-  var new_corrs = initTable[KeyHadronSUNNPartNPtCorr_t, seq[Complex64]]()
+  var new_corrs = initTable[KeyHadronSUNNPartNPtCorr_t, seq[seq[Complex64]]]()
 
   # Construct a new projop-projop submatrix
   for nk1,nv1 in pairs(projOpsMap):
     for nk2,nv2 in pairs(projOpsMap):
       echo "key1= ",nk1, "  key2= ",nk2
       let key = constructCorr(flavor, irmom, newIrrepOp(nk1), newIrrepOp(nk2))
-      var val = newVal(Lt)
+      var val = newVal(nbins,Lt)
       
       for kk1,vv1 in pairs(nv1):
         for kk2,vv2 in pairs(nv2):
@@ -343,8 +386,9 @@ when isMainModule:
           if not corrs.hasKey(cr):
             quit("oops, corr does not exist: cr= " & $cr)
           # Accumulate
-          for i in 0..Lt-1:
-            val[i] += corrs[cr][i] * vv1 * vv2
+          for n in 0..nbins-1:
+            for i in 0..Lt-1:
+              val[n][i] += corrs[cr][n][i] * vv1 * vv2
 
       new_corrs.add(key, val)
 
@@ -354,7 +398,7 @@ when isMainModule:
     for nk2 in keys(irrep_ops):
       echo "key1= ",nk1
       let key = constructCorr(flavor, irmom, newIrrepOp(nk1), nk2)
-      var val = newVal(Lt)
+      var val = newVal(nbins,Lt)
       
       for kk1,vv1 in pairs(nv1):
         #echo $serializeXML(kk1)
@@ -364,8 +408,9 @@ when isMainModule:
         if not corrs.hasKey(cr):
           quit("oops, corr does not exist: cr= " & $cr)
         # Accumulate
-        for i in 0..Lt-1:
-          val[i] += corrs[cr][i] * vv1
+        for n in 0..nbins-1:
+          for i in 0..Lt-1:
+            val[n][i] += corrs[cr][n][i] * vv1
 
       new_corrs.add(key, val)
 
@@ -375,7 +420,7 @@ when isMainModule:
     for nk2,nv2 in pairs(projOpsMap):
       echo "  key2= ",nk2
       let key = constructCorr(flavor, irmom, nk1, newIrrepOp(nk2))
-      var val = newVal(Lt)
+      var val = newVal(nbins,Lt)
       
       for kk2,vv2 in pairs(nv2):
         #echo $serializeXML(kk1)
@@ -385,8 +430,9 @@ when isMainModule:
         if not corrs.hasKey(cr):
           quit("oops, corr does not exist: cr= " & $cr)
         # Accumulate
-        for i in 0..Lt-1:
-          val[i] += corrs[cr][i] * vv2
+        for n in 0..nbins-1:
+          for i in 0..Lt-1:
+            val[n][i] += corrs[cr][n][i] * vv2
 
       new_corrs.add(key, val)
 
@@ -397,4 +443,4 @@ when isMainModule:
     f.close()
  
   # Write the new db
-  writeSDB(meta, "new_corrs.sdb", new_corrs, corrs)
+  writeEDB(meta, "new_corrs.sdb", new_corrs, corrs)
