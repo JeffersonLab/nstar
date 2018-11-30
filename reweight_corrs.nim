@@ -13,74 +13,6 @@ import
   os, strutils, xmltree, xmlparser, posix
 
 
-
-#[
-## ----------------------------------------------------------------------------------
-proc printRedstarIrrep*(ops_list: seq[OpsList_t];
-                        ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
-                        mom: seq[cint];
-                        include_all_rows: bool;
-                        creation_op: bool;
-                        smearedP: bool): seq[IrrepOpList_t] =
-  ##  Create single time-slice of operator constructions for all ops in ops_list
-  ##  Input  pair of form    [000_T1mM, string=<operator_id>]
-  ##  Return pair of form    [000_T1mM, KeyHadronSUNNPartIrrep_t]
-  ## 
-  #  Only select the irreps compatible with the mom_type
-  let canon_mom = canonicalOrder(mom)
-  #  Sink ops
-  result.setLen(0)
-  for irrep_op in items(ops_list):
-    if not ops_map.has_key(irrep_op.op):
-      quit(": missing op= " & irrep_op.op & " is not in ops_map")
-    let mom_type = opListToIrrepMom(irrep_op.rep).mom
-    if canon_mom != mom_type:
-      continue
-    var had: KeyHadronSUNNPartIrrep_t
-    had.creation_op = creation_op
-    had.smearedP = smearedP
-    had.Op = ops_map[irrep_op.op]
-    ##  Op
-    let info = hadronIrrepOpInfo(had.Op)
-    had.flavor = KeyCGCSU3_t(twoI: info.twoI, threeY: info.threeY, twoI_Z: info.twoI)
-    var dim = if (include_all_rows): info.dim else: 1
-    for row in 1 .. dim:
-      had.irmom = KeyCGCIrrepMom_t(row: row, mom: mom)
-      result.add((irrep_op.rep, had))
-
-
-## ----------------------------------------------------------------------------------
-proc printRedstar2PtsDefault*(source_ops_list: seq[OpsList_t];
-                              sink_ops_list: seq[OpsList_t];
-                              ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
-                              mom: seq[cint]; include_all_rows: bool;
-                              t_sources: seq[cint]): seq[KeyHadronSUNNPartNPtCorr_t] =
-  ## Default method
-  #  Sink & source ops
-  let sink_ops   = printRedstarIrrep(sink_ops_list, ops_map, mom, include_all_rows, false, true)
-  let source_ops = printRedstarIrrep(source_ops_list, ops_map, mom, include_all_rows, true, true)
-  ##  Output
-  result.setLen(0)
-  ##  Outer product of sink and source ops
-  for snk in items(sink_ops):
-    for src in items(source_ops):
-      ##  The "default" version has the same source/sink irreps and the same rows
-      if snk.rep != src.rep:
-        continue
-      if snk.op.irmom.row != src.op.irmom.row:
-        continue
-      ##  Loop over time sources
-      for t_source in items(t_sources):
-        var key: KeyHadronSUNNPartNPtCorr_t
-        key.NPoint.setLen(2)
-        key.NPoint[1].t_slice = -2
-        key.NPoint[1].Irrep = snk.op
-        key.NPoint[2].t_slice = t_source
-        key.NPoint[2].Irrep = src.op
-        result.add(key)
-]#  
-
-
 ## ----------------------------------------------------------------------------
 proc getNbins*(corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]): int =
   ## Construct a 2pt correlator key from the sink and source ops
@@ -138,10 +70,7 @@ proc readEDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNP
   echo "edb= ", edb
 
   type K = KeyHadronSUNNPartNPtCorr_t
-  type D = seq[Complex64]
-  type V = seq[D]
-
-  result.corrs = initTable[K,V]()
+  type V = seq[Complex64]
 
   # Quick sanity check
   if getFileSize(edb) == 0:
@@ -157,48 +86,9 @@ proc readEDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNP
   let nbins = db.getMaxNumberConfigs()
   echo "nbins= ", nbins
 
-  # Read all the key/values
-  var bin_pairs = allBinaryPairs(db)
-  echo "found num pairs= ", bin_pairs.len
-  echo "here are all the pairs: len= ", bin_pairs.len, "  keys:\n"
+  result.corrs = allPairs[K,V](db)
+  echo "found num pairs= ", result.corrs.len
   
-  #echo "deserialize the first val"
-  #let foov = deserializeBinary[V](bin_pairs[0].val)
-  #echo "foov= ", $foov
-
-  #echo "deserialize the first key"
-  #let fook = deserializeBinary[K](bin_pairs[0].key)
-  #echo "fook= ", $fook
-
-  # Loop over all the pairs and build a Table
-  var bytesize: int
-  var Lt: int
-
-  for dd in mitems(bin_pairs):
-    let kk = deserializeBinary[K](dd.key)
-    echo "kk= ", kk
-    #echo "kk= ", kk,  "   v= ", printBin(dd.val)
-
-    # If first time through, we may reset the bytesize
-    if bytesize == 0:
-      bytesize = dd.val.len div nbins
-      Lt = bytesize div sizeof(Complex64)
-      echo "bytesize= ", bytesize, "  Lt= ", Lt
-
-    # Split up the val-string into nbin chunks
-    var data = newSeq[seq[Complex64]](nbins)
-
-    for n in 0..nbins-1:
-      # convert object into a string and deserialize it
-      data[n].setLen(Lt)
-      var dbd = newString(bytesize)
-      copyMem(addr(dbd[0]), addr(dd.val[n*bytesize]), bytesize)
-      data[n] = deserializeBinary[seq[Complex64]]($dbd)
-
-    #echo "data= ", $data
-    result.corrs.add(kk, data)
-    #quit("stop")
-      
   # Close
   if db.close() != 0:
     quit("error closing db")
@@ -373,16 +263,15 @@ when isMainModule:
   # Construct a new projop-projop submatrix
   for nk1,nv1 in pairs(projOpsMap):
     for nk2,nv2 in pairs(projOpsMap):
-      echo "key1= ",nk1, "  key2= ",nk2
+      #echo "key1= ",nk1, "  key2= ",nk2
       let key = constructCorr(flavor, irmom, newIrrepOp(nk1), newIrrepOp(nk2))
       var val = newVal(nbins,Lt)
       
       for kk1,vv1 in pairs(nv1):
         for kk2,vv2 in pairs(nv2):
-          #echo $serializeXML(kk1)
-          echo "Construct this corr"
+          #echo "Construct this corr"
           let cr = constructCorr(flavor, irmom, kk1, kk2)
-          echo $serializeXML(cr)
+          #echo $serializeXML(cr)
           if not corrs.hasKey(cr):
             quit("oops, corr does not exist: cr= " & $cr)
           # Accumulate
@@ -396,15 +285,14 @@ when isMainModule:
   # Construct a new projop-projop submatrix
   for nk1,nv1 in pairs(projOpsMap):
     for nk2 in keys(irrep_ops):
-      echo "key1= ",nk1
+      #echo "key1= ",nk1
       let key = constructCorr(flavor, irmom, newIrrepOp(nk1), nk2)
       var val = newVal(nbins,Lt)
       
       for kk1,vv1 in pairs(nv1):
-        #echo $serializeXML(kk1)
-        echo "Construct this corr"
+        #echo "Construct this corr"
         let cr = constructCorr(flavor, irmom, kk1, nk2)
-        echo $serializeXML(cr)
+        #echo $serializeXML(cr)
         if not corrs.hasKey(cr):
           quit("oops, corr does not exist: cr= " & $cr)
         # Accumulate
@@ -418,15 +306,14 @@ when isMainModule:
   # Construct a new vanilla-projop submatrix
   for nk1 in keys(irrep_ops):
     for nk2,nv2 in pairs(projOpsMap):
-      echo "  key2= ",nk2
+      #echo "  key2= ",nk2
       let key = constructCorr(flavor, irmom, nk1, newIrrepOp(nk2))
       var val = newVal(nbins,Lt)
       
       for kk2,vv2 in pairs(nv2):
-        #echo $serializeXML(kk1)
-        echo "Construct this corr"
+        #echo "Construct this corr"
         let cr = constructCorr(flavor, irmom, nk1, kk2)
-        echo $serializeXML(cr)
+        #echo $serializeXML(cr)
         if not corrs.hasKey(cr):
           quit("oops, corr does not exist: cr= " & $cr)
         # Accumulate
