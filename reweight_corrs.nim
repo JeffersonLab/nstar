@@ -249,13 +249,14 @@ when isMainModule:
   echo "irmom= ",  $irmom
   echo "Lt= ",     Lt
   echo "nbins= ",  nbins
-  echo "\n\n"
+  echo "\n"
 
   # Construct a new project correlator
   # Table[KeyParticleOp_t, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
   var new_corrs = initTable[KeyHadronSUNNPartNPtCorr_t, seq[seq[Complex64]]]()
 
   # Construct a new projop-projop submatrix
+  echo "Build new-new corrs"
   for nk1,nv1 in pairs(projOpsMap):
     for nk2,nv2 in pairs(projOpsMap):
       #echo "key1= ",nk1, "  key2= ",nk2
@@ -278,6 +279,7 @@ when isMainModule:
 
 
   # Construct a new projop-projop submatrix
+  echo "Build new-old corrs"
   for nk1,nv1 in pairs(projOpsMap):
     for nk2 in keys(irrep_ops):
       #echo "key1= ",nk1
@@ -299,6 +301,7 @@ when isMainModule:
 
 
   # Construct a new vanilla-projop submatrix
+  echo "Build old-new corrs"
   for nk1 in keys(irrep_ops):
     for nk2,nv2 in pairs(projOpsMap):
       #echo "  key2= ",nk2
@@ -318,11 +321,13 @@ when isMainModule:
 
       new_corrs.add(key, val)
 
-  # More debugging
-  if open(f, "new_corrs.xml", fmWrite):
-    f.write(xmlHeader)
-    f.write(serializeXML(new_corrs, "NewCorrs"))
-    f.close()
+  # Debugging output
+  #echo "Write out all corrs"
+  #if open(f, "new_corrs.xml", fmWrite):
+  #  f.write(xmlHeader)
+  #  f.write(serializeXML(new_corrs, "NewCorrs"))
+  #  f.close()
  
   # Write the new db
+  echo "Write out new edb"
   writeEDB(meta, "new_corrs.sdb", new_corrs, corrs)
