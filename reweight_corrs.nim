@@ -201,7 +201,7 @@ proc constructCorr*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; snk, src: KeyH
 when isMainModule:
   echo "paramCount = ", paramCount()
   if paramCount() < 4:
-    quit("Usage: exe <out> <in> <proj op name> <proj op file> <ops map 1> <ops map 2> ...")
+    quit("Usage: exe <out> <in> <proj op xml> <proj op file> <ops map 1> <ops map 2> ...")
     
   let output_edb    = paramStr(1)
   let input_edb     = paramStr(2)
