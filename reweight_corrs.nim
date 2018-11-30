@@ -86,6 +86,7 @@ proc readEDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNP
   let nbins = db.getMaxNumberConfigs()
   echo "nbins= ", nbins
 
+  # This is the big read of the db, returning all correlators into a table
   result.corrs = allPairs[K,V](db)
   echo "found num pairs= ", result.corrs.len
   
@@ -127,20 +128,14 @@ proc writeEDB*(meta, file: string; new_corrs, old_corrs: Table[KeyHadronSUNNPart
     quit("strerror= " & $strerror(errno))
  
   # Write out the new corrs
-  for k,v in pairs(new_corrs):
-    # Insert
-    ret = db.insert(k,v)
-    if ret != 0:
-      echo "Ooops, ret= ", ret
-      quit("Error in insertion")
+  echo "Write out new corrs"
+  if db.insert(new_corrs) != 0:
+    quit("Error writing out new corrs")
 
   # Write out the old corrs
-  for k,v in pairs(old_corrs):
-    # Insert
-    ret = db.insert(k,v)
-    if ret != 0:
-      echo "Ooops, ret= ", ret
-      quit("Error in insertion")
+  echo "Write out old corrs"
+  if db.insert(old_corrs) != 0:
+    quit("Error writing out old corrs")
 
   # Close
   discard db.close()
