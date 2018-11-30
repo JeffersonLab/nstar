@@ -22,7 +22,7 @@ proc getNbins*(corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]): in
 
 
 ## ----------------------------------------------------------------------------------
-proc readProjectOpWeights*(files: seq[string]): auto =
+proc readProjectOpWeights*(files: seq[string]): Table[KeyParticleOp_t, Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
   ## Read proj ops files
   result = initTable[KeyParticleOp_t, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
   
@@ -30,7 +30,6 @@ proc readProjectOpWeights*(files: seq[string]): auto =
     if not fileExists(file): quit("file = " & file & " does not exist")
     let xml: XmlNode = loadXml(file)
     #echo "xml= ", $xml
-
     # Deserialize this table
     let proj_op_struct = deserializeXML[ProjectedOpWeights](xml)
     echo "file = ", file, "  version= ", proj_op_struct.version
@@ -65,7 +64,7 @@ proc openTheEDB(out_file: string): AllConfDataStoreDB =
 
 
 ## ----------------------------------------------------------------------------------
-proc readEDB*(edb: string): tuple[meta: string, corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]] =
+proc readEDB*(edb: string): tuple[meta: string, nbins: int, corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]] =
   ## Read an edb
   echo "edb= ", edb
 
@@ -224,11 +223,11 @@ when isMainModule:
   #echo "Here is the xml version of corrs\n", serializeXML(corrs)
 
   # Write the xml
-  var f: File
-  if open(f, "debug.xml", fmWrite):
-    f.write(xmlHeader)
-    f.write(serializeXML(corrs, "Corrs"))
-    f.close()
+  #var f: File
+  #if open(f, "debug.xml", fmWrite):
+  #  f.write(xmlHeader)
+  #  f.write(serializeXML(corrs, "Corrs"))
+  #  f.close()
   
 
   echo "Grab the flavor, irrepmom, and ops from the first npt of the first correlator"
@@ -275,7 +274,7 @@ when isMainModule:
             for i in 0..Lt-1:
               val[n][i] += corrs[cr][n][i] * vv1 * vv2
 
-      new_corrs.add(key, val)
+      new_corrs[key] = val
 
 
   # Construct a new projop-projop submatrix
@@ -297,7 +296,7 @@ when isMainModule:
           for i in 0..Lt-1:
             val[n][i] += corrs[cr][n][i] * vv1
 
-      new_corrs.add(key, val)
+      new_corrs[key] = val
 
 
   # Construct a new vanilla-projop submatrix
@@ -319,7 +318,7 @@ when isMainModule:
           for i in 0..Lt-1:
             val[n][i] += corrs[cr][n][i] * vv2
 
-      new_corrs.add(key, val)
+      new_corrs[key] = val
 
   # Debugging output
   #echo "Write out all corrs"
