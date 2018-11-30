@@ -194,12 +194,13 @@ proc constructCorr*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; snk, src: KeyH
 #-----------------------------------------------------------------------------
 when isMainModule:
   echo "paramCount = ", paramCount()
-  if paramCount() < 4:
-    quit("Usage: exe <out> <in> <proj op xml> <proj op file> <ops map 1> <ops map 2> ...")
+  if paramCount() < 5:
+    quit("Usage: exe <out> <in> <proj op xml> <use_herm? [Y/N]> <ops map 1> <ops map 2> ...")
     
   let output_edb    = paramStr(1)
   let input_edb     = paramStr(2)
   let proj_op_xml   = paramStr(3)
+  let herm   = paramStr(4)
 
   echo "Read proj ops map"
   let projOpsMap = readProjectOpWeights(@[proj_op_xml])
@@ -207,7 +208,7 @@ when isMainModule:
   # Read the ops files
   var ops_map_files = newSeq[string](0)
 
-  for n in 4 .. paramCount():
+  for n in 5 .. paramCount():
     let f = paramStr(n)
     ops_map_files.add(f)
     
@@ -236,13 +237,21 @@ when isMainModule:
   var Lt:       int
   var nbins:    int
   var irrep_ops = initTable[KeyHadronSUNNPartIrrepOp_t,int]()
+  var keylist: KeyHadronSUNNPartIrrepOp_t
+
+#  var count: int
+  var irrep_ops2 = initTable[KeyHadronSUNNPartIrrepOp_t,int]()
 
   for k,v in pairs(corrs):
     flavor = k.NPoint[1].Irrep.flavor
     irmom  = k.NPoint[1].Irrep.irmom
     nbins  = v.len()
     Lt     = v[0].len()
+#    echo k.NPoint[1]
+#    echo k.NPoint[1].Irrep.Op
     irrep_ops.add(k.NPoint[1].Irrep.Op,1)
+    irrep_ops2[k.NPoint[1].Irrep.Op]=1
+
 
   echo "flavor= ", $flavor
   echo "irmom= ",  $irmom
@@ -258,7 +267,7 @@ when isMainModule:
   echo "Build new-new corrs"
   for nk1,nv1 in pairs(projOpsMap):
     for nk2,nv2 in pairs(projOpsMap):
-      #echo "key1= ",nk1, "  key2= ",nk2
+      echo "key1= ",nk1, "  key2= ",nk2
       let key = constructCorr(flavor, irmom, newIrrepOp(nk1), newIrrepOp(nk2))
       var val = newVal(nbins,Lt)
       
@@ -277,11 +286,12 @@ when isMainModule:
       new_corrs[key] = val
 
 
-  # Construct a new projop-projop submatrix
+
+  # Construct a new projop-vanilla submatrix
   echo "Build new-old corrs"
   for nk1,nv1 in pairs(projOpsMap):
-    for nk2 in keys(irrep_ops):
-      #echo "key1= ",nk1
+    for nk2 in keys(irrep_ops2):
+      echo "key1= ",nk1, "  key2= ",nk2
       let key = constructCorr(flavor, irmom, newIrrepOp(nk1), nk2)
       var val = newVal(nbins,Lt)
       
@@ -296,29 +306,35 @@ when isMainModule:
           for i in 0..Lt-1:
             val[n][i] += corrs[cr][n][i] * vv1
 
+#      echo "done key= ",key
       new_corrs[key] = val
 
-
+  if herm == "N":
+    echo "No herm, building conjugate keys..."
+ 
   # Construct a new vanilla-projop submatrix
-  echo "Build old-new corrs"
-  for nk1 in keys(irrep_ops):
-    for nk2,nv2 in pairs(projOpsMap):
-      #echo "  key2= ",nk2
-      let key = constructCorr(flavor, irmom, nk1, newIrrepOp(nk2))
-      var val = newVal(nbins,Lt)
+    echo "Build old-new corrs"
+    for nk1 in keys(irrep_ops2):
+      for nk2,nv2 in pairs(projOpsMap):
+        echo "key1= ",nk1, "  key2= ",nk2
+        let key = constructCorr(flavor, irmom, nk1, newIrrepOp(nk2))
+        var val = newVal(nbins,Lt)
       
-      for kk2,vv2 in pairs(nv2):
-        #echo "Construct this corr"
-        let cr = constructCorr(flavor, irmom, nk1, kk2)
-        #echo $serializeXML(cr)
-        if not corrs.hasKey(cr):
-          quit("oops, corr does not exist: cr= " & $cr)
-        # Accumulate
-        for n in 0..nbins-1:
-          for i in 0..Lt-1:
-            val[n][i] += corrs[cr][n][i] * vv2
+        for kk2,vv2 in pairs(nv2):
+          #echo "Construct this corr"
+          let cr = constructCorr(flavor, irmom, nk1, kk2)
+          #echo $serializeXML(cr)
+          if not corrs.hasKey(cr):
+            quit("oops, corr does not exist: cr= " & $cr)
+          # Accumulate
+          for n in 0..nbins-1:
+            for i in 0..Lt-1:
+              val[n][i] += corrs[cr][n][i] * vv2
 
-      new_corrs[key] = val
+        new_corrs[key] = val
+
+  elif herm == "Y":
+    echo "Use herm, haven't build conjugate keys..."
 
   # Debugging output
   #echo "Write out all corrs"
@@ -329,4 +345,4 @@ when isMainModule:
  
   # Write the new db
   echo "Write out new edb"
-  writeEDB(meta, "new_corrs.sdb", new_corrs, corrs)
+  writeEDB(meta, output_edb, new_corrs, corrs)
