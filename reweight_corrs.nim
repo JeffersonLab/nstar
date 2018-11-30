@@ -1,4 +1,4 @@
-## Generate redstar NPoint input xml for two-point functions and a list of source/sink ops
+## Generate a new correlator edb using a projected op file to add new linearly dependent row/columns.
 
 import
   tables, complex,
