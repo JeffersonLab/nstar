@@ -12,9 +12,9 @@ import inline_meas
 type
   ## Parameters
   DispGammaMom_t* = object
-    gamma*:           int         ## The gamma matrix for this displacement
-    displacement*:    seq[int]    ## The displacement path for this gamma
-    mom*:             seq[int]    ## Array of momenta to generate 
+    gamma*:           cint        ## The gamma matrix for this displacement
+    displacement*:    seq[cint]   ## The displacement path for this gamma
+    mom*:             array[0..2,cint]  ## Array of momenta to generate 
 
   KeySolnProp_t* = object
     cacheP*:          bool
