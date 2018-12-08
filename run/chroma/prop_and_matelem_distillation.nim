@@ -1,4 +1,4 @@
-]## Prop and matelem distillation
+## Prop and matelem distillation
 
 import propagator
 import serializetools/serializexml

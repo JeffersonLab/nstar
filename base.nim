@@ -4,11 +4,11 @@ import
   system, strutils, os
 
 import  
-  redstar_chain,
+  redstar_chain, redstar_input,
   run/chroma/colorvec_work
 
 # Hacks
-let debug = false
+let debug = true
 
 #----------------------------------------------------------------------------------------------
 proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
@@ -23,7 +23,7 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.layout.decay_dir  = 3
 
   # Set time origin in canonical fashion
-  result.t_origin = getTimeOrigin(result.layout.latt_size[3], seqno)
+  result.t_origin = cint(getTimeOrigin(result.layout.latt_size[3], seqno))
 
   # base params
   result.num_vecs = 256

@@ -1,15 +1,21 @@
 #
 # This is the work script called by run_colorvec_*pl
 #
-import os, ospaths, osproc, strutils
+import os, osproc, strutils
 import re
-
-import serializetools/serializexml, niledb
 import xmltree
+
+import serializetools/serializexml
+import serializetools/array2d
+import niledb
+import ../../irrep_util
 import inline_meas
+import unsmeared_hadron_node_distillation
 import drand48
 
 import config
+
+type Mom_t = array[0..2,cint]    ## shorthand
 
 
 #------------------------------------------------------------------------------
@@ -216,26 +222,23 @@ proc newStandardStoutLinkSmear*(): XmlNode =
   newStoutLinkSmearing(0.1, 10, 3)
 
 #------------------------------------------------------------------------------
-proc flipMom(mom: seq[cint]): seq[cint] =
+proc flipMom(mom: Mom_t): Mom_t =
   ## flip momenta
-  result.setLen(3)
-  result[0] = -mom[0]
-  result[1] = -mom[1]
-  result[2] = -mom[2]
+  result = [-mom[0], -mom[1], -mom[2]]
 
-proc newMaxMomDispGammaMom*(mom2_min: int, mom2_max: int): seq[DispGammaMom_t] =
-  ## Generate canonical momenta
+proc newMaxMomDispGammaMom*(gammas: seq[cint]; mom2_min, mom2_max: cint): seq[DispGammaMom_t] =
+  ## Generate canonical momenta. In this version, no displacements
   result.setLen(0)
   let canon_mom = generateCanonMoms(mom2_min, mom2_max)
   # loop over mom
-  var mom = newSeq[cint](3)
-  for mom in items(canon_mom):
-    if norm2(mom) == 0:
-      result.add(mom)
-    else:
-      # add both moms
-      result.add(mom)
-      result.add(flipMom(mom))
+  for gamma in items(gammas):
+    for mom in items(canon_mom):
+      if norm2(mom) == 0:
+        result.add(DispGammaMom_t(gamma: gamma, mom: mom))
+      else:
+        # add both moms
+        result.add(DispGammaMom_t(gamma: gamma, mom: mom))
+        result.add(DispGammaMom_t(gamma: gamma, mom: flipMom(mom)))
 
 
 #------------------------------------------------------------------------------

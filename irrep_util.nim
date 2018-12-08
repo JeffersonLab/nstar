@@ -3,12 +3,15 @@
 
 import lists, complex, serializetools/array1d
 
+type Mom_t = array[0..2,cint]    ## shorthand
+
+
 ## ----------------------------------------------------------------------------------
-proc canonicalOrder*(mom: seq[cint]): seq[cint] =
+proc canonicalOrder*(mom: Mom_t): Mom_t =
   ## Canonically order an array of momenta
   ## return abs(mom[0]) >= abs(mom[1]) >= ... >= abs(mom[mu]) >= ... >= 0
   ##  first step: make all the components positive
-  var mom_tmp: seq[cint] = mom
+  var mom_tmp = mom
   var mu: int = 0
   while mu < mom_tmp.len():
     if mom_tmp[mu] < 0:
@@ -77,7 +80,7 @@ type
 
 
 ## Return rotation angles for a vector to a canonical direction
-proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t
+proc cubicCanonicalRotation*(mom: Mom_t): CubicCanonicalRotation_t
 
 ## ----------------------------------------------------------------------------------
 ## Check group elem is within allowed range
@@ -85,29 +88,27 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t
 
 ## ----------------------------------------------------------------------------------
 ## Conventional reference mom (for CGs) - not the same as canonical mom
-proc referenceMom*(mom: seq[cint]): seq[cint]
+proc referenceMom*(mom: Mom_t): Mom_t
 
 ## ----------------------------------------------------------------------------------
 ## Scale momentum
-proc scaleMom*(mom: seq[cint]): seq[cint]
+proc scaleMom*(mom: Mom_t): Mom_t
 
 ## ----------------------------------------------------------------------------------
 ## Unscale momentum
-proc unscaleMom*(scaled_mom: seq[cint]; mom: seq[cint]): seq[cint]
+proc unscaleMom*(scaled_mom: Mom_t; mom: Mom_t): Mom_t
 
 ## ----------------------------------------------------------------------------------
-proc Mom3d*(p1: cint; p2: cint; p3: cint): seq[cint] =
+proc Mom3d*(p1: cint; p2: cint; p3: cint): Mom_t =
   ## Helper function
-  result = newSeq[cint](3)
   result[0] = p1
   result[1] = p2
   result[2] = p3
 
 
 ## ----------------------------------------------------------------------------------
-proc Mom3d*(p1: int; p2: int; p3: int): seq[cint] =
+proc Mom3d*(p1: int; p2: int; p3: int): Mom_t =
   ## Helper function
-  result = newSeq[cint](3)
   result[0] = cint(p1)
   result[1] = cint(p2)
   result[2] = cint(p3)
@@ -123,8 +124,7 @@ proc newRotateVec_t*(a: cint; b: cint; c: cint): RotateVec_t =
 
 
 ## ----------------------------------------------------------------------------------
-import
-  irreps_cubic, irreps_cubic_helicity
+#import irreps_cubic, irreps_cubic_helicity
 
 ##  Irrep names
 type
@@ -358,9 +358,9 @@ proc buildIrrepWithPG*(irrep: string; P: cint; G: cint): string =
   return rep
 
 ## ----------------------------------------------------------------------------------
-proc generateLittleGroup*(mom: seq[cint]): string =
+proc generateLittleGroup*(mom: Mom_t): string =
   ## The name of the little group corresponding to this momentum
-  var momCan: seq[cint] = canonicalOrder(mom)
+  var momCan: Mom_t = canonicalOrder(mom)
   var littleGroup: string = ""
   if momCan[2] == 0:
     if momCan[1] == 0:
@@ -385,70 +385,57 @@ proc generateLittleGroup*(mom: seq[cint]): string =
   return littleGroup
 
 
-proc norm2(mom: seq[cint]): cint =
+proc norm2*(mom: Mom_t): cint =
   ## Compute norm2 of a sequence
   result = 0
   for m in items(mom):
     result += m*m
 
 ## ----------------------------------------------------------------------------------
-proc generateAllMom*(mom2_min: cint; mom2_max: cint): seq[seq[cint]] =
+proc generateAllMom*(mom2_min: cint; mom2_max: cint): seq[Mom_t] =
   ## Generate all momentum up to a maximum
-  result = newSeq[seq[cint]](0)
-  var mom = newSeq[cint](3)
-  mom[0] = - mom2_max
-  while mom[0] <= mom2_max:
-    mom[1] = - mom2_max
-    while mom[1] <= mom2_max:
-      mom[2] = - mom2_max
-      while mom[2] <= mom2_max:
-        if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):
-          continue
-        result.add(mom)
-        inc(mom[2])
-      inc(mom[1])
-    inc(mom[0])
-
-## ----------------------------------------------------------------------------
-proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): seq[seq[cint]] =
-  ##  Generate canonical momenta up to some maximum value
-  result = newSeq[seq[cint]](0)
-  ##  Loop over all desired canonical momentum
-  ##  This loop allows us to have, for example,  p= 100, 200, 300,  which all fall in D4
-  var mom = newSeq[cint](3)
+  result = newSeq[Mom_t](0)
+  var mom: Mom_t
   for px in -mom2_max .. mom2_max:
     for py in -mom2_max .. mom2_max:
       for pz in -mom2_max .. mom2_max:
-        ##  Check if valid
-        mom[0] = px
-        mom[1] = py
-        mom[2] = pz
+        mom = [px,py,pz]
         if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):
           continue
         result.add(mom)
-        inc(mom[2])
-      inc(mom[1])
-    inc(mom[0])
-  return
+
+## ----------------------------------------------------------------------------
+proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): seq[Mom_t] =
+  ##  Generate canonical momenta up to some maximum value
+  result = newSeq[Mom_t](0)
+  ##  Loop over all desired canonical momentum
+  ##  This loop allows us to have, for example,  p= 100, 200, 300,  which all fall in D4
+  var mom: Mom_t
+  for px in 0 .. mom2_max:
+    for py in mom[0] .. mom2_max:
+      for pz in mom[1] .. mom2_max:
+        ##  Check if valid
+        mom = [px,py,pz]
+        if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):
+          continue
+        result.add(mom)
 
 ## ----------------------------------------------------------------------------------
-proc generateLittleGroupMom*(littleGroup0: string; canon_mom0: seq[cint]): seq[seq[cint]] =
+proc generateLittleGroupMom*(littleGroup0: string; canon_mom0: Mom_t): seq[Mom_t] =
   ## Generate momentum for a little group from a canonical momentum
-  result = newSeq[seq[cint]](0)
+  result = newSeq[Mom_t](0)
   var littleGroup = getIrrepLG(littleGroup0)
   var canon_mom = canonicalOrder(canon_mom0)
   var mom2 = norm2(canon_mom)
   if generateLittleGroup(canon_mom) != littleGroup:
     quit("little group name= " & littleGroup & " inconsistent with canonical mom= " & $canon_mom)
 
-  var mom = newSeq[cint](3)
+  var mom: Mom_t
   for px in -mom2 .. mom2:
     for py in -mom2 .. mom2:
       for pz in -mom2 .. mom2:
         ##  Check if valid
-        mom[0] = px
-        mom[1] = py
-        mom[2] = pz
+        mom = [px,py,pz]
         if norm2(mom) != mom2:
           continue
         var momCan = canonicalOrder(mom)
@@ -459,30 +446,27 @@ proc generateLittleGroupMom*(littleGroup0: string; canon_mom0: seq[cint]): seq[s
         result.add(mom)
 
 
-proc addSeq(m1, m2: seq[cint]): seq[cint] =
+proc addSeq(m1, m2: Mom_t): Mom_t =
   ## Add two sequences
-  result = newSeq[cint](3)
   for i in 0..3:
     result[i] = m1[i] + m2[i]
 
 
-proc multSeq(m1: seq[cint], n: cint): seq[cint] =
+proc multSeq(m1: Mom_t, n: cint): Mom_t =
   ## Add two sequences
-  result = newSeq[cint](3)
   for i in 0..3:
     result[i] = m1[i] * n
 
 
-proc divSeq(m1: seq[cint], n: cint): seq[cint] =
+proc divSeq(m1: Mom_t, n: cint): Mom_t =
   ## Divide a sequence
-  result = newSeq[cint](3)
   for i in 0..3:
     result[i] = m1[i] div n
 
 
 ## ----------------------------------------------------------------------------------
 proc numMomentaCombin*(group1: string; group2: string;
-                       mom1, mom2, momt: seq[cint]): int =
+                       mom1, mom2, momt: Mom_t): int =
   ## Find number of possible source 1 and source 2 momentum orientations for fixed target momentum
   result = 0
   var mom_list1 = generateLittleGroupMom(group1, mom1)
@@ -495,12 +479,12 @@ proc numMomentaCombin*(group1: string; group2: string;
 
 ## ----------------------------------------------------------------------------------
 proc allowedMomentaCombin*(group1, group2: string;
-                           mom1, mom2, momt: seq[cint],
-                           allowed_mom1, allowed_mom2: var seq[seq[cint]]): int = 
+                           mom1, mom2, momt: Mom_t,
+                           allowed_mom1, allowed_mom2: var seq[Mom_t]): int = 
   ## Find posible source 1 and source 2 momentum orientations for fixed target momentum
   result = 0
-  allowed_mom1 = newSeq[seq[cint]](0)
-  allowed_mom2 = newSeq[seq[cint]](0)
+  allowed_mom1 = newSeq[Mom_t](0)
+  allowed_mom2 = newSeq[Mom_t](0)
   var mom_list1 = generateLittleGroupMom(group1, mom1)
   var mom_list2 = generateLittleGroupMom(group2, mom2)
   for m1 in items(mom_list1):
@@ -512,14 +496,14 @@ proc allowedMomentaCombin*(group1, group2: string;
 
 
 ## ----------------------------------------------------------------------------------
-proc canonMomCombin*(mom1, mom2, momt: seq[cint];
-                     canon_mom1, canon_mom2: var seq[cint]): int =
+proc canonMomCombin*(mom1, mom2, momt: Mom_t;
+                     canon_mom1, canon_mom2: var Mom_t): int =
   ## Generate a canonical combination of momenta for a given target momentum
   var group1 = generateLittleGroup(mom1)
   var group2 = generateLittleGroup(mom2)
   var groupt = generateLittleGroup(momt)
-  var allowed_mom1: seq[seq[cint]]
-  var allowed_mom2: seq[seq[cint]]
+  var allowed_mom1: seq[Mom_t]
+  var allowed_mom2: seq[Mom_t]
   var normalisation = allowedMomentaCombin(group1, group2, mom1, mom2, momt,
       allowed_mom1, allowed_mom2)
   if normalisation == 0: return normalisation
@@ -536,7 +520,7 @@ proc canonMomCombin*(mom1, mom2, momt: seq[cint];
 import math
 
 ## ----------------------------------------------------------------------------------
-proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
+proc cubicCanonicalRotation*(mom: Mom_t): CubicCanonicalRotation_t =
   ## Return rotation angles for a seq to a canonical direction
   var pi: cdouble = 3.14159265359
   ##  Lists of momentum directions
@@ -769,19 +753,19 @@ proc cubicCanonicalRotation*(mom: seq[cint]): CubicCanonicalRotation_t =
   return rot
 
 ## ----------------------------------------------------------------------------
-proc shortMom*(mom: seq[cint]): string =
+proc shortMom*(mom: Mom_t): string =
   ##  Build a short version of momentum
   result = $mom[0] & $mom[1] & $mom[2]
 
 ## ----------------------------------------------------------------------------
-proc momIrrepName*(irrep: string; mom: seq[cint]): string =
+proc momIrrepName*(irrep: string; mom: Mom_t): string =
   ## Irrep names (not including LG) with momentum used for opLists
   ## Turns [D4A1, Array(1,0,0)]  ->  100_A1
   result = shortMom(mom) & "_" & removeIrrepLG(irrep)
 
 ## ----------------------------------------------------------------------------
 type
-  IrrepMom_t* = tuple[rep: string, mom: seq[cint]]  ## Meant for datatypes  [D4A1, Array(1,0,0)]
+  IrrepMom_t* = tuple[rep: string, mom: Mom_t]  ## Meant for datatypes  [D4A1, Array(1,0,0)]
 
 proc opListToIrrepMom*(mom_irrep_name: string): IrrepMom_t =
   ## Inverse of momIrrepName. Turn an opList name back into irrep names (including LG) and momentum
@@ -806,7 +790,7 @@ proc checkIndexLimit*(el: int; dd: int) =
 
 
 ## ----------------------------------------------------------------------------------
-proc referenceMom*(mom: seq[cint]): seq[cint] =
+proc referenceMom*(mom: Mom_t): Mom_t =
   ## Conventional reference mom (for CGs) - not the same as canonical mom
   var group = generateLittleGroup(mom)
   var momCan = canonicalOrder(mom)
@@ -842,7 +826,7 @@ proc referenceMom*(mom: seq[cint]): seq[cint] =
   return momRef
 
 ## ----------------------------------------------------------------------------------
-proc scaleMom*(mom: seq[cint]): seq[cint] =
+proc scaleMom*(mom: Mom_t): Mom_t =
   ## Scale momentum to get to form 100, 110, 111, 210, 221 or 321
   var group = generateLittleGroup(mom)
   var momCan = canonicalOrder(mom)
@@ -906,7 +890,7 @@ proc scaleMom*(mom: seq[cint]): seq[cint] =
   return scaled_mom
 
 ## ----------------------------------------------------------------------------------
-proc unscaleMom*(scaled_mom: seq[cint]; mom: seq[cint]): seq[cint] =
+proc unscaleMom*(scaled_mom: Mom_t; mom: Mom_t): Mom_t =
   ## Unscale momentum from form 100, 110, 111, 210, 221 or 321
   var group: string = generateLittleGroup(mom)
   if group != generateLittleGroup(scaled_mom):
@@ -973,7 +957,7 @@ proc unscaleMom*(scaled_mom: seq[cint]; mom: seq[cint]): seq[cint] =
 
 ## ----------------------------------------------------------------------------------
 ##  Shortcut
-proc isZeroArray*(a: Array1dO[Complex]): bool =
+proc isZeroArray*(a: Array1dO[Complex64]): bool =
   ##  Helper functions for automated CGs
   var i: int = 1
   while i <= a.data.len():
@@ -981,7 +965,7 @@ proc isZeroArray*(a: Array1dO[Complex]): bool =
     inc(i)
   return true
 
-proc modsqArray*(a: Array1dO[Complex]): float =
+proc modsqArray*(a: Array1dO[Complex64]): float =
   ##  Helper functions for automated CGs
   result = 0.0
   var i: int = 1
@@ -990,7 +974,7 @@ proc modsqArray*(a: Array1dO[Complex]): float =
     result += a[i].im * a[i].im
     inc(i)
 
-proc dotArrays*(a1: Array1dO[Complex]; a2: Array1dO[Complex]): Complex =
+proc dotArrays*(a1: Array1dO[Complex64]; a2: Array1dO[Complex64]): Complex64 =
   result.re = 0.0
   result.im = 0.0
   if a1.data.len() != a2.data.len():
