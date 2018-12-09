@@ -6,17 +6,17 @@ import
 #
 type
   RedstarParams_t* = object                     ## Parameters for redstar
-    version*:                   cint            ## Version number of input
-    diagnostic_level*:          cint            ## How much verbosity you are willing to stand
-    Nt_corr*:                   cint            ## Length of correlator to compute
+    version*:                   int             ## Version number of input
+    diagnostic_level*:          int             ## How much verbosity you are willing to stand
+    Nt_corr*:                   int             ## Length of correlator to compute
     convertUDtoL*:              bool            ## Convert  u/d  quarks to l quarks
     convertUDtoS*:              bool            ## Convert  u/d  quarks to s quarks
     average_1pt_diagrams*:      bool            ## Time-slice average diagrams composed of 1pts
     zeroUnsmearedGraphsP*:      bool            ## Zero out graphs that are not computable because of lack of distillation
     autoIrrepCG*:               bool            ## Use automatically generated irrep CGs
     rephaseIrrepCG*:            bool            ## Rephase irrep CGs
-    t_origin*:                  cint            ## Where is the actual time origin of the lattice
-    bc_spec*:                   cint            ## Sign for the boundary conditions multiplier at the border
+    t_origin*:                  int             ## Where is the actual time origin of the lattice
+    bc_spec*:                   int             ## Sign for the boundary conditions multiplier at the border
     Layout*:                    Layout_t        ## Lattice size info
     ensemble*:                  string          ## Information about this ensemble
     NPointList*:                seq[KeyHadronSUNNPartNPtCorr_t]  ## Particles involved in the contractions
@@ -46,8 +46,8 @@ type
 
 type
   SmearedHadronNodeParams_t* = object           ## Parameters for smeared hadron nodes
-    version*:                   cint            ## Version number of input
-    num_vecs*:                  cint            ## Not an array
+    version*:                   int             ## Version number of input
+    num_vecs*:                  int             ## Not an array
     use_derivP*:                bool            ## Meson (& glueball) elementals use derivatives
     FlavorToMass*:              seq[FlavorToMass_t]  ## Mass flavor labels to mass labels
     
@@ -67,8 +67,8 @@ type
 
 type
   UnsmearedHadronNodeParams_t* = object         ## Parameters for colorvec
-    version*:                   cint            ## Version number of input
-    num_vecs*:                  cint            ## Not an array
+    version*:                   int             ## Version number of input
+    num_vecs*:                  int             ## Not an array
     use_derivP*:                bool            ## Meson (& glueball) elementals use derivatives
     FlavorToMass*:              seq[FlavorToMass_t]  ## Mass flavor labels to mass labels
     
@@ -81,3 +81,4 @@ type
     Param*:                     UnsmearedHadronNodeParams_t            
     DBFiles*:                   UnsmearedDBFiles_t
 
+    

@@ -4,11 +4,11 @@ import
   system, strutils, os
 
 import  
-  redstar_chain, redstar_input,
-  run/chroma/colorvec_work
+  redstar_chain, redstar_input, irrep_util,
+  run/chroma/colorvec_work, cgc_su3, cgc_irrep_mom
 
 # Hacks
-let debug = true
+let debug = false
 
 #----------------------------------------------------------------------------------------------
 proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
@@ -19,23 +19,23 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.arch  = arch
 
   # Extract file params
-  result.layout.latt_size  = extractLattSize(stem)
+  result.layout.latt_size  = [4,4,4,16]
   result.layout.decay_dir  = 3
 
   # Set time origin in canonical fashion
-  result.t_origin = getTimeOrigin(result.layout.latt_size[3], seqno)
+  result.t_origin = 0
 
   # base params
-  result.num_vecs = 256
-  result.Nt_corr  = 40
+  result.num_vecs = 10
+  result.Nt_corr  = 16
   result.use_derivP = true
   result.autoIrrepCG = false
 
-  result.mass_l   = "U-0.0860"
-  result.mass_s   = "U-0.0743"
+  result.mass_l   = "U0.05"
+  result.mass_s   = "U0.1"
 
 #  result.t_sources = @[0,16,32,48,64,80,96,112]
-  result.t_sources = @[0,64,128,192]
+  result.t_sources = @[0,4,8]
 #  result.t_sources = @[0]
 
 # var use_cp = true
@@ -51,30 +51,33 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 # end of hacks
 
   #----------------------------------------
-  let cache_dir = "/cache/Spectrum/Clover/NF2+1"
-  let lhpc_dir = "/cache/LHPC/Spectrum/Clover/NF2+1"
-  let volatile_dir = "/volatile/Spectrum/Clover/NF2+1"
-  let work_dir = "/work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1"
+  let cache_dir = "/Users/edwards/Documents/qcd/data/redstar/test_dirs"
+  let volatile_dir = "/Users/edwards/Documents/qcd/data/redstar/test_dirs"
+  let work_dir = "/Users/edwards/Documents/qcd/data/redstar/test_dirs"
 
   let corr_tag = "corr1"
 
-  result.proj_ops_xmls = @["../weights/weights.pion.xml",
-                           "../weights/weights.kaon.xml",
-                           "../weights/weights.kbar.xml",
-                           "../weights/weights.eta.xml"
+  result.proj_ops_xmls = @["./weights.pion.xml",
+                           "./weights.kaon.xml",
+                           "./weights.kbar.xml",
+                           "./weights.eta.xml"
   ]
 
-#  result.ops_xmls = @["../single.ops.xml"]
+  result.ops_xmls = @["../single.ops.xml"]
   
-#  result.source_ops_list = "./orthog.list"
-#  result.sink_ops_list = source_ops_list
+  result.source_ops_list = "./orthog.list"
+  result.sink_ops_list   = result.source_ops_list
+
+  result.convertUDtoL = true
+  result.convertUDtoS = true
 
   let momm = split(irrep, "_")
   let mom = momm[0]
   echo "irrep = ", irrep, "  mom = ", mom[0], mom[1], mom[2]
 
-  result.convertUDtoL = true
-  result.convertUDtoS = true
+  result.irmom  = KeyCGCIrrepMom_t(row: 1, mom: Mom3d(mom[0], mom[1], mom[2]))
+
+  result.flavor = KeyCGCSU3_t(twoI: 2, threeY: 0, twoI_Z: 2)    ## THIS IS A HACK ##
 
   result.runmode = "default"
   result.include_all_rows = false
@@ -100,25 +103,20 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.hadron_npt_graph_db = volatile_dir & "/" & stem & "/rge_temp/graphs/" & stem & ".n" & $result.num_vecs & ".graph.sdb" & seqno
   discard tryRemoveFile(result.hadron_npt_graph_db)     # Check me
 
-  let nn = ".n384"
+  let nn = ".n10"
   for quark_type in ["light", "strange"]:
     result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db_diagt0/" & stem & ".prop" & nn & "." & quark_type & ".diag_t0.sdb" & seqno, use_cp))
 
-    for tt in redstar.t_sources:
+    for tt in result.t_sources:
       result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db/" & stem & ".prop" & nn & "." & quark_type & ".t0_" & $tt & ".sdb" & seqno, use_cp))
 
   result.meson_dbs = @[]
   
   # derivs
   let meson_path = cache_dir & "/" & stem & "/meson_db_deriv/" & stem & ".meson.deriv" & nn
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".d_0_1_2.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".d_3.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_1.d_0_1.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_1.d_2.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_2.d_0_1.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_2.d_2.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.d_0_1.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.d_2.sdb" & seqno, use_cp))
+  result.meson_dbs.add(copy_lustre_file(meson_path & ".d_0_1_2_3.sdb" & seqno, use_cp))
+  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.sdb" & seqno, use_cp))
+  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_4.sdb" & seqno, use_cp))
 
   result.baryon_dbs = @[]
   result.ensemble = stem

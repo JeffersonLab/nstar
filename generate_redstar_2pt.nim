@@ -9,16 +9,17 @@ import
 type
   OpsList_t* = tuple[rep: string, op: string]
   IrrepOpList_t* = tuple[rep: string, op: KeyHadronSUNNPartIrrep_t]
+  Mom_t = array[0..2,cint]    ## shorthand
 
 ####### HACK ############
 type
   HadronIrrepOpInfo_t* = object ## Given an IrrepOp struct, return useful information about the construction
-    ## This construction is about the entire N-body construction, so not same as in HadronOpsRegInfo */
+    ## This construction is about the entire N-body construction, so not same as in HadronOpsRegInfo
     N*:                cint           ##
     F*:                string         ## Flavor irrep
     irrepPG*:          string         ## total irrepPG
     dim*:              cint           ## total rows of irrep
-    mom_type*:         seq[cint]      ## total mom_type
+    mom_type*:         Mom_t          ## total mom_type
     twoI*:             cint           ## total twoI
     threeY*:           cint           ## total threeY
     P*:                cint           ## Parity of the rest frame op
@@ -37,7 +38,7 @@ proc hadronIrrepOpInfo*(irrep_op: KeyHadronSUNNPartIrrepOp_t): HadronIrrepOpInfo
 ## ----------------------------------------------------------------------------------
 proc printRedstarIrrep*(ops_list: seq[OpsList_t];
                         ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
-                        mom: array[0..2,cint];
+                        mom: Mom_t;
                         include_all_rows: bool;
                         creation_op: bool;
                         smearedP: bool): seq[IrrepOpList_t] =
@@ -72,8 +73,8 @@ proc printRedstarIrrep*(ops_list: seq[OpsList_t];
 proc printRedstar2PtsDiag*(source_ops_list: seq[OpsList_t];
                            sink_ops_list: seq[OpsList_t];
                            ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
-                           mom: array[0..2,cint]; include_all_rows: bool;
-                           t_sources: seq[cint]): seq[KeyHadronSUNNPartNPtCorr_t] =
+                           mom: Mom_t; include_all_rows: bool;
+                           t_sources: seq[int]): seq[KeyHadronSUNNPartNPtCorr_t] =
   ## Create corr keys from operator list
   #  Sink & source ops - determined completely by source ops
   let source_ops = printRedstarIrrep(source_ops_list, ops_map, mom, include_all_rows, true, true)
@@ -88,7 +89,7 @@ proc printRedstar2PtsDiag*(source_ops_list: seq[OpsList_t];
       key.NPoint[1].t_slice = -2
       key.NPoint[1].Irrep = src.op
       key.NPoint[1].Irrep.creation_op = false
-      key.NPoint[2].t_slice = t_source
+      key.NPoint[2].t_slice = cint(t_source)
       key.NPoint[2].Irrep = src.op
       result.add(key)
 
@@ -96,8 +97,8 @@ proc printRedstar2PtsDiag*(source_ops_list: seq[OpsList_t];
 proc printRedstar2PtsOffDiag*(source_ops_list: seq[OpsList_t];
                               sink_ops_list: seq[OpsList_t];
                               ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
-                              mom: array[0..2,cint]; include_all_rows: bool;
-                              t_sources: seq[cint]): seq[KeyHadronSUNNPartNPtCorr_t] =
+                              mom: Mom_t; include_all_rows: bool;
+                              t_sources: seq[int]): seq[KeyHadronSUNNPartNPtCorr_t] =
   ## Off-diagonal method
   #  Sink & source ops
   let sink_ops   = printRedstarIrrep(sink_ops_list, ops_map, mom, include_all_rows, false, true)
@@ -113,7 +114,7 @@ proc printRedstar2PtsOffDiag*(source_ops_list: seq[OpsList_t];
         key.NPoint.setLen(2)
         key.NPoint[1].t_slice = -2
         key.NPoint[1].Irrep = snk.op
-        key.NPoint[2].t_slice = t_source
+        key.NPoint[2].t_slice = cint(t_source)
         key.NPoint[2].Irrep = src.op
         result.add(key)
 
@@ -121,8 +122,8 @@ proc printRedstar2PtsOffDiag*(source_ops_list: seq[OpsList_t];
 proc printRedstar2PtsDefault*(source_ops_list: seq[OpsList_t];
                               sink_ops_list: seq[OpsList_t];
                               ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
-                              mom: array[0..2,cint]; include_all_rows: bool;
-                              t_sources: seq[cint]): seq[KeyHadronSUNNPartNPtCorr_t] =
+                              mom: Mom_t; include_all_rows: bool;
+                              t_sources: seq[int]): seq[KeyHadronSUNNPartNPtCorr_t] =
   ## Default method
   #  Sink & source ops
   let sink_ops   = printRedstarIrrep(sink_ops_list, ops_map, mom, include_all_rows, false, true)
@@ -143,7 +144,7 @@ proc printRedstar2PtsDefault*(source_ops_list: seq[OpsList_t];
         key.NPoint.setLen(2)
         key.NPoint[1].t_slice = -2
         key.NPoint[1].Irrep = snk.op
-        key.NPoint[2].t_slice = t_source
+        key.NPoint[2].t_slice = cint(t_source)
         key.NPoint[2].Irrep = src.op
         result.add(key)
   
@@ -154,7 +155,7 @@ proc printRedstar2Pts*(runmode: string;
                        sink_ops_list: seq[OpsList_t];
                        ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
                        mom: array[0..2,cint]; include_all_rows: bool;
-                       t_sources: seq[cint]): seq[KeyHadronSUNNPartNPtCorr_t] =
+                       t_sources: seq[int]): seq[KeyHadronSUNNPartNPtCorr_t] =
   ## Generate all desired correlation functions dictated by the runmode but for a fixed momenta
   case runmode:
     of "diag":
@@ -183,7 +184,7 @@ proc printRedstar2Pts*(runmode: string;
                        ops_map: Table[string, KeyHadronSUNNPartIrrepOp_t];
                        moms: seq[array[0..2,cint]];
                        include_all_rows: bool;
-                       t_sources: seq[cint]): seq[KeyHadronSUNNPartNPtCorr_t] =
+                       t_sources: seq[int]): seq[KeyHadronSUNNPartNPtCorr_t] =
   ## Generate all desired correlation functions dictated by the runmode but for all momenta
   result.setLen(0)
   for mom in items(moms):
@@ -251,8 +252,8 @@ type
     source_ops_list*: string   ## !< List of source ops
     sink_ops_list*: string     ## !< List of sink ops
     ops_xmls*: seq[string]     ## !< The XML files for all of the ops
-    moms*: seq[array[0..2,cint]] ## !< The actual momentum - not mom_type
-    t_sources*: seq[cint]      ## !< Array of all the requested time-sources
+    moms*: seq[Mom_t]          ## !< The actual momentum - not mom_type
+    t_sources*: seq[int]       ## !< Array of all the requested time-sources
   
 ## ----------------------------------------------------------------------------
 ##  Generate redstar NPoint input xml for two-point functions and a list of source/sink ops

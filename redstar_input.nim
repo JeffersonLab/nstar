@@ -1,7 +1,7 @@
 ## Params for redstar_gengraph and redstar_npt
 
 import
-  op_params, hadron_sun_npart_npt_corr, redstar_chain
+  op_params, hadron_sun_npart_npt_corr, redstar_chain, cgc_su3, cgc_irrep_mom
 
 type
   RedstarRuns_t* = object                       ## Parameters for redstar
@@ -9,7 +9,7 @@ type
     stem*:                      string          ## Convenience copy
     chan*:                      string          ## Channel like "Omega"
     irrep*:                     string          ## Irrep name of form 000_Hg, etc.
-    t_origin*:                  cint            ## Time origin
+    t_origin*:                  int             ## Time origin
     layout*:                    Layout_t        ## Lattice size info
     convertUDtoL*:              bool            ## Convert  u/d  quarks to l quarks
     convertUDtoS*:              bool            ## Convert  u/d  quarks to s quarks
@@ -20,12 +20,18 @@ type
     include_all_rows*:          bool
     output_dir*:                string
     output_db*:                 string
-    num_vecs*:                  cint            ## num_vecs for hadron_node
-    Nt_corr*:                   cint            ## length of each correlator
+    output_file_base*:          string          ## Output file name without the seqno
+    num_vecs*:                  int             ## num_vecs for hadron_node
+    Nt_corr*:                   int             ## length of each correlator
     use_derivP*:                bool            ## use derivs for meson elementals
     autoIrrepCG*:               bool            ## Use auto spatial irreps
     rephaseIrrepCG*:            bool            ## Rephase irreps
-    t_sources*:                 seq[cint]       ## time sources
+    t_sources*:                 seq[int]        ## time sources
+    flavor*:                    KeyCGCSU3_t
+    irmom*:                     KeyCGCIrrepMom_t
+    source_ops_list*:           string
+    sink_ops_list*:             string
+    ops_xmls*:                  seq[string]
     proj_ops_xmls*:             seq[string]     ## The XML files with projected operator definitions
     corr_graph_xml*:            string          ## Map of correlator graph-map and weights in xml
     corr_graph_db*:             string          ## (Required) Map of correlator graph-map and weights

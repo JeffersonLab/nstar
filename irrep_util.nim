@@ -2,6 +2,7 @@
 ## 
 
 import lists, complex, serializetools/array1d
+import strutils
 
 type Mom_t = array[0..2,cint]    ## shorthand
 
@@ -113,6 +114,12 @@ proc Mom3d*(p1: int; p2: int; p3: int): Mom_t =
   result[1] = cint(p2)
   result[2] = cint(p3)
 
+## ----------------------------------------------------------------------------------
+proc Mom3d*(p1: char; p2: char; p3: char): Mom_t =
+  ## Helper function
+  result[0] = cint(parseInt($p1))
+  result[1] = cint(parseInt($p2))
+  result[2] = cint(parseInt($p3))
 
 ## ----------------------------------------------------------------------------------
 ## Helper functions for automated CGs
@@ -219,8 +226,6 @@ let irrep_names_with_pg: IRNames_t = createWithPGTable()
 
 
 ## ----------------------------------------------------------------------------------
-import strutils
-
 proc getIrrepIndex*(irrep: string): IrrepNames_t =
   ## Get irrep
   # First check the ones with parity and G-parity
