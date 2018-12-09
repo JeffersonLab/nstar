@@ -58,10 +58,10 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 
   let corr_tag = "corr1"
 
-  result.proj_ops_xmls = @["../weights/weights.pion.xml",
-                           "../weights/weights.kaon.xml",
-                           "../weights/weights.kbar.xml",
-                           "../weights/weights.eta.xml"
+  result.proj_op_xmls = @["../weights/weights.pion.xml",
+                          "../weights/weights.kaon.xml",
+                          "../weights/weights.kbar.xml",
+                          "../weights/weights.eta.xml"
   ]
 
 #  result.ops_xmls = @["../single.ops.xml"]

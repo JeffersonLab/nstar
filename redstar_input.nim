@@ -18,6 +18,7 @@ type
     mass_c*:                    string
     run_mode*:                  string
     include_all_rows*:          bool
+    scratch*:                   string          ## The scratch dir for this run
     output_dir*:                string
     output_db*:                 string
     output_file_base*:          string          ## Output file name without the seqno
@@ -32,7 +33,7 @@ type
     source_ops_list*:           string
     sink_ops_list*:             string
     ops_xmls*:                  seq[string]
-    proj_ops_xmls*:             seq[string]     ## The XML files with projected operator definitions
+    proj_op_xmls*:             seq[string]     ## The XML files with projected operator definitions
     corr_graph_xml*:            string          ## Map of correlator graph-map and weights in xml
     corr_graph_db*:             string          ## (Required) Map of correlator graph-map and weights
     hadron_npt_graph_db*:       string          ## Holds graphs - modified on output
@@ -66,7 +67,7 @@ proc newRedstarInput*(params: RedstarRuns_t): RedstarInput_t =
   result.Param.bc_spec = -1
   result.Param.Layout = params.layout
   result.Param.ensemble = params.ensemble
-  result.DBFiles.proj_ops_xmls = params.proj_ops_xmls
+  result.DBFiles.proj_op_xmls = params.proj_op_xmls
   result.DBFiles.corr_graph_xml = params.corr_graph_xml
   result.DBFiles.corr_graph_db = params.corr_graph_db
   result.DBFiles.hadron_npt_graph_db = params.hadron_npt_graph_db
@@ -76,6 +77,7 @@ proc newRedstarInput*(params: RedstarRuns_t): RedstarInput_t =
   result.DBFiles.smeared_hadron_node_db = params.smeared_hadron_node_db
   result.DBFiles.unsmeared_hadron_node_xml = params.unsmeared_hadron_node_xml
   result.DBFiles.unsmeared_hadron_node_db = params.unsmeared_hadron_node_db
+  result.DBFiles.output_db = params.output_db
 
 
 #-----------------------------------------------------------------------------
@@ -105,5 +107,6 @@ proc newUnsmearedHadronNodeInput*(params: RedstarRuns_t): UnsmearedHadronNodeInp
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'c', mass: params.mass_c))
   result.DBFiles.hadron_node_xmls = @[params.unsmeared_hadron_node_xml]
   result.DBFiles.unsmeared_meson_dbs = @[params.unsmeared_hadron_node_db]
+  result.DBFiles.output_db = params.unsmeared_hadron_node_db
 
   

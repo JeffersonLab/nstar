@@ -8,7 +8,7 @@ import
   run/chroma/colorvec_work, cgc_su3, cgc_irrep_mom
 
 # Hacks
-let debug = false
+let debug = true
 
 #----------------------------------------------------------------------------------------------
 proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
@@ -19,8 +19,8 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.arch  = arch
 
   # Extract file params
-  result.layout.latt_size  = [4,4,4,16]
-  result.layout.decay_dir  = 3
+  result.layout.lattSize  = [4,4,4,16]
+  result.layout.decayDir  = 3
 
   # Set time origin in canonical fashion
   result.t_origin = 0
@@ -33,6 +33,7 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 
   result.mass_l   = "U0.05"
   result.mass_s   = "U0.1"
+  result.mass_c   = "fred"
 
 #  result.t_sources = @[0,16,32,48,64,80,96,112]
   result.t_sources = @[0,4,8]
@@ -51,19 +52,19 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 # end of hacks
 
   #----------------------------------------
-  let cache_dir = "/Users/edwards/Documents/qcd/data/redstar/test_dirs"
-  let volatile_dir = "/Users/edwards/Documents/qcd/data/redstar/test_dirs"
-  let work_dir = "/Users/edwards/Documents/qcd/data/redstar/test_dirs"
+  let cache_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
+  let volatile_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
+  let work_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
 
   let corr_tag = "corr1"
 
-  result.proj_ops_xmls = @["./weights.pion.xml",
-                           "./weights.kaon.xml",
-                           "./weights.kbar.xml",
-                           "./weights.eta.xml"
-  ]
-
-  result.ops_xmls = @["../single.ops.xml"]
+  result.proj_op_xmls = @["../weights/weights.pion.xml",
+                          "../weights/weights.kaon.xml",
+                          "../weights/weights.kbar.xml",
+                          "../weights/weights.eta.xml"]
+ 
+  result.ops_xmls = @["../single.ops.xml",
+                      "../two.ops.xml"]
   
   result.source_ops_list = "./orthog.list"
   result.sink_ops_list   = result.source_ops_list
@@ -86,18 +87,22 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   for tt in result.t_sources:
     corr = corr & "_" & $tt
 
+  result.scratch = "/tmp"
+  let scr = result.scratch & "/"
+
+  let out_db = corr & "." & corr_tag & ".sdb"
   result.output_dir = work_dir & "/" & stem & "/redstar/" & chan & "/sdbs"
-  result.output_db = corr & "." & corr_tag & ".sdb" & seqno
-  result.output_file_base = result.output_dir & "/" & corr & "." & corr_tag & ".sdb"
+  result.output_db = scr & out_db & seqno
+  result.output_file_base = result.output_dir & "/" & out_db
 
-  result.corr_graph_db = corr & ".corr_graph.sdb" & seqno
-  result.noneval_graph_xml = corr & "." & "noneval_graph.xml" & seqno
+  result.corr_graph_db = scr & corr & ".corr_graph.sdb" & seqno
+  result.noneval_graph_xml = scr & corr & "." & "noneval_graph.xml" & seqno
 
-  result.smeared_hadron_node_db = corr & ".smeared_hadron_node.sdb" & seqno
-  result.smeared_hadron_node_xml = corr & ".smeared_hadron_node.xml" & seqno
+  result.smeared_hadron_node_db = scr & corr & ".smeared_hadron_node.sdb" & seqno
+  result.smeared_hadron_node_xml = scr & corr & ".smeared_hadron_node.xml" & seqno
 
-  result.unsmeared_hadron_node_db = corr & ".unsmeared_hadron_node.sdb" & seqno
-  result.unsmeared_hadron_node_xml = corr & ".unsmeared_hadron_node.xml" & seqno
+  result.unsmeared_hadron_node_db = scr & corr & ".unsmeared_hadron_node.sdb" & seqno
+  result.unsmeared_hadron_node_xml = scr & corr & ".unsmeared_hadron_node.xml" & seqno
 
   result.hadron_node_dbs = @[result.smeared_hadron_node_db]
   result.hadron_npt_graph_db = volatile_dir & "/" & stem & "/rge_temp/graphs/" & stem & ".n" & $result.num_vecs & ".graph.sdb" & seqno

@@ -22,7 +22,7 @@ type
     NPointList*:                seq[KeyHadronSUNNPartNPtCorr_t]  ## Particles involved in the contractions
 
   RedstarDBFiles_t* = object                    ## Parameters for redstar
-    proj_ops_xmls*:             seq[string]     ## The XML files with projected operator definitions
+    proj_op_xmls*:              seq[string]     ## The XML files with projected operator definitions
     corr_graph_xml*:            string          ## Map of correlator graph-map and weights in xml
     corr_graph_db*:             string          ## (Required) Map of correlator graph-map and weights
     hadron_npt_graph_db*:       string          ## Holds graphs - modified on output
@@ -32,6 +32,7 @@ type
     smeared_hadron_node_db*:    string          ## Smeared hadron nodes
     unsmeared_hadron_node_xml*: string          ## Unsmeared hadron nodes - output
     unsmeared_hadron_node_db*:  string          ## Smeared hadron nodes - output
+    output_db*:                 string          ## Final output
 
   RedstarInput_t* = object                       ## Parameters for colorvec
     Param*:                     RedstarParams_t            
