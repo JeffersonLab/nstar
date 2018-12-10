@@ -36,7 +36,8 @@ type
     proj_op_xmls*:             seq[string]     ## The XML files with projected operator definitions
     corr_graph_xml*:            string          ## Map of correlator graph-map and weights in xml
     corr_graph_db*:             string          ## (Required) Map of correlator graph-map and weights
-    hadron_npt_graph_db*:       string          ## Holds graphs - modified on output
+    hadron_npt_graph_db*:       string          ## Temporary graph output
+    hadron_npt_graph_dir*:      string          ## Holds graphs - modified on output
     noneval_graph_xml*:         string          ## Keys of graphs not evaluatable
     hadron_node_dbs*:           seq[string]     ## Input hadron nodes
     smeared_hadron_node_xml*:   string          ## Smeared hadron nodes - output

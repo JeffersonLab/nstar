@@ -1,11 +1,8 @@
 ## Generate params for redstar_npt
 
-import
-  system, strutils, os
-
-import  
-  redstar_chain, redstar_input, irrep_util,
-  run/chroma/colorvec_work, cgc_su3, cgc_irrep_mom
+import system, strutils, os
+import irrep_util, run/chroma/colorvec_work, cgc_su3, cgc_irrep_mom
+import redstar_chain, redstar_input, run/chroma/colorvec_work, redstar_work_files
 
 # Hacks
 let debug = true
