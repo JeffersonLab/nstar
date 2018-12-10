@@ -7,8 +7,6 @@ import times, xmltree, os
 
 type
   Exes_t* = object
-    redstar_num_threads*:    int
-    hadron_num_threads*:     int
     redstar_gen_graph*:      string
     redstar_npt*:            string
     smeared_hadron_node*:    string
@@ -23,6 +21,7 @@ proc redstar_exe_nstar*(): Exes_t =
     
 proc redstar_exe_12s*(): Exes_t =
   ## Return executables for 12s
+  quit("need to add 12s binaries")
   var run = "env"
   run = run & " OMP_NUM_THREADS=$nt"
   run = run & " OMP_PROC_BIND=true"
@@ -45,6 +44,7 @@ proc redstar_exe_12s*(): Exes_t =
 
 proc redstar_exe_knl*(): Exes_t =
   ## Return executables for jlab knl
+  quit("need to add knl binaries")
 
 ## ----------------------------------------------------------------------------
 proc redstar_exe*(arch: string): Exes_t =
