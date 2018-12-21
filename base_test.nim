@@ -52,6 +52,7 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   let cache_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
   let volatile_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
   let work_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
+  let scratch_dir = "/tmp"
 
   let corr_tag = "corr1"
 
@@ -69,41 +70,21 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.convertUDtoL = true
   result.convertUDtoS = true
 
-  let momm = split(irrep, "_")
-  let mom = momm[0]
-  echo "irrep = ", irrep, "  mom = ", mom[0], mom[1], mom[2]
+  let mom_rep = opListToIrrepMom(irrep)
+  echo "irrep = ", irrep, "  mom = ", mom_rep.mom
 
-  result.irmom  = KeyCGCIrrepMom_t(row: 1, mom: Mom3d(mom[0], mom[1], mom[2]))
+  result.irmom  = KeyCGCIrrepMom_t(row: 1, mom: mom_rep.mom)
 
   result.flavor = KeyCGCSU3_t(twoI: 2, threeY: 0, twoI_Z: 2)    ## THIS IS A HACK ##
 
   result.runmode = "default"
   result.include_all_rows = false
 
-  var corr  = stem & ".n" & $result.num_vecs & "." & chan & "." & irrep & "." & "t0"
-  for tt in result.t_sources:
-    corr = corr & "_" & $tt
+  result.work_files = redstar_work_files(stem, chan, irrep, corr_tag, result.num_vecs, result.t_sources,
+                                         scratch_dir, work_dir, volatile_dir,
+                                         seqno)
 
-  result.scratch = "/tmp"
-  let scr = result.scratch & "/"
-
-  let out_db = corr & "." & corr_tag & ".sdb"
-  result.output_dir = work_dir & "/" & stem & "/redstar/" & chan & "/sdbs"
-  result.output_db = scr & out_db & seqno
-  result.output_file_base = result.output_dir & "/" & out_db
-
-  result.corr_graph_db = scr & corr & ".corr_graph.sdb" & seqno
-  result.noneval_graph_xml = scr & corr & "." & "noneval_graph.xml" & seqno
-
-  result.smeared_hadron_node_db = scr & corr & ".smeared_hadron_node.sdb" & seqno
-  result.smeared_hadron_node_xml = scr & corr & ".smeared_hadron_node.xml" & seqno
-
-  result.unsmeared_hadron_node_db = scr & corr & ".unsmeared_hadron_node.sdb" & seqno
-  result.unsmeared_hadron_node_xml = scr & corr & ".unsmeared_hadron_node.xml" & seqno
-
-  result.hadron_node_dbs = @[result.smeared_hadron_node_db]
-  result.hadron_npt_graph_db = volatile_dir & "/" & stem & "/rge_temp/graphs/" & stem & ".n" & $result.num_vecs & ".graph.sdb" & seqno
-  discard tryRemoveFile(result.hadron_npt_graph_db)     # Check me
+  discard tryRemoveFile(result.work_files.hadron_npt_graph_db)     # Check me
 
   let nn = ".n10"
   for quark_type in ["light", "strange"]:
@@ -119,6 +100,9 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.meson_dbs.add(copy_lustre_file(meson_path & ".d_0_1_2_3.sdb" & seqno, use_cp))
   result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.sdb" & seqno, use_cp))
   result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_4.sdb" & seqno, use_cp))
+
+  let unsmeared_meson_path = cache_dir & "/" & stem & "/genprop/" & stem & ".genprop" & nn
+  result.unsmeared_meson_dbs.add(copy_lustre_file(unsmeared_meson_path & ".light.t0_0_6.sdb" & seqno, use_cp))
 
   result.baryon_dbs = @[]
   result.ensemble = stem

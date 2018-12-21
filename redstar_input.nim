@@ -1,7 +1,8 @@
 ## Params for redstar_gengraph and redstar_npt
 
-import
-  op_params, hadron_sun_npart_npt_corr, redstar_chain, cgc_su3, cgc_irrep_mom
+import cgc_su3, cgc_irrep_mom
+import op_params, hadron_sun_npart_npt_corr, redstar_chain, redstar_work_files
+  
 
 type
   RedstarRuns_t* = object                       ## Parameters for redstar
@@ -18,10 +19,6 @@ type
     mass_c*:                    string
     run_mode*:                  string
     include_all_rows*:          bool
-    scratch*:                   string          ## The scratch dir for this run
-    output_dir*:                string
-    output_db*:                 string
-    output_file_base*:          string          ## Output file name without the seqno
     num_vecs*:                  int             ## num_vecs for hadron_node
     Nt_corr*:                   int             ## length of each correlator
     use_derivP*:                bool            ## use derivs for meson elementals
@@ -32,24 +29,16 @@ type
     irmom*:                     KeyCGCIrrepMom_t
     source_ops_list*:           string
     sink_ops_list*:             string
+    work_files*:                RedstarWorkFiles_t ## Convenient place to hold the worker-bee files for running redstar
     ops_xmls*:                  seq[string]
-    proj_op_xmls*:             seq[string]     ## The XML files with projected operator definitions
-    corr_graph_xml*:            string          ## Map of correlator graph-map and weights in xml
-    corr_graph_db*:             string          ## (Required) Map of correlator graph-map and weights
-    hadron_npt_graph_db*:       string          ## Temporary graph output
-    hadron_npt_graph_dir*:      string          ## Holds graphs - modified on output
-    noneval_graph_xml*:         string          ## Keys of graphs not evaluatable
-    hadron_node_dbs*:           seq[string]     ## Input hadron nodes
-    smeared_hadron_node_xml*:   string          ## Smeared hadron nodes - output
-    smeared_hadron_node_db*:    string          ## Smeared hadron nodes
-    unsmeared_hadron_node_xml*: string          ## Unsmeared hadron nodes - output
-    unsmeared_hadron_node_db*:  string          ## Smeared hadron nodes - output
+    proj_op_xmls*:              seq[string]     ## The XML files with projected operator definitions
     ensemble*:                  string          ## Information about this ensemble
     prop_dbs*:                  seq[string]     ## The dbs that contains propagator bits
     glue_dbs*:                  seq[string]     ## The db that contains glueball colorvector contractions
     meson_dbs*:                 seq[string]     ## The db that contains meson colorvector contractions
     baryon_dbs*:                seq[string]     ## The db that contains baryon colorvector contractions
     tetra_dbs*:                 seq[string]     ## The db that contains tetraquark colorvector contractions
+    unsmeared_meson_dbs*:       seq[string]     ## The db that contains unsmeared meson elementals
 
 
 #-----------------------------------------------------------------------------
@@ -69,16 +58,16 @@ proc newRedstarInput*(params: RedstarRuns_t): RedstarInput_t =
   result.Param.Layout = params.layout
   result.Param.ensemble = params.ensemble
   result.DBFiles.proj_op_xmls = params.proj_op_xmls
-  result.DBFiles.corr_graph_xml = params.corr_graph_xml
-  result.DBFiles.corr_graph_db = params.corr_graph_db
-  result.DBFiles.hadron_npt_graph_db = params.hadron_npt_graph_db
-  result.DBFiles.noneval_graph_xml = params.noneval_graph_xml
-  result.DBFiles.hadron_node_dbs = params.hadron_node_dbs
-  result.DBFiles.smeared_hadron_node_xml = params.smeared_hadron_node_xml
-  result.DBFiles.smeared_hadron_node_db = params.smeared_hadron_node_db
-  result.DBFiles.unsmeared_hadron_node_xml = params.unsmeared_hadron_node_xml
-  result.DBFiles.unsmeared_hadron_node_db = params.unsmeared_hadron_node_db
-  result.DBFiles.output_db = params.output_db
+  result.DBFiles.corr_graph_xml = params.work_files.corr_graph_xml
+  result.DBFiles.corr_graph_db = params.work_files.corr_graph_db
+  result.DBFiles.hadron_npt_graph_db = params.work_files.hadron_npt_graph_db
+  result.DBFiles.noneval_graph_xml = params.work_files.noneval_graph_xml
+  result.DBFiles.hadron_node_dbs = params.work_files.hadron_node_dbs
+  result.DBFiles.smeared_hadron_node_xml = params.work_files.smeared_hadron_node_xml
+  result.DBFiles.smeared_hadron_node_db = params.work_files.smeared_hadron_node_db
+  result.DBFiles.unsmeared_hadron_node_xml = params.work_files.unsmeared_hadron_node_xml
+  result.DBFiles.unsmeared_hadron_node_db = params.work_files.unsmeared_hadron_node_db
+  result.DBFiles.output_db = params.work_files.output_db
 
 
 #-----------------------------------------------------------------------------
@@ -90,11 +79,11 @@ proc newSmearedHadronNodeInput*(params: RedstarRuns_t): SmearedHadronNodeInput_t
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'l', mass: params.mass_l))
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 's', mass: params.mass_s))
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'c', mass: params.mass_c))
-  result.DBFiles.hadron_node_xmls = @[params.smeared_hadron_node_xml]
+  result.DBFiles.hadron_node_xmls = @[params.work_files.smeared_hadron_node_xml]
   result.DBFiles.prop_dbs = params.prop_dbs
   result.DBFiles.meson_dbs = params.meson_dbs
   result.DBFiles.tetra_dbs = params.tetra_dbs
-  result.DBFiles.output_db = params.smeared_hadron_node_db
+  result.DBFiles.output_db = params.work_files.smeared_hadron_node_db
 
 
 #-----------------------------------------------------------------------------
@@ -106,8 +95,8 @@ proc newUnsmearedHadronNodeInput*(params: RedstarRuns_t): UnsmearedHadronNodeInp
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'l', mass: params.mass_l))
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 's', mass: params.mass_s))
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'c', mass: params.mass_c))
-  result.DBFiles.hadron_node_xmls = @[params.unsmeared_hadron_node_xml]
-  result.DBFiles.unsmeared_meson_dbs = @[params.unsmeared_hadron_node_db]
-  result.DBFiles.output_db = params.unsmeared_hadron_node_db
+  result.DBFiles.hadron_node_xmls = @[params.work_files.unsmeared_hadron_node_xml]
+  result.DBFiles.unsmeared_meson_dbs = params.unsmeared_meson_dbs
+  result.DBFiles.output_db = params.work_files.unsmeared_hadron_node_db
 
   

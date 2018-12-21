@@ -23,7 +23,8 @@ proc generateCorr2Pt(params: RedstarRuns_t): seq[KeyHadronSUNNPartNPtCorr_t] =
   #  Output corrs
   #  Select the irreps commensurate with the momentum
   echo "Build 2pt correlation functions"
-  result = printRedstar2Pts(params.runmode, source_ops_list, sink_ops_list, ops_map, params.irmom.mom,
+  result = printRedstar2Pts(params.runmode, source_ops_list, sink_ops_list, ops_map,
+                            params.flavor, params.irmom,
                             params.include_all_rows, params.t_sources)
 
 
@@ -44,9 +45,9 @@ proc run_job(input, output, exe: string) =
 ## ----------------------------------------------------------------------------
 proc copy_back(params: RedstarRuns_t) = 
   ## Desperate times call for desperate means - copy the output file back using a variety of methods
-  discard execShellCmd("rcp " & params.output_db & " qcdi1401:" & params.output_dir)
-  discard execShellCmd("cache_cp " & params.output_db & " " & params.output_dir)
-  discard execShellCmd("cp " & params.output_db & " " & params.output_dir)
+  discard execShellCmd("rcp " & params.work_files.output_db & " qcdi1401:" & params.work_files.output_dir)
+  discard execShellCmd("cache_cp " & params.work_files.output_db & " " & params.work_files.output_dir)
+  discard execShellCmd("cp " & params.work_files.output_db & " " & params.work_files.output_dir)
   #let emerg = "/lustre/volatile/Spectrum/Clover/NF2+1/${stem}/sdbs_rge"
   #system("mkdir -p ${emerg}; /bin/cp /scratch/${output_db} $emerg");   # Yuck. Always keep an emergency backup
   #unlink("/scratch/$output_db");
@@ -61,15 +62,14 @@ proc run_redstar_2pt*(arch: string; stem, chan, irrep: string, seqno: string) =
 
   echo "Time sources = ", params.t_sources
   echo "Ensemble = ", params.ensemble
-  echo "Hadron node dbs = ", params.hadron_node_dbs
-  echo "Output db = ", params.output_db
+  echo "Hadron node dbs = ", params.work_files.hadron_node_dbs
+  echo "Output db = ", params.work_files.output_db
   echo "Redstar_gen_graph executable = ", exes.redstar_gen_graph
   echo "Redstar_npt executable = ", exes.redstar_npt
   echo "Smeared hadron_node executable = ", exes.smeared_hadron_node
   echo "Unsmeared hadron_node executable = ", exes.unsmeared_hadron_node
-  echo "Hadron_npt_graph_db = ", params.hadron_npt_graph_db
+  echo "Hadron_npt_graph_db = ", params.work_files.hadron_npt_graph_db
 
-  let scratch = params.scratch & "/"
   #discard tryRemoveFile(scratch & params.hadron_node_xml)
   #unlink(scratch & $unsmeared_hadron_node_db);  # remove any extraneous copies first - not sure of their state
   #unlink(scratch & $smeared_hadron_node_db);  # remove any extraneous copies first - not sure of their state
@@ -84,31 +84,26 @@ proc run_redstar_2pt*(arch: string; stem, chan, irrep: string, seqno: string) =
 
   #print "Host = ", `hostname`;
 
-  let redstar_ini     = scratch & stem & ".redstar.ini.xml" & seqno
-  let smeared_ini     = scratch & stem & ".smeared_hadron_node.ini.xml" & seqno
-  let unsmeared_ini   = scratch & stem & ".unsmeared_hadron_node.ini.xml" & seqno
-  let file_out        = scratch & stem & ".out.xml" & seqno
- 
   echo "Build a redstar hadron node input"
   var red_input = newRedstarInput(params)
   red_input.Param.NPointList = generateCorr2Pt(params)
   #echo $red_input
-  writeFile(redstar_ini, xmlHeader & $xmlToStr(serializeXML(red_input, "RedstarNPt")))
+  writeFile(params.work_files.redstar_ini, xmlHeader & $xmlToStr(serializeXML(red_input, "RedstarNPt")))
 
   echo "Build a smeared hadron node input"
   let smeared_hadron_node_input = newSmearedHadronNodeInput(params)
   #echo $smeared_hadron_node_input
-  writeFile(smeared_ini, xmlHeader & $xmlToStr(serializeXML(smeared_hadron_node_input, "ColorVecHadron")))
+  writeFile(params.work_files.smeared_ini, xmlHeader & $xmlToStr(serializeXML(smeared_hadron_node_input, "ColorVecHadron")))
 
   echo "Build a unsmeared hadron node input"
   let unsmeared_hadron_node_input = newUnsmearedHadronNodeInput(params)
   #echo $unsmeared_hadron_node_input
-  writeFile(unsmeared_ini, xmlHeader & $xmlToStr(serializeXML(unsmeared_hadron_node_input, "ColorVecHadron")))
+  writeFile(params.work_files.unsmeared_ini, xmlHeader & $xmlToStr(serializeXML(unsmeared_hadron_node_input, "ColorVecHadron")))
 
-  run_job(redstar_ini, file_out, exes.redstar_gen_graph)
-  run_job(smeared_ini, file_out, exes.smeared_hadron_node)
-  run_job(unsmeared_ini, file_out, exes.unsmeared_hadron_node)
-  run_job(redstar_ini, file_out, exes.redstar_npt)
+  run_job(params.work_files.redstar_ini, params.work_files.file_out, exes.redstar_gen_graph)
+  #run_job(params.work_files.smeared_ini, params.work_files.file_out, exes.smeared_hadron_node)
+  run_job(params.work_files.unsmeared_ini, params.work_files.file_out, exes.unsmeared_hadron_node)
+  #run_job(params.work_files.redstar_ini, params.work_files.file_out, exes.redstar_npt)
 
   #&merge_graph_db(hadron_npt_graph_db);
 
