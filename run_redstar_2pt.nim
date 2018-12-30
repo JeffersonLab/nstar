@@ -101,9 +101,9 @@ proc run_redstar_2pt*(arch: string; stem, chan, irrep: string, seqno: string) =
   writeFile(params.work_files.unsmeared_ini, xmlHeader & $xmlToStr(serializeXML(unsmeared_hadron_node_input, "ColorVecHadron")))
 
   run_job(params.work_files.redstar_ini, params.work_files.file_out, exes.redstar_gen_graph)
-  #run_job(params.work_files.smeared_ini, params.work_files.file_out, exes.smeared_hadron_node)
+  run_job(params.work_files.smeared_ini, params.work_files.file_out, exes.smeared_hadron_node)
   run_job(params.work_files.unsmeared_ini, params.work_files.file_out, exes.unsmeared_hadron_node)
-  #run_job(params.work_files.redstar_ini, params.work_files.file_out, exes.redstar_npt)
+  run_job(params.work_files.redstar_ini, params.work_files.file_out, exes.redstar_npt)
 
   #&merge_graph_db(hadron_npt_graph_db);
 
