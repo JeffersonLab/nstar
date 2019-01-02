@@ -2,7 +2,7 @@
 
 import system, strutils, os
 import irrep_util, run/chroma/colorvec_work, cgc_su3, cgc_irrep_mom
-import redstar_chain, redstar_input, run/chroma/colorvec_work, redstar_work_files
+import redstar_chain, redstar_input, run/chroma/colorvec_work, redstar_work_files, redstar_elemental_files
 
 # Hacks
 let debug = true
@@ -16,15 +16,16 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.arch  = arch
 
   # Extract file params
-  result.layout.lattSize  = [4,4,4,16]
+  #result.layout.lattSize  = [4,4,4,16]
+  result.layout.lattSize  = [16,16,16,128]
   result.layout.decayDir  = 3
 
   # Set time origin in canonical fashion
   result.t_origin = 0
 
   # base params
-  result.num_vecs = 10
-  result.Nt_corr  = 16
+  result.num_vecs = 64
+  result.Nt_corr  = 33
   result.use_derivP = true
   result.autoIrrepCG = false
 
@@ -32,9 +33,9 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.mass_s   = "U0.1"
   result.mass_c   = "fred"
 
-#  result.t_sources = @[0,16,32,48,64,80,96,112]
-  result.t_sources = @[0,4,8]
-#  result.t_sources = @[0]
+  result.t_source = 0
+  result.t_sink   = 6
+  result.t_sources = @[result.t_source]
 
 # var use_cp = true
   var use_cp = false
@@ -58,11 +59,11 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 
   result.proj_op_xmls = @["../weights/weights.pion.xml",
                           "../weights/weights.kaon.xml",
-                          "../weights/weights.kbar.xml",
-                          "../weights/weights.eta.xml"]
+                          "../weights/weights.kbar.xml"]
+
+#  "../weights/weights.eta.xml"]
  
-  result.ops_xmls = @["../single.ops.xml",
-                      "../two.ops.xml"]
+  result.ops_xmls = @["./kfac.xml"]
   
   result.source_ops_list = "./orthog.list"
   result.sink_ops_list   = result.source_ops_list
@@ -83,28 +84,10 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.work_files = redstar_work_files(stem, chan, irrep, corr_tag, result.num_vecs, result.t_sources,
                                          scratch_dir, work_dir, volatile_dir,
                                          seqno)
+  result.elemental_files = redstar_elemental_files(stem, result.t_sources, cache_dir, seqno, use_cp)
 
   discard tryRemoveFile(result.work_files.hadron_npt_graph_db)     # Check me
 
-  let nn = ".n10"
-  for quark_type in ["light", "strange"]:
-    result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db_diagt0/" & stem & ".prop" & nn & "." & quark_type & ".diag_t0.sdb" & seqno, use_cp))
-
-    for tt in result.t_sources:
-      result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db/" & stem & ".prop" & nn & "." & quark_type & ".t0_" & $tt & ".sdb" & seqno, use_cp))
-
-  result.meson_dbs = @[]
-  
-  # derivs
-  let meson_path = cache_dir & "/" & stem & "/meson_db_deriv/" & stem & ".meson.deriv" & nn
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".d_0_1_2_3.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.sdb" & seqno, use_cp))
-  result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_4.sdb" & seqno, use_cp))
-
-  let unsmeared_meson_path = cache_dir & "/" & stem & "/genprop/" & stem & ".genprop" & nn
-  result.unsmeared_meson_dbs.add(copy_lustre_file(unsmeared_meson_path & ".light.t0_0_6.sdb" & seqno, use_cp))
-
-  result.baryon_dbs = @[]
   result.ensemble = stem
 
   

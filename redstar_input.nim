@@ -1,7 +1,7 @@
 ## Params for redstar_gengraph and redstar_npt
 
 import cgc_su3, cgc_irrep_mom
-import op_params, hadron_sun_npart_npt_corr, redstar_chain, redstar_work_files
+import op_params, hadron_sun_npart_npt_corr, redstar_chain, redstar_work_files, redstar_elemental_files
   
 
 type
@@ -25,20 +25,17 @@ type
     autoIrrepCG*:               bool            ## Use auto spatial irreps
     rephaseIrrepCG*:            bool            ## Rephase irreps
     t_sources*:                 seq[int]        ## time sources
+    t_source*:                  int             ## time source for 3pt
+    t_sink*:                    int             ## time sink for 3pt
     flavor*:                    KeyCGCSU3_t
     irmom*:                     KeyCGCIrrepMom_t
     source_ops_list*:           string
     sink_ops_list*:             string
     work_files*:                RedstarWorkFiles_t ## Convenient place to hold the worker-bee files for running redstar
+    elemental_files*:           RedstarElementalFiles_t ## Convenient place to hold the worker-bee files for running redstar
     ops_xmls*:                  seq[string]
     proj_op_xmls*:              seq[string]     ## The XML files with projected operator definitions
     ensemble*:                  string          ## Information about this ensemble
-    prop_dbs*:                  seq[string]     ## The dbs that contains propagator bits
-    glue_dbs*:                  seq[string]     ## The db that contains glueball colorvector contractions
-    meson_dbs*:                 seq[string]     ## The db that contains meson colorvector contractions
-    baryon_dbs*:                seq[string]     ## The db that contains baryon colorvector contractions
-    tetra_dbs*:                 seq[string]     ## The db that contains tetraquark colorvector contractions
-    unsmeared_meson_dbs*:       seq[string]     ## The db that contains unsmeared meson elementals
 
 
 #-----------------------------------------------------------------------------
@@ -80,9 +77,10 @@ proc newSmearedHadronNodeInput*(params: RedstarRuns_t): SmearedHadronNodeInput_t
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 's', mass: params.mass_s))
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'c', mass: params.mass_c))
   result.DBFiles.hadron_node_xmls = @[params.work_files.smeared_hadron_node_xml]
-  result.DBFiles.prop_dbs = params.prop_dbs
-  result.DBFiles.meson_dbs = params.meson_dbs
-  result.DBFiles.tetra_dbs = params.tetra_dbs
+  result.DBFiles.prop_dbs = params.elemental_files.prop_dbs
+  result.DBFiles.meson_dbs = params.elemental_files.meson_dbs
+  result.DBFiles.baryon_dbs = params.elemental_files.baryon_dbs
+  result.DBFiles.tetra_dbs = params.elemental_files.tetra_dbs
   result.DBFiles.output_db = params.work_files.smeared_hadron_node_db
 
 
@@ -96,7 +94,7 @@ proc newUnsmearedHadronNodeInput*(params: RedstarRuns_t): UnsmearedHadronNodeInp
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 's', mass: params.mass_s))
   result.Param.FlavorToMass.add(FlavorToMass_t(flavor: 'c', mass: params.mass_c))
   result.DBFiles.hadron_node_xmls = @[params.work_files.unsmeared_hadron_node_xml]
-  result.DBFiles.unsmeared_meson_dbs = params.unsmeared_meson_dbs
+  result.DBFiles.unsmeared_meson_dbs = params.elemental_files.unsmeared_meson_dbs
   result.DBFiles.output_db = params.work_files.unsmeared_hadron_node_db
 
   
