@@ -3,7 +3,8 @@
 import redstar_input, redstar_exes, run/chroma/colorvec_work, run/redstar/run_redstar_npt, hadron_sun_npart_npt_corr
 import serializetools/serializexml
 import serializetools/array1d
-import xmltree, os
+import seqno_list
+import os, xmltree
 import xmlparser
 
 
@@ -32,7 +33,7 @@ when isMainModule:
   let path_irrep = splitPath(pwd)
   let path_chan  = splitPath(path_irrep.head)
   let path_stem  = splitPath(path_chan.head)
-  let seqno = "1"
+  let seqno = nextSeqno(path_stem.tail & ".list")
 
   let exes = redstar_exe()             # Setup the executables
   let params = redstar_setup(path_stem.tail, path_chan.tail, path_irrep.tail, seqno)

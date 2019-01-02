@@ -4,7 +4,7 @@ import redstar_input, redstar_exes, run/chroma/colorvec_work, run/redstar/run_re
 import hadron_sun_npart_npt_corr
 import generate_redstar_2pt
 import serializetools/serializexml
-import os
+import seqno_list
 
 
 ## ----------------------------------------------------------------------------
@@ -30,12 +30,13 @@ proc generateCorr2Pt(params: RedstarRuns_t): seq[KeyHadronSUNNPartNPtCorr_t] =
 
 #----------------------------------------------------------------------------
 when isMainModule:
+  import os
   echo "Run redstar"
   let pwd = getCurrentDir()
   let path_irrep = splitPath(pwd)
   let path_chan  = splitPath(path_irrep.head)
   let path_stem  = splitPath(path_chan.head)
-  let seqno = "1"
+  let seqno = nextSeqno(path_stem.tail & ".list")
 
   let exes = redstar_exe()             # Setup the executables
   let params = redstar_setup(path_stem.tail, path_chan.tail, path_irrep.tail, seqno)
