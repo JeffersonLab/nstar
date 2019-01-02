@@ -8,12 +8,11 @@ import redstar_chain, redstar_input, run/chroma/colorvec_work, redstar_work_file
 let debug = true
 
 #----------------------------------------------------------------------------------------------
-proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
+proc redstar_setup*(stem, chan, irrep: string, seqno: string): RedstarRuns_t =
   ## Construct parameters for redstar
   result.stem = stem
   result.chan = chan
   result.irrep = irrep
-  result.arch  = arch
 
   # Extract file params
   result.layout.lattSize  = [4,4,4,16]

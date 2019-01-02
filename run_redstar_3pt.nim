@@ -31,9 +31,6 @@ proc generateCorr3Pt(params: RedstarRuns_t): seq[KeyHadronSUNNPartNPtCorr_t] =
 ## ----------------------------------------------------------------------------
 proc run_job(input, output, exe: string) = 
   ## Run the analysis program
-  #if execShellCmd("echo 'Here is /scratch'; /bin/ls -lt /scratch") != 0:
-  #  quit("Some error in run of " & output)
-
   echo "Before analysis: " & $now()
   let run = exe & " " & input & " " & output
   echo run
@@ -48,17 +45,13 @@ proc copy_back(params: RedstarRuns_t) =
   discard execShellCmd("rcp " & params.work_files.output_db & " qcdi1401:" & params.work_files.output_dir)
   discard execShellCmd("cache_cp " & params.work_files.output_db & " " & params.work_files.output_dir)
   discard execShellCmd("cp " & params.work_files.output_db & " " & params.work_files.output_dir)
-  #let emerg = "/lustre/volatile/Spectrum/Clover/NF2+1/${stem}/sdbs_rge"
-  #system("mkdir -p ${emerg}; /bin/cp /scratch/${output_db} $emerg");   # Yuck. Always keep an emergency backup
-  #unlink("/scratch/$output_db");
-
 
 
   
 ## ----------------------------------------------------------------------------
-proc run_redstar_3pt*(arch: string; stem, chan, irrep: string, seqno: string) =
+proc run_redstar_3pt*(stem, chan, irrep: string, seqno: string) =
   let exes = redstar_exe()             # Setup the executables
-  let params = redstar_setup(arch, stem, chan, irrep, seqno)
+  let params = redstar_setup(stem, chan, irrep, seqno)
 
   echo "Time sources = ", params.t_sources
   echo "Ensemble = ", params.ensemble
@@ -69,20 +62,6 @@ proc run_redstar_3pt*(arch: string; stem, chan, irrep: string, seqno: string) =
   echo "Smeared hadron_node executable = ", exes.smeared_hadron_node
   echo "Unsmeared hadron_node executable = ", exes.unsmeared_hadron_node
   echo "Hadron_npt_graph_db = ", params.work_files.hadron_npt_graph_db
-
-  #discard tryRemoveFile(scratch & params.hadron_node_xml)
-  #unlink(scratch & $unsmeared_hadron_node_db);  # remove any extraneous copies first - not sure of their state
-  #unlink(scratch & $smeared_hadron_node_db);  # remove any extraneous copies first - not sure of their state
-  #discard tryRemoveFile(scratch & params.output_db)
-
-  # Always remove a possible local graph db
-  # If the global graph db exists, copy it in
-  #$local_graph_db = &copy_graph_db($hadron_npt_graph_db);
-  ##$local_graph_db = $hadron_npt_graph_db;
-
-  #printf("local_graph_db = $local_graph_db\n");
-
-  #print "Host = ", `hostname`;
 
   echo "Build a redstar hadron node input"
   var red_input = newRedstarInput(params)
@@ -114,6 +93,11 @@ proc run_redstar_3pt*(arch: string; stem, chan, irrep: string, seqno: string) =
 #----------------------------------------------------------------------------
 when isMainModule:
   echo "Run redstar"
-  run_redstar_3pt("nstar", "test", "rho", "000_T1mP", "1")
+  let pwd = getCurrentDir()
+  let path_irrep = splitPath(pwd)
+  let path_chan  = splitPath(path_irrep.head)
+  let path_stem  = splitPath(path_chan.head)
+  let seqno = "1"
+  run_redstar_3pt(path_stem.tail, path_chan.tail, path_irrep.tail, seqno)
   
 
