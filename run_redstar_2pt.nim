@@ -1,11 +1,10 @@
 ## Run redstar
 
-import redstar_input, run/chroma/colorvec_work, run/redstar/run_redstar_npt
-import cgc_su3, cgc_irrep_mom, hadron_sun_npart_npt_corr
+import redstar_input, redstar_exes, run/chroma/colorvec_work, run/redstar/run_redstar_npt
+import hadron_sun_npart_npt_corr
 import generate_redstar_2pt
 import serializetools/serializexml
-import times, xmltree, os
-import redstar_exes
+import os
 
 
 ## ----------------------------------------------------------------------------
