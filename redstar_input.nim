@@ -39,7 +39,7 @@ type
 
 
 #-----------------------------------------------------------------------------
-proc newRedstarInput*(params: RedstarRuns_t): RedstarInput_t =
+proc newRedstarInput*(params: RedstarRuns_t; corrs: seq[KeyHadronSUNNPartNPtCorr_t]): RedstarInput_t =
   ## Construct redstar params from output of user input
   result.Param.version = 11
   result.Param.convertUDtoL = params.convertUDtoL
@@ -54,6 +54,7 @@ proc newRedstarInput*(params: RedstarRuns_t): RedstarInput_t =
   result.Param.bc_spec = -1
   result.Param.Layout = params.layout
   result.Param.ensemble = params.ensemble
+  result.Param.NPointList = corrs
   result.DBFiles.proj_op_xmls = params.proj_op_xmls
   result.DBFiles.corr_graph_xml = params.work_files.corr_graph_xml
   result.DBFiles.corr_graph_db = params.work_files.corr_graph_db

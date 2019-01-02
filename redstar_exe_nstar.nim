@@ -2,7 +2,7 @@
 
 import redstar_exes
 
-proc redstar_exe*(): Exes_t =
+proc redstar_exe*(): RedstarExes_t =
   ## Return executables for nstar
   result.redstar_gen_graph     = "/Users/edwards/Documents/qcd/git/devel/redstar/build/src/redstar_gen_graph"
   result.redstar_npt           = "/Users/edwards/Documents/qcd/git/devel/redstar/build/src/redstar_npt"

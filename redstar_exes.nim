@@ -1,21 +1,21 @@
 ## Redstar executables
 
 type
-  Exes_t* = object
+  RedstarExes_t* = object
     redstar_gen_graph*:      string
     redstar_npt*:            string
     smeared_hadron_node*:    string
     unsmeared_hadron_node*:  string
 
 #[
-proc redstar_exe_nstar*(): Exes_t =
+proc redstar_exe_nstar*(): RedstarExes_t =
   ## Return executables for 12s
   result.redstar_gen_graph     = "/Users/edwards/Documents/qcd/git/devel/redstar/build/src/redstar_gen_graph"
   result.redstar_npt           = "/Users/edwards/Documents/qcd/git/devel/redstar/build/src/redstar_npt"
   result.smeared_hadron_node   = "/Users/edwards/Documents/qcd/git/devel/colorvec/build/src/hadron_node"
   result.unsmeared_hadron_node = "/Users/edwards/Documents/qcd/git/devel/colorvec/build/src/unsmeared_hadron_node"
     
-proc redstar_exe_12s*(): Exes_t =
+proc redstar_exe_12s*(): RedstarExes_t =
   ## Return executables for 12s
   quit("need to add 12s binaries")
   var run = "env"
@@ -38,7 +38,7 @@ proc redstar_exe_12s*(): Exes_t =
 #  ## test
 #  result.output_file_base = "fred"
 
-proc redstar_exe_knl*(): Exes_t =
+proc redstar_exe_knl*(): RedstarExes_t =
   ## Return executables for jlab knl
   quit("need to add knl binaries")
 
