@@ -2,10 +2,14 @@
 
 import redstar_exes
 
-proc redstar_exe*(): Exes_t =
+proc redstar_exe*(): RedstarExes_t =
   ## Return executables for 12s
-  result.redstar_gen_graph     = "/Users/edwards/Documents/qcd/git/devel/redstar/build/src/redstar_gen_graph"
-  result.redstar_npt           = "/Users/edwards/Documents/qcd/git/devel/redstar/build/src/redstar_npt"
-  result.smeared_hadron_node   = "/Users/edwards/Documents/qcd/git/devel/colorvec/build/src/hadron_node"
-  result.unsmeared_hadron_node = "/Users/edwards/Documents/qcd/git/devel/colorvec/build/src/unsmeared_hadron_node"
+  result.redstar_gen_graph     = "/home/edwards/bin/x86_64-linux/redstar_gen_graph.devel-graph-mkl.oct_3_2017"
+  result.redstar_npt           = "/home/edwards/bin/x86_64-linux/redstar_npt.devel-graph-mkl.oct_3_2017"
+  result.smeared_hadron_node   = "/home/edwards/bin/x86_64-linux/hadron_node.devel-mkl.oct_3_2017"
+  result.unsmeared_hadron_node = "/home/edwards/bin/x86_64-linux/unsmeared_hadron_node.devel-mkl.jan_3_2019"
+
+#  $meson_exe     = "/home/edwards/bin/x86_64-linux/hadron_node.devel-mkl.oct_3_2017";
+#  $gen_graph_exe = "/home/edwards/bin/x86_64-linux/redstar_gen_graph.devel-graph-mkl.oct_3_2017";
+#  $npt_exe       = "/home/edwards/bin/x86_64-linux/redstar_npt.devel-graph-mkl.oct_3_2017";
 
