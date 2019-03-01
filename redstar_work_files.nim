@@ -40,7 +40,7 @@ proc redstar_work_files*(stem, chan, irrep: string,
   let scr = scratch_dir & "/"
 
   let out_db = corr & "." & corr_tag & ".sdb"
-  result.output_dir = work_dir & "/" & stem & "/redstar/" & chan & "/sdbs"
+  result.output_dir = work_dir & "/" & stem & "/redstar/" & chan & "/sdbs_rge"
   result.output_db = scr & out_db & seqno
   result.output_file_base = result.output_dir & "/" & out_db
 

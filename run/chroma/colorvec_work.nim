@@ -60,8 +60,10 @@ proc copy_lustre_file*(orig_file: string, use_cp: bool): string =
 
     echo "In function find_file:   copy_lustre_file ", orig_file
 
-    if execShellCmd("cache_cp " & orig_file & " " & scratch_dir) != 0:
-      quit("Some problem copying with copying " & orig_file)
+#    if execShellCmd("cache_cp " & orig_file & " " & scratch_dir) != 0:
+#      quit("Some problem copying with copying " & orig_file)
+#    if execShellCmd("/bin/cp " & orig_file & " " & scratch_dir) != 0:
+#      quit("Some problem copying with copying " & orig_file)
 
     result = scratch_dir & "/" & filename
   else:

@@ -21,8 +21,8 @@ proc run_job*(input, output, exe: string) =
 ## ----------------------------------------------------------------------------
 proc copy_back*(params: RedstarRuns_t) = 
   ## Desperate times call for desperate means - copy the output file back using a variety of methods
-  discard execShellCmd("rcp " & params.work_files.output_db & " qcdi1401:" & params.work_files.output_dir)
-  discard execShellCmd("cache_cp " & params.work_files.output_db & " " & params.work_files.output_dir)
+  #discard execShellCmd("rcp " & params.work_files.output_db & " qcdi1401:" & params.work_files.output_dir)
+  #discard execShellCmd("cache_cp " & params.work_files.output_db & " " & params.work_files.output_dir)
   discard execShellCmd("cp " & params.work_files.output_db & " " & params.work_files.output_dir)
 
 

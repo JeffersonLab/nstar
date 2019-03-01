@@ -5,7 +5,7 @@ import irrep_util, run/chroma/colorvec_work, cgc_su3, cgc_irrep_mom
 import redstar_chain, redstar_input, run/chroma/colorvec_work, redstar_work_files, redstar_elemental_files
 
 # Hacks
-let debug = true
+let debug = false
 
 #----------------------------------------------------------------------------------------------
 proc redstar_setup*(stem, chan, irrep: string, seqno: string): RedstarRuns_t =
@@ -16,24 +16,24 @@ proc redstar_setup*(stem, chan, irrep: string, seqno: string): RedstarRuns_t =
 
   # Extract file params
   #result.layout.lattSize  = [4,4,4,16]
-  result.layout.lattSize  = [16,16,16,128]
+  result.layout.lattSize  = extractLattSize(stem)
   result.layout.decayDir  = 3
 
   # Set time origin in canonical fashion
-  result.t_origin = 0
+  result.t_origin = getTimeOrigin(result.layout.lattSize[3], seqno)
 
   # base params
   result.num_vecs = 64
-  result.Nt_corr  = 33
+  result.Nt_corr  = 25
   result.use_derivP = true
   result.autoIrrepCG = false
 
-  result.mass_l   = "U0.05"
-  result.mass_s   = "U0.1"
+  result.mass_l   = "U-0.0840"
+  result.mass_s   = "U-0.0743"
   result.mass_c   = "fred"
 
   result.t_source = 0
-  result.t_sink   = 6
+  result.t_sink   = 24
   result.t_sources = @[result.t_source]
 
 # var use_cp = true
@@ -42,40 +42,40 @@ proc redstar_setup*(stem, chan, irrep: string, seqno: string): RedstarRuns_t =
   #----------------------------------------
 # Hacks
   if debug:
-    result.num_vecs = 3
-    result.Nt_corr  = 4
+    result.num_vecs = 16
     result.t_sources = @[0]
     use_cp = false
 # end of hacks
 
   #----------------------------------------
-  let cache_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
-  let volatile_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
-  let work_dir = "/Users/edwards/Documents/qcd/data/redstar/test/test_dirs"
-  let scratch_dir = "/tmp"
+  let cache_dir = "/lustre/cache/Spectrum/Clover/NF2+1"
+  let volatile_dir = "/lustre/volatile/Spectrum/Clover/NF2+1"
+  let work_dir = "/work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1"
+  let scratch_dir = "/scratch"
 
-  let corr_tag = "corr1"
+  let corr_tag = "dt_0_24.corr1"
 
   result.proj_op_xmls = @["../weights/weights.pion.xml",
                           "../weights/weights.kaon.xml",
-                          "../weights/weights.kbar.xml"]
+                          "../weights/weights.kbar.xml",
+                          "../weights/weights.rho.xml"]
 
 #  "../weights/weights.eta.xml"]
  
-  result.ops_xmls = @["./kfac.xml"]
+  result.ops_xmls = @["./pipi.kfac.xml"]
   
   result.source_ops_list = "./orthog.list"
   result.sink_ops_list   = result.source_ops_list
 
   result.convertUDtoL = true
-  result.convertUDtoS = true
+  result.convertUDtoS = false
 
-  let mom_rep = opListToIrrepMom(irrep)
-  echo "irrep = ", irrep, "  mom = ", mom_rep.mom
+  #let mom_rep = opListToIrrepMom(irrep)
+  #echo "irrep = ", irrep, "  mom = ", mom_rep.mom
 
-  result.irmom  = KeyCGCIrrepMom_t(row: 1, mom: mom_rep.mom)
+  #result.irmom  = KeyCGCIrrepMom_t(row: 1, mom: mom_rep.mom)
 
-  result.flavor = KeyCGCSU3_t(twoI: 2, threeY: 0, twoI_Z: 2)    ## THIS IS A HACK ##
+  #result.flavor = KeyCGCSU3_t(twoI: 2, threeY: 0, twoI_Z: 2)    ## THIS IS A HACK ##
 
   result.runmode = "default"
   result.include_all_rows = false

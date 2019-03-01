@@ -28,8 +28,11 @@ proc generateCorr3Pt(params: RedstarRuns_t): seq[KeyHadronSUNNPartNPtCorr_t] =
 
 #----------------------------------------------------------------------------
 when isMainModule:
-  echo "Run redstar"
-  let pwd = getCurrentDir()
+  import times
+  echo "Run run_redstar_3pt: " & $now()
+  #let pwd = getCurrentDir()
+  #let pwd = "/home/edwards/qcd/data/redstar/analysis/szscl21_16_128_b1p50_t_x4p300_um0p0840_sm0p0743_n1p265_per/k_kstar_3pt/000_T1mP"
+  let pwd = "/home/edwards/qcd/data/redstar/analysis/szscl21_16_128_b1p50_t_x4p300_um0p0840_sm0p0743_n1p265_per/pi_rho_3pt/000_T1mP"
   let path_irrep = splitPath(pwd)
   let path_chan  = splitPath(path_irrep.head)
   let path_stem  = splitPath(path_chan.head)
@@ -40,5 +43,9 @@ when isMainModule:
   let corrs = generateCorr3Pt(params)
 
   run_redstar_npt(params, corrs, exes)
-  
 
+  for f in items(params.elemental_files.unsmeared_meson_dbs):
+    echo "Removing ", f
+    discard tryRemoveFile(f)
+
+  echo "Finished run_redstar_3pt: " & $now()
