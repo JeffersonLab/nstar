@@ -24,7 +24,7 @@ type
     mass_label*: SerialString   ## A mass label
 
   ValPropElementalOperator_t* = object
-    mat*:  Array2d[Complex]     ## Propagator time slice
+    mat*:  Array2d[Complex64]   ## Propagator time slice
 
 proc hash*(x: KeyPropElementalOperator_t): Hash =
   ## Computes a Hash from `x`.

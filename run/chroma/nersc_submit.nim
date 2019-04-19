@@ -19,10 +19,13 @@ when isMainModule:
     setCurrentDir(dir)
 
     # Loop over t0 and must submit
-    for t0 in 0 .. Lt-1:
-      if (t0 mod 16) == 0: continue
+    #for t0 in 0 .. Lt-1:
+    for t0 in 104 .. Lt-1:
+      #if (t0 mod 16) != 0: continue
+      #if (t0 mod 16) == 0: continue
       let run_paths = constructPathNames(t0)
       let outputFile = genPath(run_paths.prop_op_file)
+      echo outputFile
 
       # If the outputFile does not exist, do the thang!
       if existsFile(outputFile):

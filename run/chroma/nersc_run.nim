@@ -217,10 +217,11 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
   let queue    = "regular"
-  let wallTime = "02:00:00"
+  #let queue    = "scavenger"
+  let wallTime = "06:00:00"
 
   # This particular job
-  result.nodes          = 1
+  result.nodes          = 2
   result.wallTime       = wallTime
   result.queuename      = "ANALY_TJLAB_LQCD"
   result.outputFile     = genPath(run_paths.prop_op_file)
@@ -228,10 +229,10 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 
   result.command = """
 #!/bin/bash
-#SBATCH -N 2
-#SBATCH -C knl,quad,cache
+#SBATCH -N """ & $result.nodes & "\n" & """
 #SBATCH -q """ & queue & "\n" & """
-#SBATCH -t """ & wallTime & "\n" & """
+#SBATCH -t """ & result.wallTime & "\n" & """
+#SBATCH -C knl,quad,cache
 #SBATCH -A m2156
 #SBATCH -S 2
 
@@ -298,7 +299,9 @@ when isMainModule:
     let cwd = getCurrentDir()
     setCurrentDir(dir)
 
-    for t0 in 0 .. Lt-1:
+    #for t0 in 0 .. Lt-1:
+    for t0 in 104 .. Lt-1:
+      #if (t0 mod 16) != 0: continue
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0
       let run_paths = constructPathNames(t0)

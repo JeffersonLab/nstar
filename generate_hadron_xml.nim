@@ -28,8 +28,7 @@ proc numFlavorEmbed*(left_cont_op: string; right_cont_op: string; target_F: stri
     ##  SU(3)
     return numEmbed(left.F, right.F, target_F)
   else:
-    cerr shl __func__ shl ": oops, invalid SU(N): N= " shl left.N shl endl
-    exit(1)
+    quit("oops, invalid SU(N): N= " & $left.N)
   return 0
 
 ## ----------------------------------------------------------------------------

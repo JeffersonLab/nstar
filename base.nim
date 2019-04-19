@@ -4,11 +4,11 @@ import
   system, strutils, os
 
 import  
-  redstar_chain,
+  redstar_chain, redstar_input,
   run/chroma/colorvec_work
 
 # Hacks
-let debug = false
+let debug = true
 
 #----------------------------------------------------------------------------------------------
 proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): RedstarRuns_t =
@@ -31,9 +31,15 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.use_derivP = true
   result.autoIrrepCG = false
 
+  result.mass_l   = "U-0.0860"
+  result.mass_s   = "U-0.0743"
+
 #  result.t_sources = @[0,16,32,48,64,80,96,112]
   result.t_sources = @[0,64,128,192]
 #  result.t_sources = @[0]
+
+# var use_cp = true
+  var use_cp = false
 
   #----------------------------------------
 # Hacks
@@ -41,6 +47,7 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
     result.num_vecs = 3
     result.Nt_corr  = 4
     result.t_sources = @[0]
+    use_cp = false
 # end of hacks
 
   #----------------------------------------
@@ -51,10 +58,10 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 
   let corr_tag = "corr1"
 
-  result.proj_ops_xmls = @["../weights/weights.pion.xml",
-                           "../weights/weights.kaon.xml",
-                           "../weights/weights.kbar.xml",
-                           "../weights/weights.eta.xml"
+  result.proj_op_xmls = @["../weights/weights.pion.xml",
+                          "../weights/weights.kaon.xml",
+                          "../weights/weights.kbar.xml",
+                          "../weights/weights.eta.xml"
   ]
 
 #  result.ops_xmls = @["../single.ops.xml"]
@@ -78,6 +85,7 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
 
   result.output_dir = work_dir & "/" & stem & "/redstar/" & chan & "/sdbs"
   result.output_db = corr & "." & corr_tag & ".sdb" & seqno
+  result.output_file_base = result.output_dir & "/" & corr & "." & corr_tag & ".sdb"
 
   result.corr_graph_db = corr & ".corr_graph.sdb" & seqno
   result.noneval_graph_xml = corr & "." & "noneval_graph.xml" & seqno
@@ -92,27 +100,6 @@ proc redstar_setup*(arch: string; stem, chan, irrep: string, seqno: string): Red
   result.hadron_npt_graph_db = volatile_dir & "/" & stem & "/rge_temp/graphs/" & stem & ".n" & $result.num_vecs & ".graph.sdb" & seqno
   discard tryRemoveFile(result.hadron_npt_graph_db)     # Check me
 
-  result.ensemble = stem
-
-  
-#----------------------------------------------------------------------------------------------
-proc colorvec_setup*(redstar: RedstarRuns_t, seqno: string): ColorvecRuns_t =
-  ## Construct parameters for colorvec hadron node
-  let stem = redstar.stem
-
-# var use_cp = true
-  var use_cp = false
-
-  #----------------------------------------
-# Hacks
-  if debug:
-    use_cp = false
-# end of hacks
-
-  result.mass_l   = "U-0.0860"
-  result.mass_s   = "U-0.0743"
-
-  let cache_dir = "/cache/Spectrum/Clover/NF2+1"
   let nn = ".n384"
   for quark_type in ["light", "strange"]:
     result.prop_dbs.add(copy_lustre_file(cache_dir & "/" & stem & "/prop_db_diagt0/" & stem & ".prop" & nn & "." & quark_type & ".diag_t0.sdb" & seqno, use_cp))
@@ -134,5 +121,8 @@ proc colorvec_setup*(redstar: RedstarRuns_t, seqno: string): ColorvecRuns_t =
   result.meson_dbs.add(copy_lustre_file(meson_path & ".mom_3.d_2.sdb" & seqno, use_cp))
 
   result.baryon_dbs = @[]
+  result.ensemble = stem
+
+  
 
   
