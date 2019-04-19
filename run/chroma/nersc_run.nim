@@ -253,7 +253,7 @@ then
   exit 0
 fi
 
-exe="$HOME/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
+exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
 
 source """ & basedir & """/env_qphix.sh
 
