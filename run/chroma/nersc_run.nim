@@ -42,7 +42,7 @@ proc genPath*(files: seq[PathFile_t]): seq[string] =
 #------------------------------------------------------------------------------
 # Mass params - need to fix this stuff up to have the datasets and their masses
 let mass_s = -0.0743
-let mass_l = -0.0850
+let mass_l = -0.0856
 
 type
   QuarkMass_t* = object
@@ -148,7 +148,8 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   createDir(run_paths.seqDir)
 
   # Common stuff
-  let Rsd         = 1.0e-8
+  #let Rsd         = 1.0e-8
+  let Rsd         = 5.0e-7
   let MaxIter     = 8
 
   let lattSize = extractLattSize(run_paths.stem)
@@ -216,12 +217,12 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   # Common stuff
   #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
-  let queue    = "regular"
-  #let queue    = "scavenger"
-  let wallTime = "06:00:00"
+  #let queue    = "regular"
+  let queue    = "scavenger"
+  let wallTime = "7:00:00"
 
   # This particular job
-  result.nodes          = 2
+  result.nodes          = 4
   result.wallTime       = wallTime
   result.queuename      = "ANALY_TJLAB_LQCD"
   result.outputFile     = genPath(run_paths.prop_op_file)
@@ -231,10 +232,11 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 #!/bin/bash
 #SBATCH -N """ & $result.nodes & "\n" & """
 #SBATCH -q """ & queue & "\n" & """
-#SBATCH -t """ & result.wallTime & "\n" & """
+#SBATCH -t """ & result.wallTime & "\n" 
+#SBATCH --time-min 4:00:00
 #SBATCH -C knl,quad,cache
 #SBATCH -A m2156
-#SBATCH -S 2
+#SBATCH -S """ & $result.nodes & "\n" & """
 
 cd """ & run_paths.seqDir & "\n" & """
 
@@ -258,7 +260,9 @@ exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.oct_5_20
 
 source """ & basedir & """/env_qphix.sh
 
-srun -n 32 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 2 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
+date
+srun -n 64 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
+date
 
 """ & propCheck & " 0.5 $prop_tmp > " & genPath(run_paths.check_file) & """
 
@@ -299,8 +303,7 @@ when isMainModule:
     let cwd = getCurrentDir()
     setCurrentDir(dir)
 
-    #for t0 in 0 .. Lt-1:
-    for t0 in 104 .. Lt-1:
+    for t0 in 0 .. Lt-1:
       #if (t0 mod 16) != 0: continue
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0

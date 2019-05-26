@@ -275,7 +275,7 @@ proc newQOPAMG24x256*(mass: float, Rsd: float, MaxIter: int): XmlNode =
                                             Residual: Rsd,
                                             Verbose: 0,
                                             Levels: 2,
-                                            Blocking: @[@[3,3,3,8], @[2,2,2,4]],
+                                            Blocking: @[@[4,4,4,4], @[2,2,2,2]],
                                             NumNullVecs: @[24, 32],
                                             NumExtraVecs: @[0, 0],
                                             NullResidual: @[0.4, 0.4],
@@ -307,7 +307,7 @@ proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
                     PreSmootherApplications: @[4, 4],
                     PostSmootherApplications: @[4, 4],
                     SchwarzType: "ADDITIVE_SCHWARZ",
-                    Blocking: @[@[3,3,3,4], @[2,2,2,2]])
+                    Blocking: @[@[4,4,4,4], @[2,2,2,2]])
 
 
 proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t): XmlNode =
@@ -349,7 +349,7 @@ proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int): XmlNode =
                                        CloverParams: newAnisoCloverParams(mass),
                                        AntiPeriodicT: true,
                                        MGLevels: 3,
-                                       Blocking: @[@[3,3,3,4], @[2,2,2,2]],
+                                       Blocking: @[@[4,4,4,4], @[2,2,2,2]],
                                        NullVecs: @[24, 32],
                                        NullSolverMaxIters: @[100, 100],
                                        NullSolverRsdTarget: @[5e-6, 5e-6],
@@ -387,7 +387,7 @@ when isMainModule:
 
   # Basic parameters
   when ensemble == "real":
-    let stem  = "szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265"
+    let stem  = "szscl21_24_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265"
     let seqno = "1000a"
 
     let lustre_dir = "/lustre/atlas/proj-shared/nph103"
@@ -395,7 +395,7 @@ when isMainModule:
     let colorvec_files = @[lustre_dir & "/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
     let sdb = "prop_op_file"
 
-    let mass        = -0.0850
+    let mass        = -0.0856
     let mass_label  = "U" & formatFloat(mass, ffDecimal, 4)
     echo "mass_label= ", mass_label
     let num_vecs    = 1
