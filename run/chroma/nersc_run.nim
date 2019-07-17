@@ -232,7 +232,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 #!/bin/bash
 #SBATCH -N """ & $result.nodes & "\n" & """
 #SBATCH -q """ & queue & "\n" & """
-#SBATCH -t """ & result.wallTime & "\n" 
+#SBATCH -t """ & result.wallTime & "\n" & """
 #SBATCH --time-min 4:00:00
 #SBATCH -C knl,quad,cache
 #SBATCH -A m2156
