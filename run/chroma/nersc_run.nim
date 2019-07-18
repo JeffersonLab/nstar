@@ -82,7 +82,6 @@ type
     quark*:            string
     mm*:               QuarkMass_t
     seqno*:            string
-    t0*:               int
     num_vecs*:         int
     prefix*:           string
     prop_op_tmp*:      PathFile_t
@@ -91,22 +90,21 @@ type
     out_file*:         PathFile_t
     check_file*:       PathFile_t
     prop_op_file*:     PathFile_t
+    prop_op_file_check*: PathFile_t
     
 
 #------------------------------------------------------------------------------
-proc constructPathNames*(t0: int): RunPaths_t =
+proc constructPathNames*(t0: string): RunPaths_t =
   ## Construct the names for all the various paths
   result.stem     = getStem()
   result.cache    = getEnsemblePath()
   result.num_vecs = getNumVecs()
   result.scratch  = getScratchPath()
-  result.t0       = t0
 
   # shortcuts
   let stem    = result.stem
   let cache   = result.cache
   let scratch = result.scratch
-  let t0      = result.t0
 
   result.quark = readFile("quark_mass")
   removeSuffix(result.quark)
@@ -128,18 +126,19 @@ proc constructPathNames*(t0: int): RunPaths_t =
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
   result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
 
-  result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & $t0 
+  result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
   result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
   result.input_file     = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".ini.xml" & seqno)
   result.output_file    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out.xml" & seqno)
   result.out_file       = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out" & seqno)
   result.check_file     = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".check" & seqno)
 
-  result.prop_op_file   = PathFile_t(fileDir: result.dataDir & "/prop_db_t0", name: result.prop_op_tmp.name)
+  result.prop_op_file       = PathFile_t(fileDir: result.dataDir & "/prop_db_t0", name: result.prop_op_tmp.name)
+  result.prop_op_file_check = PathFile_t(fileDir: result.dataDir & "/prop_db_t0.check", name: result.prop_op_tmp.name)
 
 
 #------------------------------------------------------------------------------
-proc generateChromaXML*(run_paths: RunPaths_t) =
+proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   ## Generate input file and return the path to the expected output file
   let mass        = run_paths.mm.mass
 
@@ -156,12 +155,12 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
 
-  var (Nt_forward, Nt_backward) = if run_paths.t0 mod 16 == 0: (48, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,
                                         num_vecs: run_paths.num_vecs,
-                                        t_sources: @[(run_paths.t0 + t_origin + Lt) mod Lt],
+                                        t_sources: @[(t0 + t_origin + Lt) mod Lt],
                                         Nt_forward: Nt_forward,
                                         Nt_backward: Nt_backward,
                                         decay_dir: 3,
@@ -202,7 +201,6 @@ type
     nodes*:            int
     walltime*:         string
     queuename*:        string
-    iterable*:         string
     outputFile*:       string
     command*:          string
 
@@ -212,7 +210,7 @@ type
 
 
 #------------------------------------------------------------------------------
-proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
+proc generateNERSCRunScript*(t0s: seq[int], iterable: string, run_paths: RunPaths_t): PandaJob_t =
   ## Generate input file
   # Common stuff
   #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
@@ -224,9 +222,14 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   # This particular job
   result.nodes          = 4
   result.wallTime       = wallTime
-  result.queuename      = "ANALY_TJLAB_LQCD"
+  result.queuename      = queue
   result.outputFile     = genPath(run_paths.prop_op_file)
-  result.iterable       = $run_paths.t0
+
+  if t0s.len() < 1: quit("Need more than 0 t0s")
+  var array_t0s = $t0s[0]
+
+  for n in 1 .. t0s.len-1:
+    array_t0s = array_t0s & "," & $t0s[n]
 
   result.command = """
 #!/bin/bash
@@ -236,7 +239,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 #SBATCH --time-min 4:00:00
 #SBATCH -C knl,quad,cache
 #SBATCH -A m2156
-#SBATCH -S """ & $result.nodes & "\n" & """
+#SBATCH --array """ & array_t0s & "\n" & """
 
 cd """ & run_paths.seqDir & "\n" & """
 
@@ -244,6 +247,7 @@ export OMP_NUM_THREADS=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
+""" & iterable & """ = $SLURM_ARRAY_TASK_ID
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
 out="""" & genPath(run_paths.out_file) & """"
@@ -274,7 +278,7 @@ fi
 """
 
   # Will hopefully remove writing any specific file
-  let run_script = run_paths.seqDir & "/nersc.t0_" & $run_paths.t0 & ".sh"
+  let run_script = run_paths.seqDir & "/nersc.all.sh"
   writeFile(run_script, result.command)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
@@ -302,13 +306,16 @@ when isMainModule:
     echo dir
     let cwd = getCurrentDir()
     setCurrentDir(dir)
+    var array_t0s: seq[int]
+    array_t0s = @[]    
 
     for t0 in 0 .. Lt-1:
       #if (t0 mod 16) != 0: continue
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0
-      let run_paths = constructPathNames(t0)
+      let run_paths = constructPathNames($t0)
       let outputFile = genPath(run_paths.prop_op_file)
+      let outputFile_check = genPath(run_paths.prop_op_file_check)
 
       # Empty files are bad
       if existsFile(outputFile):
@@ -317,14 +324,27 @@ when isMainModule:
 
       # If the outputFile does not exist, do the thang!
       if fileExists(outputFile): continue
+      if fileExists(outputFile_check): continue
       echo "Generate job for prop= ", outputFile
-      generateChromaXML(run_paths)
-      let jj = generateNERSCRunScript(run_paths)
-      Data.jobs.add(jj)
+      generateChromaXML(t0, run_paths)
+      array_t0s.add(t0)
 
-    # Dump the job script to titanManager
-    #writeFile("campaign.xml", xmlToStr(serializeXML(Data)))
-    writeFile("campaign.json", $$Data)
+    # Build the script
+    if array_t0s.len == 0: 
+      setCurrentDir(cwd)
+      continue
+
+    # Must construct
+    let iterable = "t0"
+    let run_paths = constructPathNames("$" & iterable)
+    discard generateNERSCRunScript(array_t0s, iterable, run_paths)
+
+    # Either is not or empty, so submit
+    let f = run_paths.seqDir & "/nersc.all.sh"
+
+    echo "Submitting " & f
+    if execShellCmd("sbatch " & f) != 0:
+      quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
