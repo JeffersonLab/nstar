@@ -14,8 +14,8 @@ type
     Cconj*:       bool                ## Is the node (gamma matrix structure) C-conjugated? 
     twoI_z*:      cint                ## Isospin_z - here, always set to 0 for compatibility purposes 
     row*:         cint                ## Some row indicator of irrep, etc. 
-    #mom*:         array[0..2, cint]   ## D-1 momentum of the operator 
-    mom*:         seq[cint]           ## D-1 momentum of the operator 
+    mom*:         array[0..2, cint]   ## D-1 momentum of the operator 
+    #mom*:         seq[cint]           ## D-1 momentum of the operator 
     creation_op*: bool                ## Is this a creation ops?  
     smearedP*:    bool                ## Does this operators use distillation/distillution? 
   

@@ -7,8 +7,8 @@ import particle_op, serializetools/array1d, hashes
 type
   Slot_t* = object
     slot*:      string            ## At first level, the HadronOp index, at higher levels, the temporary 
-    F*:         string            ## Target SU(N) flavor irrep - of form for SU(2) "3,1", or for SU(3) "8,1" 
     irrep*:     string            ## Target Octahedral/little-group irrep - of form   "Lambda,embed" 
+    F*:         string            ## Target SU(N) flavor irrep - of form for SU(2) "3,1", or for SU(3) "8,1" 
     mom_type*:  seq[cint]         ## Target D-1 Canonical momentum type 
     
   CGPair_t* = object
@@ -17,8 +17,8 @@ type
     target*:    Slot_t            ## Target of CG 
   
   KeyHadronSUNNPartIrrepOp_t* = object
-    CGs*:       Array1dO[CGPair_t]        ## Each pair of CG contractions 
     Operators*: Array1dO[KeyParticleOp_t] ## Each operator 
+    CGs*:       Array1dO[CGPair_t]        ## Each pair of CG contractions 
 
 
 proc hash*(x: Slot_t): Hash =

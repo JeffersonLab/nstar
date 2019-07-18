@@ -1,15 +1,21 @@
 #
 # This is the work script called by run_colorvec_*pl
 #
-import os, ospaths, osproc, strutils
+import os, osproc, strutils
 import re
-
-import serializetools/serializexml, niledb
 import xmltree
+
+import serializetools/serializexml
+import serializetools/array2d
+import niledb
+import ../../irrep_util
 import inline_meas
+import unsmeared_hadron_node_distillation
 import drand48
 
 import config
+
+type Mom_t = array[0..2,cint]    ## shorthand
 
 
 #------------------------------------------------------------------------------
@@ -54,8 +60,10 @@ proc copy_lustre_file*(orig_file: string, use_cp: bool): string =
 
     echo "In function find_file:   copy_lustre_file ", orig_file
 
-    if execShellCmd("cache_cp " & orig_file & " " & scratch_dir) != 0:
-      quit("Some problem copying with copying " & orig_file)
+#    if execShellCmd("cache_cp " & orig_file & " " & scratch_dir) != 0:
+#      quit("Some problem copying with copying " & orig_file)
+#    if execShellCmd("/bin/cp " & orig_file & " " & scratch_dir) != 0:
+#      quit("Some problem copying with copying " & orig_file)
 
     result = scratch_dir & "/" & filename
   else:
@@ -207,9 +215,35 @@ import prop_and_matelem_distillation as matelem
 import fermbc, fermstate
 import inverter
 import clover_fermact
+import link_smearing
 import propagator
 
 
+proc newStandardStoutLinkSmear*(): XmlNode =
+  ## Standard link smearing we use for in distillation
+  newStoutLinkSmearing(0.1, 10, 3)
+
+#------------------------------------------------------------------------------
+proc flipMom(mom: Mom_t): Mom_t =
+  ## flip momenta
+  result = [-mom[0], -mom[1], -mom[2]]
+
+proc newMaxMomDispGammaMom*(gammas: seq[cint]; mom2_min, mom2_max: cint): seq[DispGammaMom_t] =
+  ## Generate canonical momenta. In this version, no displacements
+  result.setLen(0)
+  let canon_mom = generateCanonMoms(mom2_min, mom2_max)
+  # loop over mom
+  for gamma in items(gammas):
+    for mom in items(canon_mom):
+      if norm2(mom) == 0:
+        result.add(DispGammaMom_t(gamma: gamma, mom: mom))
+      else:
+        # add both moms
+        result.add(DispGammaMom_t(gamma: gamma, mom: mom))
+        result.add(DispGammaMom_t(gamma: gamma, mom: flipMom(mom)))
+
+
+#------------------------------------------------------------------------------
 proc newAnisoParams*(): AnisoParam_t =
   ## Anisotropic clover params for light and strange quarks
   AnisoParam_t(anisoP: true, xi_0: 4.3, nu: 1.265, t_dir: 3)

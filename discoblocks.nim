@@ -10,8 +10,8 @@ type
     t_slice*: cushort                ## Meson operator time slice
     ndisp*:   cushort                ## This is unfortunate, but the length of disp was buried as part of key
     disp*:    seq[cshort]            ## Displacement dirs of quark (right)
-    #mom*:     array[0..2, cshort]    ## D-1 momentum of this operator
-    mom*:     seq[cshort]            ## D-1 momentum of this operator
+    mom*:     array[0..2, cshort]    ## D-1 momentum of this operator
+    #mom*:     seq[cshort]            ## D-1 momentum of this operator
   
 type
   DiscoValOperator_t* = object

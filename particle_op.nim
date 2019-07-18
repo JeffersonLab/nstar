@@ -9,6 +9,7 @@ type
     name*:     string            ## Some string label for the operator 
     smear*:    string            ## Some string label for the smearing of this operator 
     mom_type*: array[0..2, cint] ## D-1 Canonical momentum type 
+    #mom_type*: seq[cint]         ## D-1 Canonical momentum type 
   
 
 #proc constructKeyParticleOp_t*(): KeyParticleOp_t 
