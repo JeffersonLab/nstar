@@ -247,7 +247,7 @@ export OMP_NUM_THREADS=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
-""" & iterable & """ = $SLURM_ARRAY_TASK_ID
+""" & iterable & """=$SLURM_ARRAY_TASK_ID
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
 out="""" & genPath(run_paths.out_file) & """"
