@@ -91,6 +91,7 @@ type
     check_file*:       PathFile_t
     prop_op_file*:     PathFile_t
     prop_op_file_check*: PathFile_t
+    prop_op_file_done*:  PathFile_t
     
 
 #------------------------------------------------------------------------------
@@ -135,6 +136,7 @@ proc constructPathNames*(t0: string): RunPaths_t =
 
   result.prop_op_file       = PathFile_t(fileDir: result.dataDir & "/prop_db_t0", name: result.prop_op_tmp.name)
   result.prop_op_file_check = PathFile_t(fileDir: result.dataDir & "/prop_db_t0.check", name: result.prop_op_tmp.name)
+  result.prop_op_file_done  = PathFile_t(fileDir: result.dataDir & "/prop_db_t0.done", name: result.prop_op_tmp.name)
 
 
 #------------------------------------------------------------------------------
@@ -260,9 +262,9 @@ then
   exit 0
 fi
 
-exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.oct_5_2018"
+exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.aug_7_2019"
 
-source """ & basedir & """/env_qphix.sh
+source """ & basedir & """/env_cori.sh
 
 date
 srun -n 64 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
@@ -316,6 +318,7 @@ when isMainModule:
       let run_paths = constructPathNames($t0)
       let outputFile = genPath(run_paths.prop_op_file)
       let outputFile_check = genPath(run_paths.prop_op_file_check)
+      let outputFile_done  = genPath(run_paths.prop_op_file_done)
 
       # Empty files are bad
       if existsFile(outputFile):
@@ -325,6 +328,7 @@ when isMainModule:
       # If the outputFile does not exist, do the thang!
       if fileExists(outputFile): continue
       if fileExists(outputFile_check): continue
+      if fileExists(outputFile_done): continue
       echo "Generate job for prop= ", outputFile
       generateChromaXML(t0, run_paths)
       array_t0s.add(t0)
