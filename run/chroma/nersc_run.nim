@@ -219,7 +219,7 @@ proc generateNERSCRunScript*(t0s: seq[int], iterable: string, run_paths: RunPath
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
   #let queue    = "regular"
   let queue    = "scavenger"
-  let wallTime = "7:00:00"
+  let wallTime = "5:00:00"
 
   # This particular job
   result.nodes          = 4
