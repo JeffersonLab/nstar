@@ -220,9 +220,13 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   ## Generate input file
   # Common stuff
   let propCheck = "/home1/00314/tg455881/qcd/git/nim-play/nstar/prop_check"
-  let nodes          = 4
+  let nodes    = 4
+  let mpi      = 64 
   let queue    = "normal"
   let wallTime = "5:00:00"
+
+  let total_nodes = nodes * t0s.len()
+  let total_mpi   = mpi * t0s.len()
 
   # This particular job
   let job_paths = constructPathNames("t0")
@@ -230,12 +234,12 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 
   if t0s.len() < 1: quit("Need more than 0 t0s")
 
-  result = """
+  var exe = """
 #!/bin/bash
-#SBATCH -N """ & $nodes & "\n" & """
+#SBATCH -N """ & $total_nodes & "\n" & """
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -t """ & wallTime & "\n" & """
-#SBATCH -n 64
+#SBATCH -n """ & $total_mpi & "\n" & """
 #SBATCH --time-min 4:00:00
 #SBATCH -A TG-PHY190005
 
@@ -247,19 +251,26 @@ export OMP_PROC_BIND=spread
 exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
 """
 
-  result = result & "source " & basedir & "/env_stampede2.sh\ndate\n"
+  exe = exe & "source " & basedir & "/env_stampede2.sh\n"
+  var cnt = 0
 
   for t0 in items(t0s):
     let run_paths = constructPathNames($t0)
-    result = result & "\n/bin/rm -f " & genPath(run_paths.prop_op_tmp)
-    let com = "ibrun -n 64 $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &"
-
-  result = result & "wait\ndate\n\n\n"
+    exe = exe & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n"
+  
+  exe = exe & "\ndate\n"
 
   for t0 in items(t0s):
     let run_paths = constructPathNames($t0)
-    result = result & "propCheck 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
-    result = result & """
+    exe = exe & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+    cnt += mpi
+
+  exe = exe & "wait\ndate\n\n\n"
+
+  for t0 in items(t0s):
+    let run_paths = constructPathNames($t0)
+    exe = exe & "propCheck 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
+    exe = exe & """
 stat=$?
 if [ $stat -eq 0 ]
 then
@@ -269,9 +280,10 @@ fi
 
   # Will hopefully remove writing any specific file
   let run_script = seqDir & "/tacc.all.sh"
-  writeFile(run_script, result)
+  writeFile(run_script, exe)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
+  return run_script
 
 
 
@@ -284,6 +296,8 @@ when isMainModule:
   let stem = getStem()
   let lattSize = extractLattSize(stem)
   let Lt = lattSize[3]
+
+  let max_t0 = 64
 
   # This vesion assumes the arguments are the pre-existing directories
   for dir in commandLineParams():
@@ -300,6 +314,7 @@ when isMainModule:
     array_t0s = @[]    
 
     for t0 in 0 .. Lt-1:
+      if array_t0s.len() == max_t0: continue
       #if (t0 mod 16) != 0: continue
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0
