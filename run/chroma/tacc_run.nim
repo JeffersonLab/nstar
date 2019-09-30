@@ -223,7 +223,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let nodes    = 4
   let mpi      = 64 
   let queue    = "normal"
-  let wallTime = "5:00:00"
+  let wallTime = "5:30:00"
 
   let total_nodes = nodes * t0s.len()
   let total_mpi   = mpi * t0s.len()
@@ -269,14 +269,15 @@ exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
 
   for t0 in items(t0s):
     let run_paths = constructPathNames($t0)
-    exe = exe & "propCheck 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
+    exe = exe & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
     exe = exe & """
 stat=$?
 if [ $stat -eq 0 ]
 then
-  /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & """
+  /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & "\n" & """
 fi
 """
+  exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
   let run_script = seqDir & "/tacc.all.sh"
