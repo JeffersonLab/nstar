@@ -240,7 +240,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -n """ & $total_mpi & "\n" & """
-#SBATCH --time-min 4:00:00
+#SBATCH --time-min 5:00:00
 #SBATCH -A TG-PHY190005
 
 cd """ & seqDir & "\n" & """
