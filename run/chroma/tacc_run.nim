@@ -286,11 +286,9 @@ fi
   return run_script
 
 #------------------------------------------------------------------------------
-proc generateTACCRunScripts*(t0s: seq[int]): seq[string] =
-  ## Split array of t0s into chunks of scripts
-  ## Generate possibly multiple scripts
+proc splitSeq(t0s: seq[int], max_t0: int): seq[seq[int]] =
+  ## Split array of seqs into chunks of seqs
   result = @[]
-  let max_t0 = 64
 
   var cnt = 0
   while cnt < t0s.len():
@@ -302,8 +300,7 @@ proc generateTACCRunScripts*(t0s: seq[int]): seq[string] =
       cnt += 1
 
     if to_do.len() > 0:
-      result.add(generateTACCRunScript(to_do))
-
+      result.add(to_do)
 
 
 #------------------------------------------------------------------------------
@@ -358,8 +355,10 @@ when isMainModule:
       continue
 
     # Must construct
-    let fs = generateTACCRunScripts(array_t0s)
-    for f in items(fs):
+    let max_t0 = 64
+
+    for to_do in items(splitSeq(array_t0s, max_t0)):
+      let f = generateTACCRunScript(to_do)
       echo "Submitting " & f
       if execShellCmd("sbatch " & f) != 0:
         quit("Some error submitting " & f)
