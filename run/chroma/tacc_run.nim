@@ -21,7 +21,6 @@ echo "basedir= ", basedir
 #const platform = "NERSC"
 const platform = "TACC"
 
-
 type
   PathFile_t* = object
     name*:               string
@@ -280,11 +279,31 @@ fi
   exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
-  let run_script = seqDir & "/tacc.all.sh"
+  let run_script = seqDir & "/tacc.t0_" & $t0s[0] & "-" & $t0s[t0s.high()] & ".sh"
   writeFile(run_script, exe)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
   return run_script
+
+#------------------------------------------------------------------------------
+proc generateTACCRunScripts*(t0s: seq[int]): seq[string] =
+  ## Generate possibly multiple scripts
+  result = @[]
+
+  let max_t0 = 64
+
+  var cnt = 0
+
+  while cnt < t0s.len():
+    var to_do: seq[int] = @[]
+    
+    for t0 in items(t0s):
+      if cnt == max_t0: continue
+      to_do.add(t0)
+      cnt += 1
+
+    if to_do.len() > 0:
+      result.add(generateTACCRunScript(to_do))
 
 
 
@@ -297,8 +316,6 @@ when isMainModule:
   let stem = getStem()
   let lattSize = extractLattSize(stem)
   let Lt = lattSize[3]
-
-  let max_t0 = 64
 
   # This vesion assumes the arguments are the pre-existing directories
   for dir in commandLineParams():
@@ -315,7 +332,6 @@ when isMainModule:
     array_t0s = @[]    
 
     for t0 in 0 .. Lt-1:
-      if array_t0s.len() == max_t0: continue
       #if (t0 mod 16) != 0: continue
       if (t0 mod 16) == 0: continue
       echo "Check t0= ", t0
@@ -343,10 +359,11 @@ when isMainModule:
       continue
 
     # Must construct
-    let f = generateTACCRunScript(array_t0s)
-    echo "Submitting " & f
-    if execShellCmd("sbatch " & f) != 0:
-      quit("Some error submitting " & f)
+    let fs = generateTACCRunScripts(array_t0s)
+    for f in items(fs):
+      echo "Submitting " & f
+      if execShellCmd("sbatch " & f) != 0:
+        quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
