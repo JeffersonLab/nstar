@@ -287,19 +287,18 @@ fi
 
 #------------------------------------------------------------------------------
 proc generateTACCRunScripts*(t0s: seq[int]): seq[string] =
+  ## Split array of t0s into chunks of scripts
   ## Generate possibly multiple scripts
   result = @[]
-
   let max_t0 = 64
 
   var cnt = 0
-
   while cnt < t0s.len():
     var to_do: seq[int] = @[]
-    
-    for t0 in items(t0s):
-      if cnt == max_t0: continue
-      to_do.add(t0)
+
+    for cc in 1 .. max_t0:
+      if cnt == t0s.len(): continue
+      to_do.add(t0s[cnt])
       cnt += 1
 
     if to_do.len() > 0:
