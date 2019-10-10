@@ -222,7 +222,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let nodes    = 4
   let mpi      = 64 
   let queue    = "normal"
-  let wallTime = "5:30:00"
+  let wallTime = "6:00:00"
 
   let total_nodes = nodes * t0s.len()
   let total_mpi   = mpi * t0s.len()
@@ -239,7 +239,6 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -n """ & $total_mpi & "\n" & """
-#SBATCH --time-min 5:00:00
 #SBATCH -A TG-PHY190005
 
 cd """ & seqDir & "\n" & """
@@ -279,7 +278,7 @@ fi
   exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
-  let run_script = seqDir & "/tacc.t0_" & $t0s[0] & "-" & $t0s[t0s.high()] & ".sh"
+  let run_script = seqDir & "/tacc.t_" & $t0s[0] & "-" & $t0s[t0s.high()] & ".sh"
   writeFile(run_script, exe)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
