@@ -21,7 +21,6 @@ echo "basedir= ", basedir
 #const platform = "NERSC"
 const platform = "TACC"
 
-
 type
   PathFile_t* = object
     name*:               string
@@ -216,36 +215,33 @@ type
 
 
 #------------------------------------------------------------------------------
-proc generateTACCRunScript*(t0s: seq[int], run_paths: RunPaths_t): PandaJob_t =
+proc generateTACCRunScript*(t0s: seq[int]): string =
   ## Generate input file
   # Common stuff
   let propCheck = "/home1/00314/tg455881/qcd/git/nim-play/nstar/prop_check"
+  let nodes    = 4
+  let mpi      = 64 
   let queue    = "normal"
-  let wallTime = "5:00:00"
+  let wallTime = "6:00:00"
+
+  let total_nodes = nodes * t0s.len()
+  let total_mpi   = mpi * t0s.len()
 
   # This particular job
-  result.nodes          = 4
-  result.wallTime       = wallTime
-  result.queuename      = queue
-  result.outputFile     = genPath(run_paths.prop_op_file)
+  let job_paths = constructPathNames("t0")
+  let seqDir    = job_paths.seqDir
 
   if t0s.len() < 1: quit("Need more than 0 t0s")
-  for n in 1 .. t0s.len-1:
-    array_t0s = array_t0s & "," & $t0s[n]
 
-  let run_paths = constructPathNames("$" & iterable)
-
-  result.command = """
+  var exe = """
 #!/bin/bash
-#SBATCH -N """ & $result.nodes & "\n" & """
+#SBATCH -N """ & $total_nodes & "\n" & """
 #SBATCH -p """ & queue & "\n" & """
-#SBATCH -t """ & result.wallTime & "\n" & """
-#SBATCH -n 64
-#SBATCH --time-min 4:00:00
+#SBATCH -t """ & wallTime & "\n" & """
+#SBATCH -n """ & $total_mpi & "\n" & """
 #SBATCH -A TG-PHY190005
-#SBATCH --array """ & array_t0s & "\n" & """
 
-cd """ & run_paths.seqDir & "\n" & """
+cd """ & seqDir & "\n" & """
 
 export OMP_NUM_THREADS=8
 export OMP_PLACES=threads
@@ -253,41 +249,57 @@ export OMP_PROC_BIND=spread
 exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
 """
 
-  var com = "";
+  exe = exe & "source " & basedir & "/env_stampede2.sh\n"
+  var cnt = 0
 
   for t0 in items(t0s):
-    result.command = result.command & "\n/bin/rm -f " & genPath(run_paths.prop_op_tmp)
-    let com = "ibrun -n 64 $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &"
-    input="""" & genPath(run_paths.input_file) & """"
-    output="""" & genPath(run_paths.output_file) & """"
-    out="""" & genPath(run_paths.out_file) & """"
-    prop_tmp="""" & genPath(run_paths.prop_op_tmp) & """"
-    prop_op="""" & genPath(run_paths.prop_op_file) & """"
-/bin/rm -f $prop_tmp
+    let run_paths = constructPathNames($t0)
+    exe = exe & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n"
+  
+  exe = exe & "\ndate\n"
 
-exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
+  for t0 in items(t0s):
+    let run_paths = constructPathNames($t0)
+    exe = exe & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+    cnt += mpi
 
-source """ & basedir & """/env_stampede2.sh
+  exe = exe & "wait\ndate\n\n\n"
 
-date
-ibrun -n 64 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
-date
-
-""" & propCheck & " 0.5 $prop_tmp > " & genPath(run_paths.check_file) & """
-
+  for t0 in items(t0s):
+    let run_paths = constructPathNames($t0)
+    exe = exe & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
+    exe = exe & """
 stat=$?
 if [ $stat -eq 0 ]
 then
-  /bin/mv $prop_tmp $prop_op
+  /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & "\n" & """
 fi
 """
+  exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
-  let run_script = run_paths.seqDir & "/nersc.all.sh"
-  writeFile(run_script, result.command)
+  let run_script = seqDir & "/tacc.t_" & $t0s[0] & "-" & $t0s[t0s.high()] & ".sh"
+  writeFile(run_script, exe)
   var perm = getFilePermissions(run_script) + {fpUserExec}
   setFilePermissions(run_script, perm)
+  return run_script
 
+#------------------------------------------------------------------------------
+proc splitSeq(t0s: seq[int], max_t0: int): seq[seq[int]] =
+  ## Split array of seqs into chunks of seqs
+  result = @[]
+
+  var cnt = 0
+  while cnt < t0s.len():
+    var to_do: seq[int] = @[]
+
+    for cc in 1 .. max_t0:
+      if cnt == t0s.len(): continue
+      to_do.add(t0s[cnt])
+      cnt += 1
+
+    if to_do.len() > 0:
+      result.add(to_do)
 
 
 #------------------------------------------------------------------------------
@@ -342,14 +354,13 @@ when isMainModule:
       continue
 
     # Must construct
-    discard generateTACCRunScript(array_t0s, run_paths)
+    let max_t0 = 64
 
-    # Either is not or empty, so submit
-    let f = run_paths.seqDir & "/tacc.all.sh"
-
-    echo "Submitting " & f
-    if execShellCmd("sbatch " & f) != 0:
-      quit("Some error submitting " & f)
+    for to_do in items(splitSeq(array_t0s, max_t0)):
+      let f = generateTACCRunScript(to_do)
+      echo "Submitting " & f
+      if execShellCmd("sbatch " & f) != 0:
+        quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
