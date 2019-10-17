@@ -306,7 +306,7 @@ sleep 2
   exe = exe & "pids[${npid}]=$! ; npid=$((npid+1))\n\n"
 
   for n in 1..24:
-    exe = exe & "mpiexec -launcher=rsh -genvall -n 2 -ppn 1 -hostfile ${hostfile} ${HAROM} -i " & genPath(run_paths.peram_files[n-1]) & " 1> ${stem}.harom1.t0_${t0}.${CFG} &\n"
+    exe = exe & "mpiexec -launcher=rsh -genvall -n 2 -ppn 1 -hostfile ${hostfile} ${HAROM} -i " & genPath(run_paths.peram_files[n-1]) & " 1> out.harom" & $n & ".t0_${t0}.${CFG} &\n"
     exe = exe & "pids[${npid}]=$! ; npid=$((npid+1))\n\n"
 
   exe = exe & """
@@ -328,13 +328,12 @@ fi
   exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
-  let run_script = seqDir & "/jlab_gpu.t_" & $t0 & ".sh"
-  echo "run_script= ", run_script
+  result = seqDir & "/jlab_gpu.t_" & $t0 & ".sh"
+  echo "run_script= ", result
 
-  writeFile(run_script, exe)
-  var perm = getFilePermissions(run_script) + {fpUserExec}
-  setFilePermissions(run_script, perm)
-  return run_script
+  writeFile(result, exe)
+  var perm = getFilePermissions(result) + {fpUserExec}
+  setFilePermissions(result, perm)
 
 #------------------------------------------------------------------------------
 proc splitSeq(t0s: seq[int], max_t0: int): seq[seq[int]] =
