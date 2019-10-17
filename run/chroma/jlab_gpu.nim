@@ -325,7 +325,7 @@ then
   /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & "\n" & """
 fi
 """
-  exe = exe & "\nexit 0\n"
+  exe = exe & "\n/bin/rm ${hostfile}\n\nexit 0\n"
 
   # Will hopefully remove writing any specific file
   result = seqDir & "/jlab_gpu.t_" & $t0 & ".sh"
