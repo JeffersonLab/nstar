@@ -256,8 +256,8 @@ proc generateJLabGPURunScript*(t0: int): string =
   let wallTime = "6:00:00"
 
   # This particular job
-  let job_paths = constructPathNames("t0")
-  let seqDir    = job_paths.seqDir
+  let run_paths = constructPathNames($t0)
+  let seqDir    = run_paths.seqDir
 
   var exe = """
 #!/bin/bash
@@ -267,19 +267,53 @@ proc generateJLabGPURunScript*(t0: int): string =
 #SBATCH -A Spectrumg
 #SBATCH -t 10:00:00
 
-cd """ & seqDir & "\n" & """
+source /usr/share/Modules/init/bash
+module load gcc-6.3.0
+module load mvapich2-2.3
+module load cuda-10.0
+
+module list
+
+cd $SLURM_SUBMIT_DIR
+
+CHROMA=/home/fwinter/bin/exe/chroma.shm.19g
+HAROM=/home/fwinter/bin/exe/harom.shm.19g
+REMOVE=/home/fwinter/bin/exe/remove_fifo.sh
+
+export OMP_NUM_THREADS=2
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export QUDA_RESOURCE_PATH=$SLURM_SUBMIT_DIR
+export MV2_ENABLE_AFFINITY=0
+export QUDA_ENABLE_DEVICE_MEMORY_POOL=0
+
+hostfile=$(mktemp "hostfile.XXXXX")
+/usr/bin/scontrol show hostnames $SLURM_JOB_NODELIST > ${hostfile}
 
 date
+
+npid=0
+
+mpiexec -launcher=rsh -genvall -n 2 -ppn 1 -hostfile ${hostfile} ${REMOVE}
+
+sleep 2
+
 """
-
-  let run_paths = constructPathNames($t0)
-
-#  echo "name= ", job_paths.name, "  fileDir= ", job_paths.fileDir
-
-  echo "prop_op_tmp= ", genPath(run_paths.prop_op_tmp)
-
+  exe = exe & "t0=" & $t0 & "\n"
+  exe = exe & "CFG=" & run_paths.seqno & "\n\n"
   exe = exe & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n"
-  exe = exe & shm_script & " " & $t0 & " " & $run_paths.seqno & " " & genPath(run_paths.input_file) & " > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+  
+  exe = exe & "mpiexec -launcher=rsh -genvall -np 16 -ppn 8 -hostfile ${hostfile} ${CHROMA} -i " & genPath(run_paths.input_file) & " -geom 1 1 1 16 -iogeom 1 1 1 4 -qmp-alloc-map 3 2 1 0 -qmp-logic-map 3 2 1 0 > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+  exe = exe & "pids[${npid}]=$! ; npid=$((npid+1))\n\n"
+
+  for n in 1..24:
+    exe = exe & "mpiexec -launcher=rsh -genvall -n 2 -ppn 1 -hostfile ${hostfile} ${HAROM} -i " & genPath(run_paths.peram_files[n-1]) & " 1> ${stem}.harom1.t0_${t0}.${CFG} &\n"
+    exe = exe & "pids[${npid}]=$! ; npid=$((npid+1))\n\n"
+
+  exe = exe & """
+for pid in ${pids[*]}; do 
+    wait $pid
+done
+"""
 
   exe = exe & "\ndate\n\n"
 
