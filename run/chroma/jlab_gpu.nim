@@ -255,10 +255,6 @@ proc generateJLabGPURunScript*(t0: int): string =
   ## Generate input file
   # Common stuff
   let propCheck = "/home/edwards/bin/x86_64-redhat-linux-gnu/prop_check"
-  let shm_script = "/home/edwards/qcd/git/bw.3/scripts_rge/run/chroma/run.shm.sh"
-
-  let queue    = "normal"
-  let wallTime = "6:00:00"
 
   # This particular job
   let run_paths = constructPathNames($t0)
@@ -339,24 +335,6 @@ fi
   writeFile(result, exe)
   var perm = getFilePermissions(result) + {fpUserExec}
   setFilePermissions(result, perm)
-
-#------------------------------------------------------------------------------
-proc splitSeq(t0s: seq[int], max_t0: int): seq[seq[int]] =
-  ## Split array of seqs into chunks of seqs
-  result = @[]
-
-  var cnt = 0
-  while cnt < t0s.len():
-    var to_do: seq[int] = @[]
-
-    for cc in 1 .. max_t0:
-      if cnt == t0s.len(): continue
-      to_do.add(t0s[cnt])
-      cnt += 1
-
-    if to_do.len() > 0:
-      result.add(to_do)
-
 
 #------------------------------------------------------------------------------
 when isMainModule:

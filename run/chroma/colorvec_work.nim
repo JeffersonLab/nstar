@@ -224,6 +224,24 @@ proc newStandardStoutLinkSmear*(): XmlNode =
   newStoutLinkSmearing(0.1, 10, 3)
 
 #------------------------------------------------------------------------------
+proc splitSeq*(t0s: seq[int], max_t0: int): seq[seq[int]] =
+  ## Split array of seqs into chunks of seqs
+  result = @[]
+
+  var cnt = 0
+  while cnt < t0s.len():
+    var to_do: seq[int] = @[]
+
+    for cc in 1 .. max_t0:
+      if cnt == t0s.len(): continue
+      to_do.add(t0s[cnt])
+      cnt += 1
+
+    if to_do.len() > 0:
+      result.add(to_do)
+
+
+#------------------------------------------------------------------------------
 proc flipMom(mom: Mom_t): Mom_t =
   ## flip momenta
   result = [-mom[0], -mom[1], -mom[2]]
