@@ -17,6 +17,10 @@ type
     decay_dir*:     int
     num_tries*:     int
     fifo*:          seq[string]
+    nodes_per_cn*:  int
+    do_inversions*: bool
+    check_results*: bool
+    cache_eigs*:    bool
 
   DistParams_t* = object
     Contractions*:    Contractions_t

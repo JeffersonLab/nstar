@@ -173,6 +173,7 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
 
   var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
 
+  let nodes_per_cn = 8
   var fifo: seq[string]
   for n in 1..24:
      fifo.add("/tmp/harom-cmd" & $n)
@@ -185,6 +186,10 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
                                         Nt_backward: Nt_backward,
                                         decay_dir: 3,
                                         num_tries: -1,
+                                        nodes_per_cn: nodes_per_cn,
+                                        do_inversions: true,
+                                        check_results: false,
+                                        cache_eigs: true,
                                         fifo: fifo)
 
  
@@ -202,7 +207,7 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   elif platform == "JLAB_GPU":
     let mg  = newQUDAMGParams24x256()
     let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
-    let fermact = newAnisoPrecCloverFermAct(mass)
+    let fermact = newAnisoSEOPrecCloverFermAct(mass)
   else:
     quit("not allowed")
 

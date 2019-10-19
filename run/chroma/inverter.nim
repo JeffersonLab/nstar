@@ -106,10 +106,10 @@ type
 
   QUDA_MULTIGRID_CLOVER_INVERTER_t* =  object
     invType*:               string      # QUDA_MULTIGRID_CLOVER_INVERTER
-    MULTIGRIDParams*:       MULTIGRIDParams_t    
     CloverParams*:          CloverParams_t
     RsdTarget*:             float
     Delta*:                 float
+    Pipeline*:              int
     MaxIter*:               int
     RsdToleranceFactor*:    int
     SilentFail*:            bool
@@ -121,6 +121,7 @@ type
     CudaSloppyPrecision*:   string
     CudaSloppyReconstruct*: string
     AxialGaugeFix*:         bool
+    MULTIGRIDParams*:       MULTIGRIDParams_t    
     SubspaceID*:            string
 
 

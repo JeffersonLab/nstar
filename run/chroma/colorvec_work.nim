@@ -277,6 +277,10 @@ proc newAnisoPrecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newAnisoCloverFermAct("PRECONDITIONED_CLOVER", mass)
 
+proc newAnisoSEOPrecCloverFermAct*(mass: float): XmlNode =
+  ## Anisotropic clover fermion action
+  newAnisoCloverFermAct("SEOPREC_CLOVER", mass)
+
 proc newAnisoUnprecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newAnisoCloverFermAct("UNPRECONDITIONED_CLOVER", mass)
@@ -323,25 +327,48 @@ proc newQOPAMG24x256*(mass: float, Rsd: float, MaxIter: int): XmlNode =
                                             
 
 #            <invType>QUDA_MULTIGRID_CLOVER_INVERTER</invType>
+#             <RsdTargetSubspaceCreate>5e-06 5e-06</RsdTargetSubspaceCreate>
+#             <MaxIterSubspaceCreate>500 500</MaxIterSubspaceCreate>
+#              <MaxIterSubspaceRefresh>500 500</MaxIterSubspaceRefresh>
+#              <OuterGCRNKrylov>20</OuterGCRNKrylov>
+#              <PrecondGCRNKrylov>10</PrecondGCRNKrylov>
+#              <GenerateNullspace>true</GenerateNullspace>
+#              <CheckMultigridSetup>false</CheckMultigridSetup>
+#              <GenerateAllLevels>true</GenerateAllLevels>
+#              <CycleType>MG_RECURSIVE</CycleType>
+#              <SchwarzType>ADDITIVE_SCHWARZ</SchwarzType>
+#              <RelaxationOmegaOuter>1.0</RelaxationOmegaOuter>
+#              <SetupOnGPU>1 1</SetupOnGPU>
 
 proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
   ## QUDA MG params to run small sizes
-  MULTIGRIDParams_t(Residual: 2.5e-1,
-                    CycleType: "MG_RECURSIVE",
-                    RelaxationOmegaMG: 1.0,
-                    RelaxationOmegaOuter: 1.0,
-                    MaxIterations: 10,
-                    SmootherType:  "MR",
-                    Verbosity: false,
+  MULTIGRIDParams_t(Verbosity: false,
                     Precision: "HALF",
-                    Reconstruct: "RECONS_8",
+                    Reconstruct: "RECONS_12",
+                    Blocking: @[@[4,4,4,4], @[2,2,2,2]],
+                    CoarseSolverType: @["GCR", "CA_GCR"],
+                    CoarseResidual: @[0.1, 0.1, 0.1],
+                    MaxCoarseIterations: @[0.1, 0.1, 0.1],
+                    RelaxationOmegaMG: @[1.0, 1.0, 1.0],
+                    SmootherType: @["CA_GCR", "CA_GCR", "CA_GCR"],
+                    SmootherTol: @[0.25, 0.25, 0.25],
                     NullVectors: @[24, 32],
-                    GenerateNullspace: true,
-                    GenerateAllLevels: true,
                     PreSmootherApplications: @[4, 4],
                     PostSmootherApplications: @[4, 4],
+                    SubspaceSolver: @["CG", "CG"],
+                    RsdTargetSubspaceCreate: @[5.0e-06, 5.0e-06],
+                    MaxIterSubspaceCreate: @[500, 500],
+                    MaxIterSubspaceRefresh: @[500, 500],
+                    OuterGCRNKrylov: 20,
+                    PrecondGCRNKrylov: 10,
+                    GenerateNullspace: true,
+                    CheckMultigridSetup: false,
+                    GenerateAllLevels: true, 
+                    CycleType: "MG_RECURSIVE",
                     SchwarzType: "ADDITIVE_SCHWARZ",
-                    Blocking: @[@[4,4,4,4], @[2,2,2,2]])
+                    RelaxationOmegaOuter: 1.0,
+                    SetupOnGPU: @[1, 1])
+
 
 
 proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t): XmlNode =
@@ -358,8 +385,9 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t)
                                                 AsymmetricLinop: false,
                                                 CudaReconstruct: "RECONS_12",
                                                 CudaSloppyPrecision: "SINGLE",
-                                                CudaSloppyReconstruct: "RECONS_8",
+                                                CudaSloppyReconstruct: "RECONS_12",
                                                 AxialGaugeFix: false,
+                                                AutotuneDslash: true,
                                                 SubspaceID: "foo"), "InvertParam")
 
 

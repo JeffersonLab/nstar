@@ -2,7 +2,8 @@
 
 #import strutils, os, ospaths
 
-proc getBase(): string = return "/scratch/00314/tg455881"
+proc getBase(): string = return "/lustre/cache/Spectrum/Clover/NF2+1"
+proc getScratch(): string = return "/lustre/volatile/Spectrum/Clover/NF2+1"
 proc getStem*(): string = return "szscl21_32_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265"
 proc getNumVecs*(): int = 256
 
@@ -16,7 +17,8 @@ proc getNumVecs*(): int = 256
 
 proc getEnsemblePath*(): string = return getBase() & "/" & getStem()
 
-proc getScratchPath*(): string = return getBase() & "/" & getStem() & "/tmp.allt"
+#proc getScratchPath*(): string = return getBase() & "/" & getStem() & "/tmp.allt"
+proc getScratchPath*(): string = return getScratch() & "/" & getStem() & "/tmp.allt"
 #proc getScratchPath*(): string = return getBase()
 
 
