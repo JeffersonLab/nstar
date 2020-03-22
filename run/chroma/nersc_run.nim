@@ -126,7 +126,11 @@ proc constructPathNames*(t0: string): RunPaths_t =
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
-  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
+  #result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
+  #scratch/<stem>/eigs_mod/<seqno>/<stem>.3d.eigs.n_640.t_<t>.mod<seqno>
+  result.colorvec_files = @[]
+  for t in 1 .. 31:
+    result.colorvec_files.add(PathFile_t(fileDir: result.dataDir & "/eigs_mod/" & seqno, name: stem & ".3d.eigs.n_" & $result.num_vecs & ".t_" & $t & ".mod" & seqno))
 
   result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
   result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
@@ -150,15 +154,14 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   createDir(run_paths.seqDir)
 
   # Common stuff
-  #let Rsd         = 1.0e-8
-  let Rsd         = 5.0e-7
+  let Rsd         = 1.0e-8
   let MaxIter     = 8
 
   let lattSize = extractLattSize(run_paths.stem)
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
 
-  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t0 mod 32 == 0: (32, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,
@@ -219,12 +222,14 @@ type
 proc generateTACCRunScript*(t0s: seq[int], run_paths: RunPaths_t): PandaJob_t =
   ## Generate input file
   # Common stuff
-  let propCheck = "/home1/00314/tg455881/qcd/git/nim-play/nstar/prop_check"
-  let queue    = "normal"
-  let wallTime = "5:00:00"
+  #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
+  let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
+  let queue    = "regular"
+  #let queue    = "scavenger"
+  let wallTime = "30:00:00"
 
   # This particular job
-  result.nodes          = 4
+  result.nodes          = 18
   result.wallTime       = wallTime
   result.queuename      = queue
   result.outputFile     = genPath(run_paths.prop_op_file)
@@ -234,15 +239,13 @@ proc generateTACCRunScript*(t0s: seq[int], run_paths: RunPaths_t): PandaJob_t =
     array_t0s = array_t0s & "," & $t0s[n]
 
   let run_paths = constructPathNames("$" & iterable)
+# #SBATCH --time-min 7:00:00
 
   result.command = """
 #!/bin/bash
 #SBATCH -N """ & $result.nodes & "\n" & """
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -t """ & result.wallTime & "\n" & """
-#SBATCH -n 64
-#SBATCH --time-min 4:00:00
-#SBATCH -A TG-PHY190005
 #SBATCH --array """ & array_t0s & "\n" & """
 
 cd """ & run_paths.seqDir & "\n" & """
@@ -265,12 +268,12 @@ exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
     prop_op="""" & genPath(run_paths.prop_op_file) & """"
 /bin/rm -f $prop_tmp
 
-exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
+exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.mar_20_2020"
 
-source """ & basedir & """/env_stampede2.sh
+source """ & basedir & """/env_qphix.sh
 
 date
-ibrun -n 64 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
+srun -n 288 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
 date
 
 """ & propCheck & " 0.5 $prop_tmp > " & genPath(run_paths.check_file) & """
@@ -296,9 +299,9 @@ when isMainModule:
   echo "paramCount()= ", paramCount()
 
   # The t0 list filename is always the same for each config
-  let stem = getStem()
-  let lattSize = extractLattSize(stem)
-  let Lt = lattSize[3]
+  #let stem = getStem()
+  #let lattSize = extractLattSize(stem)
+  #let Lt = lattSize[3]
 
   # This vesion assumes the arguments are the pre-existing directories
   for dir in commandLineParams():
@@ -314,9 +317,10 @@ when isMainModule:
     var array_t0s: seq[int]
     array_t0s = @[]    
 
-    for t0 in 0 .. Lt-1:
+    #for t0 in 0 .. Lt-1:
+    for t0 in 0 .. 31:
       #if (t0 mod 16) != 0: continue
-      if (t0 mod 16) == 0: continue
+      if (t0 mod 32) == 0: continue
       echo "Check t0= ", t0
       let run_paths = constructPathNames($t0)
       let outputFile = genPath(run_paths.prop_op_file)
