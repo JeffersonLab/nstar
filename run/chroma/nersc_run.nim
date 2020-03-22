@@ -18,8 +18,7 @@ const basedir = strip(staticExec("pwd"))
 echo "basedir= ", basedir
 
 #const platform = "OLCF"
-#const platform = "NERSC"
-const platform = "TACC"
+const platform = "NERSC"
 
 
 type
@@ -126,11 +125,7 @@ proc constructPathNames*(t0: string): RunPaths_t =
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
-  #result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
-  #scratch/<stem>/eigs_mod/<seqno>/<stem>.3d.eigs.n_640.t_<t>.mod<seqno>
-  result.colorvec_files = @[]
-  for t in 1 .. 31:
-    result.colorvec_files.add(PathFile_t(fileDir: result.dataDir & "/eigs_mod/" & seqno, name: stem & ".3d.eigs.n_" & $result.num_vecs & ".t_" & $t & ".mod" & seqno))
+  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
 
   result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
   result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
@@ -154,14 +149,15 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   createDir(run_paths.seqDir)
 
   # Common stuff
-  let Rsd         = 1.0e-8
+  #let Rsd         = 1.0e-8
+  let Rsd         = 5.0e-7
   let MaxIter     = 8
 
   let lattSize = extractLattSize(run_paths.stem)
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
 
-  var (Nt_forward, Nt_backward) = if t0 mod 32 == 0: (32, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,
@@ -178,9 +174,6 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
     let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
     let fermact = newAnisoPrecCloverFermAct(mass)
   elif platform == "NERSC":
-    let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
-    let fermact = newAnisoCloverFermAct(mass)
-  elif platform == "TACC":
     let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
     let fermact = newAnisoCloverFermAct(mass)
   else:
@@ -219,33 +212,39 @@ type
 
 
 #------------------------------------------------------------------------------
-proc generateTACCRunScript*(t0s: seq[int], run_paths: RunPaths_t): PandaJob_t =
+proc generateNERSCRunScript*(t0s: seq[int], iterable: string, run_paths: RunPaths_t): PandaJob_t =
   ## Generate input file
   # Common stuff
   #let propCheck = "/global/homes/r/redwards/bin/x86_64/prop_check"
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
   let queue    = "regular"
   #let queue    = "scavenger"
-  let wallTime = "30:00:00"
+  let wallTime = "18:00:00"
+  let node_cnt          = 36
+  let corr_cnt_per_node = 16
 
   # This particular job
-  result.nodes          = 18
+  let corr_cnt          = node_cnt * corr_cnt_per_node
+  result.nodes          = node_cnt * t0s.len
   result.wallTime       = wallTime
   result.queuename      = queue
   result.outputFile     = genPath(run_paths.prop_op_file)
 
   if t0s.len() < 1: quit("Need more than 0 t0s")
+  var array_t0s = $t0s[0]
+
   for n in 1 .. t0s.len-1:
     array_t0s = array_t0s & "," & $t0s[n]
 
-  let run_paths = constructPathNames("$" & iterable)
-# #SBATCH --time-min 7:00:00
+  # SBATCH --time-min 4:00:00
 
   result.command = """
 #!/bin/bash
 #SBATCH -N """ & $result.nodes & "\n" & """
-#SBATCH -p """ & queue & "\n" & """
+#SBATCH -q """ & queue & "\n" & """
 #SBATCH -t """ & result.wallTime & "\n" & """
+#SBATCH -C knl,quad,cache
+#SBATCH -A m2156
 #SBATCH --array """ & array_t0s & "\n" & """
 
 cd """ & run_paths.seqDir & "\n" & """
@@ -253,27 +252,26 @@ cd """ & run_paths.seqDir & "\n" & """
 export OMP_NUM_THREADS=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
-exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
-"""
 
-  var com = "";
-
-  for t0 in items(t0s):
-    result.command = result.command & "\n/bin/rm -f " & genPath(run_paths.prop_op_tmp)
-    let com = "ibrun -n 64 $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &"
-    input="""" & genPath(run_paths.input_file) & """"
-    output="""" & genPath(run_paths.output_file) & """"
-    out="""" & genPath(run_paths.out_file) & """"
-    prop_tmp="""" & genPath(run_paths.prop_op_tmp) & """"
-    prop_op="""" & genPath(run_paths.prop_op_file) & """"
+""" & iterable & """=$SLURM_ARRAY_TASK_ID
+input="""" & genPath(run_paths.input_file) & """"
+output="""" & genPath(run_paths.output_file) & """"
+out="""" & genPath(run_paths.out_file) & """"
+prop_tmp="""" & genPath(run_paths.prop_op_tmp) & """"
+prop_op="""" & genPath(run_paths.prop_op_file) & """"
 /bin/rm -f $prop_tmp
 
-exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.mar_20_2020"
+if [ -e $prop_op ]
+then
+  exit 0
+fi
 
-source """ & basedir & """/env_qphix.sh
+exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.aug_7_2019"
+
+source """ & basedir & """/env_cori.sh
 
 date
-srun -n 288 -c 16 --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
+srun -n """ & $corr_cnt & """ -c """ & $corr_cnt_per_node & """ --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
 date
 
 """ & propCheck & " 0.5 $prop_tmp > " & genPath(run_paths.check_file) & """
@@ -299,9 +297,9 @@ when isMainModule:
   echo "paramCount()= ", paramCount()
 
   # The t0 list filename is always the same for each config
-  #let stem = getStem()
-  #let lattSize = extractLattSize(stem)
-  #let Lt = lattSize[3]
+  let stem = getStem()
+  let lattSize = extractLattSize(stem)
+  let Lt = lattSize[3]
 
   # This vesion assumes the arguments are the pre-existing directories
   for dir in commandLineParams():
@@ -317,7 +315,7 @@ when isMainModule:
     var array_t0s: seq[int]
     array_t0s = @[]    
 
-    #for t0 in 0 .. Lt-1:
+    # for t0 in 0 .. Lt-1:
     for t0 in 0 .. 31:
       #if (t0 mod 16) != 0: continue
       if (t0 mod 32) == 0: continue
@@ -346,10 +344,12 @@ when isMainModule:
       continue
 
     # Must construct
-    discard generateTACCRunScript(array_t0s, run_paths)
+    let iterable = "t0"
+    let run_paths = constructPathNames("$" & iterable)
+    discard generateNERSCRunScript(array_t0s, iterable, run_paths)
 
     # Either is not or empty, so submit
-    let f = run_paths.seqDir & "/tacc.all.sh"
+    let f = run_paths.seqDir & "/nersc.all.sh"
 
     echo "Submitting " & f
     if execShellCmd("sbatch " & f) != 0:

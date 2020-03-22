@@ -4,6 +4,7 @@
 
 proc getBase(): string = return "/global/homes/r/redwards/scratch"
 proc getStem*(): string = return "szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per"
+#proc getNumVecs*(): int = 2
 proc getNumVecs*(): int = 640
 
 #proc getBase(): string = return "/scratch"
@@ -16,8 +17,7 @@ proc getNumVecs*(): int = 640
 
 proc getEnsemblePath*(): string = return getBase() & "/" & getStem()
 
-#proc getScratchPath*(): string = return getBase() & "/" & getStem() & "/tmp.allt"
-proc getScratchPath*(): string = return getScratch() & "/" & getStem() & "/tmp.allt"
+proc getScratchPath*(): string = return getBase() & "/" & getStem() & "/tmp.allt"
 #proc getScratchPath*(): string = return getBase()
 
 
