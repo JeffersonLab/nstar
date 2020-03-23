@@ -225,7 +225,8 @@ proc generateNERSCRunScript*(t0s: seq[int], iterable: string, run_paths: RunPath
 
   # This particular job
   let corr_cnt          = node_cnt * corr_cnt_per_node
-  result.nodes          = node_cnt * t0s.len
+  #result.nodes          = node_cnt * t0s.len
+  result.nodes          = node_cnt
   result.wallTime       = wallTime
   result.queuename      = queue
   result.outputFile     = genPath(run_paths.prop_op_file)
@@ -266,12 +267,13 @@ then
   exit 0
 fi
 
-exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.aug_7_2019"
 
-source """ & basedir & """/env_cori.sh
+exe="/global/homes/r/redwards/bin/exe/cori/chroma.cori.double.parscalar.mar_20_2020"
+
+source """ & basedir & """/env_qphix.sh
 
 date
-srun -n """ & $corr_cnt & """ -c """ & $corr_cnt_per_node & """ --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
+srun -n """ & $corr_cnt & """ -c """ & $corr_cnt_per_node & """ --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 3 6 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
 date
 
 """ & propCheck & " 0.5 $prop_tmp > " & genPath(run_paths.check_file) & """
