@@ -223,7 +223,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let nodes    = 18
   let mpi      = 288 
   let queue    = "normal"
-  let wallTime = "24:00:00"
+  let wallTime = "18:00:00"
 
   let total_nodes = nodes * t0s.len()
   let total_mpi   = mpi * t0s.len()
@@ -243,40 +243,41 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 #SBATCH -n """ & $total_mpi & "\n" & """
 #SBATCH -A TG-PHY190008
 
-cd """ & seqDir & "\n" & """
+cd """ & seqDir & "\n\n"
 
-export OMP_NUM_THREADS=8
-export OMP_PLACES=threads
-export OMP_PROC_BIND=spread
-exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
-"""
+  exe = exe & "date\n\n"
 
-  exe = exe & "source " & basedir & "/env_stampede2.sh\n"
+  let bin = "/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
   var cnt = 0
 
+  # Build each helper script
   for t0 in items(t0s):
     let run_paths = constructPathNames($t0)
-    exe = exe & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n"
-  
-  exe = exe & "\ndate\n"
 
-  for t0 in items(t0s):
-    let run_paths = constructPathNames($t0)
-    exe = exe & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+    var exe_t0 = "#!/bin/bash\n\n"
+    exe_t0 = exe_t0 & "export OMP_NUM_THREADS=8\n"
+    exe_t0 = exe_t0 & "export OMP_PLACES=threads\n"
+    exe_t0 = exe_t0 & "export OMP_PROC_BIND=spread\n\n"
+    exe_t0 = exe_t0 & "source " & basedir & "/env_stampede2.sh\n"
+    exe_t0 = exe_t0 & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n\n"
+    exe_t0 = exe_t0 & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity " & bin & " -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 \n\n"
     cnt += mpi
+    exe_t0 = exe_t0 & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
 
-  exe = exe & "wait\ndate\n\n\n"
-
-  for t0 in items(t0s):
-    let run_paths = constructPathNames($t0)
-    exe = exe & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
-    exe = exe & """
+    exe_t0 = exe_t0 & """
 stat=$?
 if [ $stat -eq 0 ]
 then
   /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & "\n" & """
 fi
 """
+    exe_t0 = exe_t0 & "\n\nexit 0\n"
+    let script_t0 = seqDir & "/helper.t_" & $t0 & ".sh"
+    writeFile(script_t0, exe_t0)
+    exe = exe & "bash " & script_t0 & " &\n"
+
+  # Finish up
+  exe = exe & "\nwait\ndate\n\n\n"
   exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
@@ -357,7 +358,7 @@ when isMainModule:
       continue
 
     # Must construct
-    let max_t0 = 11
+    let max_t0 = 10
 
     for to_do in items(splitSeq(array_t0s, max_t0)):
       let f = generateTACCRunScript(to_do)
