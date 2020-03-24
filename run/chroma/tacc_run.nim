@@ -125,7 +125,8 @@ proc constructPathNames*(t0: string): RunPaths_t =
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
-  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
+  # <colorvec_files><elem>/global/homes/r/redwards/scratch/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per/eigs_mod/1980b/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per.3d.eigs.n_640.t_10.mod1980b</elem></colorvec_files>
+  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod/" & seqno, name: stem & ".3d.eigs.n_640.t_" & t0 & ".mod" & seqno)]
 
   result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
   result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
@@ -219,10 +220,10 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   ## Generate input file
   # Common stuff
   let propCheck = "/home1/00314/tg455881/qcd/git/nim-play/nstar/prop_check"
-  let nodes    = 4
-  let mpi      = 64 
+  let nodes    = 18
+  let mpi      = 288 
   let queue    = "normal"
-  let wallTime = "6:00:00"
+  let wallTime = "24:00:00"
 
   let total_nodes = nodes * t0s.len()
   let total_mpi   = mpi * t0s.len()
@@ -232,6 +233,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let seqDir    = job_paths.seqDir
 
   if t0s.len() < 1: quit("Need more than 0 t0s")
+  # SBATCH -A TG-PHY190005  aniso account
 
   var exe = """
 #!/bin/bash
@@ -239,7 +241,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -n """ & $total_mpi & "\n" & """
-#SBATCH -A TG-PHY190005
+#SBATCH -A TG-PHY190008
 
 cd """ & seqDir & "\n" & """
 
@@ -260,7 +262,7 @@ exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
 
   for t0 in items(t0s):
     let run_paths = constructPathNames($t0)
-    exe = exe & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+    exe = exe & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &\n"
     cnt += mpi
 
   exe = exe & "wait\ndate\n\n\n"
@@ -326,9 +328,10 @@ when isMainModule:
     var array_t0s: seq[int]
     array_t0s = @[]    
 
-    for t0 in 0 .. Lt-1:
+    # for t0 in 0 .. Lt-1:
+    for t0 in 0 .. 31:
       #if (t0 mod 16) != 0: continue
-      if (t0 mod 16) == 0: continue
+      if (t0 mod 32) == 0: continue
       echo "Check t0= ", t0
       let run_paths = constructPathNames($t0)
       let outputFile = genPath(run_paths.prop_op_file)
@@ -354,7 +357,7 @@ when isMainModule:
       continue
 
     # Must construct
-    let max_t0 = 64
+    let max_t0 = 11
 
     for to_do in items(splitSeq(array_t0s, max_t0)):
       let f = generateTACCRunScript(to_do)
