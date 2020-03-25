@@ -224,6 +224,24 @@ proc newStandardStoutLinkSmear*(): XmlNode =
   newStoutLinkSmearing(0.1, 10, 3)
 
 #------------------------------------------------------------------------------
+proc splitSeq*(t0s: seq[int], max_t0: int): seq[seq[int]] =
+  ## Split array of seqs into chunks of seqs
+  result = @[]
+
+  var cnt = 0
+  while cnt < t0s.len():
+    var to_do: seq[int] = @[]
+
+    for cc in 1 .. max_t0:
+      if cnt == t0s.len(): continue
+      to_do.add(t0s[cnt])
+      cnt += 1
+
+    if to_do.len() > 0:
+      result.add(to_do)
+
+
+#------------------------------------------------------------------------------
 proc flipMom(mom: Mom_t): Mom_t =
   ## flip momenta
   result = [-mom[0], -mom[1], -mom[2]]
@@ -277,6 +295,10 @@ proc newAnisoPrecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newAnisoCloverFermAct("PRECONDITIONED_CLOVER", mass)
 
+proc newAnisoSEOPrecCloverFermAct*(mass: float): XmlNode =
+  ## Anisotropic clover fermion action
+  newAnisoCloverFermAct("SEOPREC_CLOVER", mass)
+
 proc newAnisoUnprecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
   newAnisoCloverFermAct("UNPRECONDITIONED_CLOVER", mass)
@@ -323,25 +345,48 @@ proc newQOPAMG24x256*(mass: float, Rsd: float, MaxIter: int): XmlNode =
                                             
 
 #            <invType>QUDA_MULTIGRID_CLOVER_INVERTER</invType>
+#             <RsdTargetSubspaceCreate>5e-06 5e-06</RsdTargetSubspaceCreate>
+#             <MaxIterSubspaceCreate>500 500</MaxIterSubspaceCreate>
+#              <MaxIterSubspaceRefresh>500 500</MaxIterSubspaceRefresh>
+#              <OuterGCRNKrylov>20</OuterGCRNKrylov>
+#              <PrecondGCRNKrylov>10</PrecondGCRNKrylov>
+#              <GenerateNullspace>true</GenerateNullspace>
+#              <CheckMultigridSetup>false</CheckMultigridSetup>
+#              <GenerateAllLevels>true</GenerateAllLevels>
+#              <CycleType>MG_RECURSIVE</CycleType>
+#              <SchwarzType>ADDITIVE_SCHWARZ</SchwarzType>
+#              <RelaxationOmegaOuter>1.0</RelaxationOmegaOuter>
+#              <SetupOnGPU>1 1</SetupOnGPU>
 
 proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
   ## QUDA MG params to run small sizes
-  MULTIGRIDParams_t(Residual: 2.5e-1,
-                    CycleType: "MG_RECURSIVE",
-                    RelaxationOmegaMG: 1.0,
-                    RelaxationOmegaOuter: 1.0,
-                    MaxIterations: 10,
-                    SmootherType:  "MR",
-                    Verbosity: false,
+  MULTIGRIDParams_t(Verbosity: false,
                     Precision: "HALF",
-                    Reconstruct: "RECONS_8",
+                    Reconstruct: "RECONS_12",
+                    Blocking: @[@[4,4,4,4], @[2,2,2,2]],
+                    CoarseSolverType: @["GCR", "CA_GCR"],
+                    CoarseResidual: @[0.1, 0.1, 0.1],
+                    MaxCoarseIterations: @[0.1, 0.1, 0.1],
+                    RelaxationOmegaMG: @[1.0, 1.0, 1.0],
+                    SmootherType: @["CA_GCR", "CA_GCR", "CA_GCR"],
+                    SmootherTol: @[0.25, 0.25, 0.25],
                     NullVectors: @[24, 32],
-                    GenerateNullspace: true,
-                    GenerateAllLevels: true,
                     PreSmootherApplications: @[4, 4],
                     PostSmootherApplications: @[4, 4],
+                    SubspaceSolver: @["CG", "CG"],
+                    RsdTargetSubspaceCreate: @[5.0e-06, 5.0e-06],
+                    MaxIterSubspaceCreate: @[500, 500],
+                    MaxIterSubspaceRefresh: @[500, 500],
+                    OuterGCRNKrylov: 20,
+                    PrecondGCRNKrylov: 10,
+                    GenerateNullspace: true,
+                    CheckMultigridSetup: false,
+                    GenerateAllLevels: true, 
+                    CycleType: "MG_RECURSIVE",
                     SchwarzType: "ADDITIVE_SCHWARZ",
-                    Blocking: @[@[4,4,4,4], @[2,2,2,2]])
+                    RelaxationOmegaOuter: 1.0,
+                    SetupOnGPU: @[1, 1])
+
 
 
 proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t): XmlNode =
@@ -358,8 +403,9 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t)
                                                 AsymmetricLinop: false,
                                                 CudaReconstruct: "RECONS_12",
                                                 CudaSloppyPrecision: "SINGLE",
-                                                CudaSloppyReconstruct: "RECONS_8",
+                                                CudaSloppyReconstruct: "RECONS_12",
                                                 AxialGaugeFix: false,
+                                                AutotuneDslash: true,
                                                 SubspaceID: "foo"), "InvertParam")
 
 
@@ -389,8 +435,8 @@ proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int): XmlNode =
                                        NullSolverRsdTarget: @[5e-6, 5e-6],
                                        NullSolverVerboseP: @[0, 0],
                                        OuterSolverNKrylov: 8,
-                                       #OuterSolverRsdTarget: 1.0e-8,
-                                       OuterSolverRsdTarget: 5.0e-7,
+                                       OuterSolverRsdTarget: 1.0e-8,
+                                       #OuterSolverRsdTarget: 5.0e-7,
                                        OuterSolverMaxIters: 100,
                                        OuterSolverVerboseP: true,
                                        VCyclePreSmootherMaxIters: @[0, 0],

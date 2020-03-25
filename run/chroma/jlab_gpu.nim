@@ -1,340 +1,399 @@
-## Parameters
+## Generate prop jobs
 
-import "config"
+import os, xmltree, strutils
+
+import colorvec_work, serializetools/serializexml
+import config
+
+import chroma
+import prop_and_matelem_distillation_harom as matelem
+import harom_peram_chroma as peram
+import fermbc, fermstate
+import inverter
+import clover_fermact
+import propagator
+
+
+const basedir = strip(staticExec("pwd"))
+echo "basedir= ", basedir
+
+#const platform = "OLCF"
+#const platform = "NERSC"
+#const platform = "TACC"
+const platform = "JLAB_GPU"
 
 type
-  HMCParam* = object
-    stem*:         string
-    lattSize*:     array[0..3,int]
-    t_source*:     int
-    num_vecs*:     int
-    Nt_forward*:   int
-    Nt_backward*:  int
-    quark_mass*:   string
-    gauge_type*:   string
-    gauge_file*:   string
+  PathFile_t* = object
+    name*:               string
+    fileDir*:            string
+
+
+#------------------------------------------------------------------------------
+proc genPath*(file: PathFile_t): string =
+  ## Convenience to generate a path
+  result = file.fileDir & "/" & file.name
+
+proc genPath*(files: seq[PathFile_t]): seq[string] =
+  ## Convenience to generate a path
+  result = newSeq[string](0)
+  for f in items(files):
+    result.add(genPath(f))
+
+
+#------------------------------------------------------------------------------
+# Mass params - need to fix this stuff up to have the datasets and their masses
+let mass_s = -0.0743
+let mass_l = -0.0856
+
+type
+  QuarkMass_t* = object
+    mass*:         float
+    mass_label*:   string
+
+proc quarkMass*(stem: string, quark: string): QuarkMass_t =
+  # Pull out the mass and label
+  case quark:
+    of "strange":
+      result.mass = mass_s
+      
+    of "light":
+      result.mass = mass_l
+
+    else:
+      quit("Unknown quark = " & quark)
+
+  result.mass_label  = "U" & formatFloat(result.mass, ffDecimal, 4)
+
+
+
+
+#------------------------------------------------------------------------------
+# Paths to all the various files
+type
+  RunPaths_t* = object    ## Paths used for running
+    stem*:             string
+    cache*:            string
+    scratch*:          string
+    dataDir*:          string
+    workDir*:          string
+    seqName*:          string
+    seqDir*:           string
+    cfg_file*:         PathFile_t
+    colorvec_files*:   seq[PathFile_t]
+    quark*:            string
+    mm*:               QuarkMass_t
+    seqno*:            string
+    num_vecs*:         int
+    prefix*:           string
+    prop_op_tmp*:      PathFile_t
+    input_file*:       PathFile_t
+    peram_files*:      seq[PathFile_t]
+    output_file*:      PathFile_t
+    out_file*:         PathFile_t
+    check_file*:       PathFile_t
+    prop_op_file*:     PathFile_t
+    prop_op_file_check*: PathFile_t
+    prop_op_file_done*:  PathFile_t
     
 
+#------------------------------------------------------------------------------
+proc constructPathNames*(t0: string): RunPaths_t =
+  ## Construct the names for all the various paths
+  result.stem     = getStem()
+  result.cache    = getEnsemblePath()
+  result.num_vecs = getNumVecs()
+  result.scratch  = getScratchPath()
 
-proc getParams*(arch, seqno: string; t0: int): HMCParam = 
-{
-  echo "arch= ", arch, "  seqno= ", seqno, "  t0= ", t0
-  let stem = getStem()
+  # shortcuts
+  let stem    = result.stem
+  let cache   = result.cache
+  let scratch = result.scratch
 
-  # List file containing t0-s
-  var list = stem & ".list"
-  if not fileExists(list):
-    quit("t0 list file= " & $list & "  does not exist")
+  result.quark = readFile("quark_mass")
+  removeSuffix(result.quark)
 
-  # Extract file params
-  result.lattSize = extractLattSize(stem)
+  result.seqno = readFile("list")
+  removeSuffix(result.seqno)
+  let seqno = result.seqno
 
-  let mass_l = "-0.0850"
-  let mass_s = "-0.0743"
-  let mass_c = "0.092"
+  # Pull out the mass and label
+  result.mm = quarkMass(result.stem, result.quark)
 
-  # Find the quark mass
-  block:
-    let q_file = "quark_mass"
-    if not fileExists(q_file):
-      quit("quark mass file " & q_file & "  does not exist")
-    var tmp = readFile(q_file)
-    removeSuffix(tmp)
+  # Main paths
+  result.dataDir    = cache
+  result.workDir    = scratch
+  result.seqName    = result.seqno & "." & formatFloat(result.mm.mass, ffDecimal, 4) & ".allt"
+  result.seqDir     = result.workdir & "/" & result.seqName
 
-    if tmp eq "light":
-      result.quark_mass = mass_l
-    elsif tmp eq "strange":
-      result.quark_mass = mass_s
-    elsif tmp eq "charm":
-      result.quark_mass = mass_c
-    else:
-      quit("Unknown quark type = " & tmp)
+  # Files
+  result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
+  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
 
-  printf "ARCH = ", arch
+  result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
+  result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
+  result.input_file     = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".ini.xml" & seqno)
+  result.output_file    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out.xml" & seqno)
+  result.out_file       = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out" & seqno)
+  result.check_file     = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".check" & seqno)
 
-  #----------------------------------------
-  # Pull off t_sources.
-  result.t_source = t0
+  result.prop_op_file       = PathFile_t(fileDir: result.dataDir & "/prop_db_t0", name: result.prop_op_tmp.name)
+  result.prop_op_file_check = PathFile_t(fileDir: result.dataDir & "/prop_db_t0.check", name: result.prop_op_tmp.name)
+  result.prop_op_file_done  = PathFile_t(fileDir: result.dataDir & "/prop_db_t0.done", name: result.prop_op_tmp.name)
 
-  #----------------------------------------
-  # Vsriables for this run
-  result.num_vecs = 162
+  result.peram_files = @[]
+  for n in 1..24:
+    #result.peram_files.add(PathFile_t(fileDir: result.seqDir, name: stem & ".peram" & $n & "." & result.quark & ".t0_" & t0 & ".ini.xml" & seqno))
+    result.peram_files.add(PathFile_t(fileDir: result.seqDir, name: "peram" & $n & ".ini.xml"))
 
-  result.Nt_backward = 0
+  echo "scratch= ", scratch
+  echo "dataDir= ", result.dataDir
+  echo "workDir= ", result.workDir
+  echo "seqDir= ", result.seqDir
+  echo "prop_op_file= ", result.prop_op_file
+  echo "input_file= ", result.input_file
 
-  if result.t_source mod 16 == 0:
-    result.Nt_forward = 48
+#------------------------------------------------------------------------------
+proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
+  ## Generate input file and return the path to the expected output file
+  let mass        = run_paths.mm.mass
+
+  # Main paths
+  echo "workDir= ", run_paths.workDir
+  #createDir(run_paths.workDir)
+  echo "seqDir= ", run_paths.seqDir
+  discard existsOrCreateDir(run_paths.seqDir)
+
+  # Common stuff
+  let Rsd         = 1.0e-8
+  let MaxIter     = 8
+
+  let lattSize = extractLattSize(run_paths.stem)
+  let Lt = lattSize[3]
+  let t_origin = getTimeOrigin(Lt, run_paths.seqno)
+
+  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
+
+  let nodes_per_cn = 8
+  var fifo: seq[string]
+  for n in 1..24:
+     fifo.add("/tmp/harom-cmd" & $n)
+
+  # Used by distillation input
+  let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,
+                                        num_vecs: run_paths.num_vecs,
+                                        t_sources: @[(t0 + t_origin + Lt) mod Lt],
+                                        Nt_forward: Nt_forward,
+                                        Nt_backward: Nt_backward,
+                                        decay_dir: 3,
+                                        num_tries: -1,
+                                        nodes_per_cn: nodes_per_cn,
+                                        do_inversions: true,
+                                        check_results: false,
+                                        cache_eigs: true,
+                                        fifo: fifo)
+
+ 
+  # Fermion action and inverters
+  when platform == "OLCF":
+    let mg  = newQUDAMGParams24x256()
+    let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
+    let fermact = newAnisoPrecCloverFermAct(mass)
+  elif platform == "NERSC":
+    let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
+    let fermact = newAnisoCloverFermAct(mass)
+  elif platform == "TACC":
+    let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
+    let fermact = newAnisoCloverFermAct(mass)
+  elif platform == "JLAB_GPU":
+    let mg  = newQUDAMGParams24x256()
+    let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
+    let fermact = newAnisoSEOPrecCloverFermAct(mass)
   else:
-    result.Nt_forward = 1
-
-## HACKS
-  if false:
-    result.num_vecs = 1
-## END OF HACKS
-
-  #----------------------------------------
-  # Inputs
-  result.gauge_type = "SCIDAC"
-  ##result.gauge_type = "WEAK_FIELD"
-
-  let remote_gauge = "${stem}_cfg_${seqno}.lime"
-  let remote_eig   = "${stem}.3d.eigs.mod${seqno}"
-
-  let bw_dir = getScratchPath()
-
-  result.gauge_file = "${bw_dir}/$stem/cfgs/${remote_gauge}"
-  result.eig_file = "<elem>${bw_dir}/$stem/eigs_mod/${remote_eig}</elem>"
-##  result.eig_file = "<elem>${bw_dir}/$stem/tmp_eigs/${seqno}/eigs.t_%d.mod${seqno}</elem>\n"
-
-  #----------------------------------------
-  # Outputs
-  result.sdb_dir = "${bw_dir}/$stem/prop_db_t0"
-
-  # Quark mass string
-  if mass_l == result.quark_mass:
-    echo "Run light: t0= ", t_source
-    result.quark_string = "light"
-  elsif mass_s == result.quark_mass:
-    echo "Run strange: t0= ", t_source
-    result.quark_string = "strange"
-  elsif mass_c == result.quark_mass:
-    echo "Run charm: t0= ", t_source
-    result.quark_string = "charm"
-  else:
-    quit("Unknown quark mass = ", result.quark_mass)
-
-  # More files
-  result.soln_file = "${stem}.prop.n${num_vecs}.${quark_string}.t0_${t0}.sdb${seqno}"
+    quit("not allowed")
 
 
-  #----------------------------------------
-  # Run params
-  result.beta = 1.5
-  result.xi = 3.5
-  result.xi_0 = 4.3
-  result.nu = 1.265
+  # Inline measurement
+  let mat_named_obj = matelem.NamedObject_t(gauge_id: "default_gauge_field",
+                                            colorvec_files: genPath(run_paths.colorvec_files),
+                                            prop_op_file: genPath(run_paths.prop_op_tmp))
+  let mat_prop      = newPropagator(fermact, inv)
+  let mat_param     = matelem.DistParams_t(Contractions: contract, Propagator: mat_prop)
+  let inline_dist   = matelem.newPropAndMatelemDistillationHarom(mat_param, mat_named_obj)
 
-  result.anisoP = "true"
-  result.t_dir = 3
-  result.u_s = 0.733566
-  result.u_t = 1
-  result.u_s_stout = 0.926742
-  result.u_t_stout = 1
-  result.c_s = 1.589327
-  result.c_t = 0.902784
+  var chroma_param = chroma.Param_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
+  let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: genPath(run_paths.cfg_file), reunit: true, parallel_io: true)
 
-  if mass_l == result.quark_mass:
-    echo "Using light parameters"
-  elsif mass_s == result.quark_mass:
-    echo "Using strange parameters"
-  elsif mass_c == result.quark_mass:
-    # Charm params override the default params
-    echo "Using charm parameters"
+  let chroma_xml = chroma.Chroma_t(Param: chroma_param, Cfg: cfg)
+  writeFile(genPath(run_paths.input_file), xmlHeader & xmlToStr(serializeXML(chroma_xml, "chroma")))
 
-    result.nu  = "1.078"
-    result.c_s = "1.3545694350"
-    result.c_t = "0.7939900651"
-    # end of charm params
-  else:
-    quit("Unknown quark mass = " & result.quark_mass)
+  # Harom peram inline measurement
+  for n in 1..24:
+    let peram_named_obj = peram.NamedObject_t(fifo: fifo[n-1])
+    let inline_peram = peram.newHaromPeramChroma(peram_named_obj)
+    var harom_param = chroma.Param_t(nrow: lattSize, InlineMeasurements: @[inline_peram])
+    let harom_xml = chroma.Harom_t(Param: harom_param)
+    writeFile(genPath(run_paths.peram_files[n-1]), xmlHeader & xmlToStr(serializeXML(harom_xml, "harom")))
+
+
+#-----------------------------------------------------------------------------
+# Types need for submitter
+type
+  PandaJob_t* = object
+    nodes*:            int
+    walltime*:         string
+    queuename*:        string
+    outputFile*:       string
+    command*:          string
+
+  PandaSubmitter_t* = object
+    campaign*:         string
+    jobs*:             seq[PandaJob_t]
+
+
+#------------------------------------------------------------------------------
+proc generateJLabGPURunScript*(t0: int): string =
+  ## Generate input file
+  # Common stuff
+  let propCheck = "/home/edwards/bin/x86_64-redhat-linux-gnu/prop_check"
+
+  # This particular job
+  let run_paths = constructPathNames($t0)
+  let seqDir    = run_paths.seqDir
+
+  var exe = """
+#!/bin/bash
+#SBATCH -n 16
+#SBATCH -N 2
+#SBATCH -p gpu
+#SBATCH -A Spectrumg
+#SBATCH -t 10:00:00
+
+source /usr/share/Modules/init/bash
+module load gcc-6.3.0
+module load mvapich2-2.3
+module load cuda-10.0
+
+module list
+
+cd $SLURM_SUBMIT_DIR
+
+CHROMA=/home/fwinter/bin/exe/chroma.shm.19g
+HAROM=/home/fwinter/bin/exe/harom.shm.19g
+REMOVE=/home/fwinter/bin/exe/remove_fifo.sh
+
+export OMP_NUM_THREADS=2
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export QUDA_RESOURCE_PATH=$SLURM_SUBMIT_DIR
+export MV2_ENABLE_AFFINITY=0
+export QUDA_ENABLE_DEVICE_MEMORY_POOL=0
+
+hostfile=$(mktemp "hostfile.XXXXX")
+/usr/bin/scontrol show hostnames $SLURM_JOB_NODELIST > ${hostfile}
+
+date
+
+npid=0
+
+mpiexec -launcher=rsh -genvall -n 2 -ppn 1 -hostfile ${hostfile} ${REMOVE}
+
+sleep 2
+
+"""
+  exe = exe & "t0=" & $t0 & "\n"
+  exe = exe & "CFG=" & run_paths.seqno & "\n\n"
+  exe = exe & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n"
   
-  result.rho = 0.14
-  result.n_smear = 2
-  result.orthog_dir = 3
+  exe = exe & "mpiexec -launcher=rsh -genvall -np 16 -ppn 8 -hostfile ${hostfile} ${CHROMA} -i " & genPath(run_paths.input_file) & " -geom 1 1 1 16 -iogeom 1 1 1 4 -qmp-alloc-map 3 2 1 0 -qmp-logic-map 3 2 1 0 > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+  exe = exe & "pids[${npid}]=$! ; npid=$((npid+1))\n\n"
 
-  result.link_smear_type = "STOUT_SMEAR"
-  result.link_smear_num = 10
-  result.link_smear_fact = 0.1
+  for n in 1..24:
+    exe = exe & "mpiexec -launcher=rsh -genvall -n 2 -ppn 1 -hostfile ${hostfile} ${HAROM} -i " & genPath(run_paths.peram_files[n-1]) & " 1> out.harom" & $n & ".t0_${t0}.${CFG} &\n"
+    exe = exe & "pids[${npid}]=$! ; npid=$((npid+1))\n\n"
 
-##  result.SolverType = "BICGSTAB_INVERTER"
-  result.RsdCG = 1.0e-8
-  result.MaxCG = 10000
+  exe = exe & """
+for pid in ${pids[*]}; do 
+    wait $pid
+done
+"""
 
-  #----------------------------------------
-  # Executables
-  my $basedir = $main::basedir
-  my $builddir = "$ENV{'HOME'}/bin/exe/cuda"
+  exe = exe & "\ndate\n\n"
 
-  printf "Builddir = %s\n", $builddir
-  printf "Basedir = %s\n", $basedir
+  exe = exe & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
+  exe = exe & """
+stat=$?
+if [ $stat -eq 0 ]
+then
+  /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & "\n" & """
+fi
+"""
+  exe = exe & "\n/bin/rm ${hostfile}\n\nexit 0\n"
 
-  # The system
-  if ($arch eq "BW_CPU")
-  {
-    $nnmpi = `cat $ENV{'PBS_NODEFILE'} | wc -l | awk '{print \$1}'` chomp $nnmpi
-    printf "On arch BW_CPU: nnmpi= $nnmpi\n"
+  # Will hopefully remove writing any specific file
+  result = seqDir & "/jlab_gpu.t_" & $t0 & ".sh"
+  echo "run_script= ", result
 
-    my $MPIHOME = "/usr/mpi/gcc/mvapich2-1.8"
-    $run = "${MPIHOME}/bin/mpirun_rsh -rsh -np $nnmpi -hostfile $ENV{'PBS_NODEFILE'}"
+  writeFile(result, exe)
+  var perm = getFilePermissions(result) + {fpUserExec}
+  setFilePermissions(result, perm)
 
-    $numa_script = ""
-    print "numa_script = $numa_script\n"
+#------------------------------------------------------------------------------
+when isMainModule:
+  import marshal
+  echo "paramCount()= ", paramCount()
 
-    $harom_exe = "$builddir/harom_parscalar.jan_14_2017"
-    $harom_env_vars = ""
+  # The t0 list filename is always the same for each config
+  let stem = getStem()
+  let lattSize = extractLattSize(stem)
+  let Lt = lattSize[3]
 
-    $chroma_exe = "/home/edwards/bin/exe/ib9q/chroma.parscalar.jan_14_2017"
-    $chroma_env_vars = ""
-  }
-  elsif ($arch eq "JLAB_QOPKNL")
-  {
-    my $hostf = $ENV{'PWD'} . "/hostfile.$$"
-    system("cat $ENV{'PBS_NODEFILE'} | awk '{for(i=0i<64++i){print \$1}}' > $hostf")
-    system("cat $hostf")
+  # This vesion assumes the arguments are the pre-existing directories
+  for dir in commandLineParams():
+    # All the jobs to accumulate
+    var Data: PandaSubmitter_t
+    Data.campaign = dir
+    Data.jobs = @[]
 
-    $nnmpi = `cat $hostf | wc -l | awk '{print \$1}'` chomp $nnmpi
+    # build input for each directory
+    echo dir
+    let cwd = getCurrentDir()
+    setCurrentDir(dir)
+    var array_t0s: seq[int]
+    array_t0s = @[]    
 
-    my $MPIHOME = "/usr/mpi/gcc/mvapich2-2.1"
-    $run = "${MPIHOME}/bin/mpirun_rsh -rsh -np $nnmpi -hostfile $hostf"
+    for t0 in 0 .. Lt-1:
+      if (t0 mod 16) != 0: continue
+      #if (t0 mod 16) == 0: continue
+      echo "Check t0= ", t0
+      let run_paths = constructPathNames($t0)
+      let outputFile = genPath(run_paths.prop_op_file)
+      let outputFile_check = genPath(run_paths.prop_op_file_check)
+      let outputFile_done  = genPath(run_paths.prop_op_file_done)
 
-    $numa_script = ""
-    print "numa_script = $numa_script\n"
+      # Empty files are bad
+      if existsFile(outputFile):
+        if getFileSize(outputFile) == 0:
+          discard tryRemoveFile(outputFile)
 
-    $harom_exe = "$builddir/harom_parscalar.jan_14_2017"
-    $harom_env_vars = ""
+      # If the outputFile does not exist, do the thang!
+      if fileExists(outputFile): continue
+      if fileExists(outputFile_check): continue
+      if fileExists(outputFile_done): continue
+      echo "Generate job for prop= ", run_paths.prop_op_file.name
+      generateChromaXML(t0, run_paths)
+      array_t0s.add(t0)
 
-    $chroma_exe = "/home/edwards/bin/exe/ib9q/chroma.parscalar.jan_14_2017"
-    $chroma_env_vars = ""
-  }
-  elsif ($arch eq "JLAB_KNL")
-  {
-    $SolverType = "BICGSTAB"
-    $Delta = 0.1
-    $RsdTarget = $RsdCG = 1.0e-8
-    $RsdToleranceFactor = 10
-    $MaxIter = $MaxCG = 10000
+    # Build the script
+    if array_t0s.len == 0: 
+      setCurrentDir(cwd)
+      continue
 
-    $numa_script = ""
-    print "numa_script = $numa_script\n"
+    # Must construct
+    for to_do in items(array_t0s):
+      let f = generateJLabGPURunScript(to_do)
+      echo "Submitting " & f
+#      if execShellCmd("sbatch " & f) != 0:
+#        quit("Some error submitting " & f)
 
-    $harom_exe = "$builddir/harom_parscalar.jan_14_2017"
-    $harom_env_vars = ""
-
-    $chroma_exe = "/home/edwards/bin/exe/ib9q/chroma.scalar.qphix.aug_25_2017"
-    $chroma_env_vars = ""
-  }
-  elsif ($arch eq "NERSC_QPHIX")
-  {
-    $SolverType = "BICGSTAB"
-    $Delta = 0.1
-    $RsdTarget = $RsdCG = 1.0e-8
-    $RsdToleranceFactor = 10
-    $MaxIter = $MaxCG = 10000
-
-    $numa_script = ""
-    print "numa_script = $numa_script\n"
-
-    $harom_exe = "$builddir/harom_parscalar.jan_14_2017"
-    $harom_env_vars = ""
-
-    $chroma_exe = "/global/homes/r/redwards/bin/exe/ib9q/chroma.cori2.scalar.qphix.aug_28_2017"
-    $chroma_env_vars = ""
-  }
-  elsif ($arch eq "BW_GPU")
-  {
-    ##$SolverType = "CG"
-    $SolverType = "BICGSTAB"
-    $CudaSloppyPrecision = "SINGLE"
-    $Delta = 0.001
-    #$CudaSloppyPrecision = "HALF"
-    #$Delta = 0.1
-
-    #$RsdTarget = $RsdCG = 2.5e-8
-    ####$RsdTarget = $RsdCG = 5.0e-7
-    $RsdTarget = $RsdCG = 1.0e-8
-    #$RsdToleranceFactor = 50
-    #$RsdToleranceFactor = 100
-    $RsdToleranceFactor = 150
-    $MaxIter = $MaxCG = 10000
-
-    # BW on cpus
-    $run = "env APRUN_BALANCED_INJECTION=64 aprun"
-
-    $numa_script = "./numa_script.sh"
-    print "numa_script = $numa_script\n"
-
-    $harom_exe = "$builddir/harom_parscalar.aug_17_2013"
-    $harom_env_vars = ""
-
-    my $CUDA_INSTALL_PATH = "/usr/local/cuda-5.0"
-    $chroma_env_vars = "-e LD_LIBRARY_PATH=/opt/cray/libsci/12.1.01/GNU/48/interlagos/lib"
-
-##    $chroma_exe = "$builddir/chroma_double_quda_gpu35.sep_12_2013"
-    $chroma_exe = "$builddir/chroma_single_quda_qpu35.nov_30_2013"
-  }
-  elsif ($jlab_gpu eq "JLAB_GPU")
-  {
-    ##$SolverType = "CG"
-    $SolverType = "BICGSTAB"
-    $CudaSloppyPrecision = "SINGLE"
-    $Delta = 0.001
-    #$CudaSloppyPrecision = "HALF"
-    #$Delta = 0.1
-
-    #$RsdTarget = $RsdCG = 2.5e-8
-    ####$RsdTarget = $RsdCG = 2.5e-7
-    $RsdTarget = $RsdCG = 1.0e-8
-    $RsdToleranceFactor = 50
-    $MaxIter = $MaxCG = 10000
-
-    my $hostf = $ENV{'PWD'} . "/hostfile.$$"
-    system("cat $ENV{'PBS_NODEFILE'} | $basedir/trim_hostfile.csh > $hostf")
-    system("cat $hostf")
-
-    $nnmpi = `cat $hostf | wc -l | awk '{print \$1}'` chomp $nnmpi
-
-    my $MPIHOME = "/usr/mpi/gcc/mvapich2-1.8"
-    $run = "${MPIHOME}/bin/mpirun_rsh -rsh -np $nnmpi -hostfile $hostf"
-
-    $numa_script = ""
-    print "numa_script = $numa_script\n"
-
-##    $harom_exe = "$builddir/harom_centos62_dist_parscalar.jul_16_2013"
-##    $harom_env_vars = "MV2_ENABLE_AFFINITY=0 OMP_NUM_THREADS=2"
-
-    $harom_exe = "$builddir/harom_centos62_scalar.feb_6_2014"
-    $harom_env_vars = ""
-
-#    my $CUDA_INSTALL_PATH = "/usr/local/cuda-5.0"
-    my $CUDA_INSTALL_PATH = "/usr/local/cuda-7.0"
-    $chroma_env_vars = "MV2_ENABLE_AFFINITY=0 OMP_NUM_THREADS=2 LD_LIBRARY_PATH=/dist/gcc-4.8.2/lib64:/dist/gcc-4.8.2/lib:${CUDA_INSTALL_PATH}/lib64:${CUDA_INSTALL_PATH}/lib"
-
-    if ($sm eq "sm13")
-    {
-##      $chroma_exe = "$builddir/chroma_centos62_gpu13_mvapich2.jul_17_2013"
-      die "sm13 no longer supported\n"
-    }
-    elsif ($sm eq "sm20")
-    {
-##      $chroma_exe = "$builddir/chroma_centos62_gpu20_mvapich2.jun_16_2014"
-##      $chroma_exe = "chroma_double_centos62_gpu20_mvapich2.aug_15_2013"
-##      $chroma_exe = "$builddir/chroma_centos65_gpu35_mvapich2.feb_10_2016"
-      $chroma_exe = "$builddir/chroma_centos65_gpu20_mvapich2.dec_18_2015"
-    }
-    elsif ($sm eq "sm30")
-    {
-##      $chroma_exe = "$builddir/chroma_centos62_gpu30_mvapich2.jun_16_2014"
-##      $chroma_exe = "$builddir/chroma_double_centos62_gpu30_mvapich2.jun_16_2014"
-##      $chroma_exe = "$builddir/chroma_centos65_gpu35_mvapich2.feb_10_2016"
-      $chroma_exe = "$builddir/chroma_centos65_gpu30_mvapich2.dec_18_2015"
-    }
-    elsif ($sm eq "sm35")
-    {
-##    $chroma_exe = "$builddir/chroma_centos62_gpu35_mvapich2.jun_16_2014"
-##      $chroma_exe = "$builddir/chroma_double_centos62_gpu30_mvapich2.oct_7_2013"
-##      $chroma_exe = "$builddir/chroma_double_centos62_gpu35_mvapich2.jun_16_2014"
-##      $chroma_exe = "$builddir/chroma_centos65_gpu35_mvapich2.feb_10_2016"
-##      $chroma_exe = "$builddir/chroma_centos65_gpu35_mvapich2.apr_6_2016"
-      $chroma_exe = "$builddir/chroma_double_centos65_gpu35_mvapich2.jul_11_2016"
-##      $chroma_exe = "$builddir/chroma_double_centos65_gpu35_mvapich2.sep_14_2016"
-    }
-    else
-    {
-      die "Unknown SM type = $sm\n"
-    }
-  }
-  else
-  {
-    die "Unknown in exe: arch = $arch\n"
-  }
-}
+    # popd
+    setCurrentDir(cwd)
+    

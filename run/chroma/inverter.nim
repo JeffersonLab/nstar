@@ -86,30 +86,42 @@ type
 #---------------------------------------------------------------------
 type
   MULTIGRIDParams_t* = object          ## Parameters within QUDA AMG
-    Residual*:              float
-    CycleType*:             string
-    RelaxationOmegaMG*:     float
-    RelaxationOmegaOuter*:  float
-    MaxIterations*:         int
-    SmootherType*:          string
-    Verbosity*:             bool
-    Precision*:             string
-    Reconstruct*:           string
-    NullVectors*:           seq[int]
-    GenerateNullspace*:     bool
-    GenerateAllLevels*:     bool
-    PreSmootherApplications*:   seq[int]
-    PostSmootherApplications*:  seq[int]
-    SchwarzType*:           string
-    Blocking*:              seq[seq[int]]
+    Verbosity*:                  bool
+    Precision*:                  string
+    Reconstruct*:                string
+    Blocking*:                   seq[seq[int]]
+    CoarseSolverType*:           seq[string]
+    CoarseResidual*:             seq[float]
+    MaxCoarseIterations*:        seq[float]
+    RelaxationOmegaMG*:          seq[float]
+    SmootherType*:               seq[string]
+    SmootherTol*:                seq[float]
+    NullVectors*:                seq[int]
+    PreSmootherApplications*:    seq[int]
+    PostSmootherApplications*:   seq[int]
+    SubspaceSolver*:             seq[string]
+    RsdTargetSubspaceCreate*:    seq[float]
+    MaxIterSubspaceCreate*:      seq[int]
+    MaxIterSubspaceRefresh*:     seq[int]
+    OuterGCRNKrylov*:            int
+    PrecondGCRNKrylov*:          int
+    GenerateNullspace*:          bool
+    CheckMultigridSetup*:        bool
+    GenerateAllLevels*:          bool
+    CycleType*:                  string
+    SchwarzType*:                string
+    RelaxationOmegaOuter*:       float
+    SetupOnGPU*:                 seq[int]
+
 
 
   QUDA_MULTIGRID_CLOVER_INVERTER_t* =  object
     invType*:               string      # QUDA_MULTIGRID_CLOVER_INVERTER
-    MULTIGRIDParams*:       MULTIGRIDParams_t    
     CloverParams*:          CloverParams_t
     RsdTarget*:             float
+    MULTIGRIDParams*:       MULTIGRIDParams_t    
     Delta*:                 float
+    Pipeline*:              int
     MaxIter*:               int
     RsdToleranceFactor*:    int
     SilentFail*:            bool
@@ -121,6 +133,7 @@ type
     CudaSloppyPrecision*:   string
     CudaSloppyReconstruct*: string
     AxialGaugeFix*:         bool
+    AutotuneDslash*:        bool
     SubspaceID*:            string
 
 
