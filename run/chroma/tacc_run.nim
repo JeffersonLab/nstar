@@ -3,7 +3,7 @@
 import os, xmltree, strutils
 
 import colorvec_work, serializetools/serializexml
-import config
+#import config
 
 import chroma
 import prop_and_matelem_distillation as matelem
@@ -17,10 +17,22 @@ import propagator
 const basedir = strip(staticExec("pwd"))
 echo "basedir= ", basedir
 
+#------------------------------------------------------------------------------
 #const platform = "OLCF"
 #const platform = "NERSC"
 const platform = "TACC"
 
+when platform == "OLCF":
+  include config_OLCF
+elif platform == "NERSC":
+  include config_NERSC
+elif platform == "TACC":
+  include config_TACC
+else:
+  quit("unknown platform")
+
+
+#------------------------------------------------------------------------------
 type
   PathFile_t* = object
     name*:               string
