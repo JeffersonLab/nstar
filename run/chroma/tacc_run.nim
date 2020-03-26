@@ -170,7 +170,7 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
 
-  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t0 mod 32 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,
@@ -235,7 +235,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let nodes    = 18
   let mpi      = 288 
   let queue    = "normal"
-  let wallTime = "18:00:00"
+  let wallTime = "17:00:00"
 
   let total_nodes = nodes * t0s.len()
   let total_mpi   = mpi * t0s.len()
@@ -370,7 +370,7 @@ when isMainModule:
       continue
 
     # Must construct
-    let max_t0 = 10
+    let max_t0 = 1
 
     for to_do in items(splitSeq(array_t0s, max_t0)):
       let f = generateTACCRunScript(to_do)
