@@ -245,7 +245,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let seqDir    = job_paths.seqDir
 
   if t0s.len() < 1: quit("Need more than 0 t0s")
-  # SBATCH -A TG-PHY190005  aniso account
+  # SBATCH -A TG-PHY190008  structure account
 
   var exe = """
 #!/bin/bash
@@ -253,7 +253,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -n """ & $total_mpi & "\n" & """
-#SBATCH -A TG-PHY190008
+#SBATCH -A TG-PHY190005
 
 cd """ & seqDir & "\n\n"
 
@@ -370,7 +370,7 @@ when isMainModule:
       continue
 
     # Must construct
-    let max_t0 = 1
+    let max_t0 = 11
 
     for to_do in items(splitSeq(array_t0s, max_t0)):
       let f = generateTACCRunScript(to_do)
