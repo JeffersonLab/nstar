@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<chroma>
+<Param> 
+  <InlineMeasurements>
+
+    <elem>
+      <Name>UNSMEARED_HADRON_NODE_DISTILLATION_HAROM_OPT2</Name>
+      <Frequency>1</Frequency>
+      <Param>
+	
+        <Displacements>
+	  <elem></elem>
+
+<!--	  
+	  <elem>1</elem>
+	  <elem>2</elem>
+	  <elem>3</elem>
+	  
+	  <elem>1 1</elem>
+	  <elem>1 2</elem>
+	  <elem>1 3</elem>
+-->
+	  
+	</Displacements>
+	
+        <Moms>
+          <elem>0 0 0</elem>
+          <elem>1 0 0</elem>
+          <elem>1 1 0</elem>
+          <elem>1 1 1</elem>
+          <elem>2 0 0</elem>
+          <elem>-1 0 0</elem>
+          <elem>-1 -1 0</elem>
+          <elem>-1 -1 -1</elem>
+          <elem>-2 0 0</elem>
+	</Moms>
+	
+        <LinkSmearing>
+          <LinkSmearingType>NONE</LinkSmearingType>
+          <!-- LinkSmearingType>STOUT_SMEAR</LinkSmearingType -->
+          <link_smear_fact>0.1625</link_smear_fact>
+          <link_smear_num>4</link_smear_num>
+          <no_smear_dir>3</no_smear_dir>
+        </LinkSmearing>
+
+        <SinkSources>
+	  <elem>
+	    <Key>0</Key>
+	    <Val>2</Val>
+	  </elem>
+        </SinkSources>
+	
+	<PropSources>0 2</PropSources>
+
+        <Contractions>
+          <num_vecs>4</num_vecs>
+          <mass_label>U-0.0856</mass_label>
+          <decay_dir>3</decay_dir>
+          <displacement_length>1</displacement_length>
+          <num_tries>0</num_tries>
+	  <t_start>0</t_start>
+	  <Nt_forward>8</Nt_forward>
+	  <fifo>
+	    <elem>/tmp/harom-cmd1</elem>
+	    <elem>/tmp/harom-cmd2</elem>
+	    <elem>/tmp/harom-cmd3</elem>
+	    <elem>/tmp/harom-cmd4</elem>
+	  </fifo>
+	  <nodes_per_cn>8</nodes_per_cn>
+        </Contractions>
+
+
+
+        <Propagator>
+          <version>10</version>
+          <quarkSpinType>FULL</quarkSpinType>
+          <obsvP>false</obsvP>
+          <numRetries>1</numRetries>
+          <FermionAction>
+            <FermAct>CLOVER</FermAct>
+            <Mass>-0.0856</Mass>
+            <clovCoeffR>1.589327</clovCoeffR>
+            <clovCoeffT>0.902784</clovCoeffT>
+            <AnisoParam>
+              <anisoP>true</anisoP>
+              <xi_0>4.3</xi_0>
+              <nu>1.265</nu>
+              <t_dir>3</t_dir>
+            </AnisoParam>
+            <FermState>
+              <Name>STOUT_FERM_STATE</Name>
+              <rho>0.14</rho>
+              <n_smear>2</n_smear>
+              <orthog_dir>3</orthog_dir>
+              <FermionBC>
+                <FermBC>SIMPLE_FERMBC</FermBC>
+                <boundary>1 1 1 -1</boundary>
+              </FermionBC>
+            </FermState>
+          </FermionAction>
+	  
+          <!--InvertParam>
+            <invType>MG_PROTO_QPHIX_EO_CLOVER_INVERTER</invType>
+            <CloverParams>
+              <Mass>-0.0856</Mass>
+              <clovCoeffR>1.589327</clovCoeffR>
+              <clovCoeffT>0.902784</clovCoeffT>
+              <AnisoParam>
+                <anisoP>true</anisoP>
+                <xi_0>4.3</xi_0>
+                <nu>1.265</nu>
+                <t_dir>3</t_dir>
+              </AnisoParam>
+            </CloverParams>
+            <AntiPeriodicT>true</AntiPeriodicT>
+            <MGLevels>3</MGLevels>
+            <Blocking>
+              <elem>4 4 2 4</elem>
+              <elem>2 2 2 2</elem>
+            </Blocking>
+            <NullVecs>24 32</NullVecs>
+            <NullSolverMaxIters>100 100</NullSolverMaxIters>
+            <NullSolverRsdTarget>5e-06 5e-06</NullSolverRsdTarget>
+            <NullSolverVerboseP>0 0</NullSolverVerboseP>
+            <OuterSolverNKrylov>8</OuterSolverNKrylov>
+            <OuterSolverRsdTarget>1e-07</OuterSolverRsdTarget>
+            <OuterSolverMaxIters>100</OuterSolverMaxIters>
+            <OuterSolverVerboseP>true</OuterSolverVerboseP>
+            <VCyclePreSmootherMaxIters>0 0</VCyclePreSmootherMaxIters>
+            <VCyclePreSmootherRsdTarget>0.1 0.1</VCyclePreSmootherRsdTarget>
+            <VCyclePreSmootherRelaxOmega>1.1 1.1</VCyclePreSmootherRelaxOmega>
+            <VCyclePreSmootherVerboseP>0 0</VCyclePreSmootherVerboseP>
+            <VCyclePostSmootherMaxIters>8 8</VCyclePostSmootherMaxIters>
+            <VCyclePostSmootherRsdTarget>0.1 0.1</VCyclePostSmootherRsdTarget>
+            <VCyclePostSmootherRelaxOmega>1.1 1.1</VCyclePostSmootherRelaxOmega>
+            <VCyclePostSmootherVerboseP>0 0</VCyclePostSmootherVerboseP>
+            <VCycleBottomSolverMaxIters>8 24</VCycleBottomSolverMaxIters>
+            <VCycleBottomSolverRsdTarget>0.1 0.1</VCycleBottomSolverRsdTarget>
+            <VCycleBottomSolverNKrylov>8 8</VCycleBottomSolverNKrylov>
+            <VCycleBottomSolverVerboseP>0 0</VCycleBottomSolverVerboseP>
+            <VCycleMaxIters>1 1</VCycleMaxIters>
+            <VCycleRsdTarget>0.1 0.1</VCycleRsdTarget>
+            <VCycleVerboseP>0 0</VCycleVerboseP>
+            <SubspaceId>foo_eo</SubspaceId>
+            </InvertParam-->
+	  
+          <InvertParam>
+            <invType>CG_INVERTER</invType>
+            <RsdCG>1.0e-4</RsdCG>
+            <MaxCG>100</MaxCG>
+	    <verbose>true</verbose>
+	    <Verbose>true</Verbose>
+          </InvertParam>
+	  
+        </Propagator>
+
+
+
+      </Param>
+
+      <NamedObject>
+        <gauge_id>default_gauge_field</gauge_id>
+        <colorvec_files><elem>/global/cscratch1/sd/fwinter/szscl21_32_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265.3d.eigs.mod1600a</elem></colorvec_files>
+        <dist_op_file>/global/cscratch1/sd/fwinter/unsmeared_genprop_8n.sdb</dist_op_file>
+      </NamedObject>
+
+    </elem>
+
+  </InlineMeasurements>
+  <nrow>32 32 32 8</nrow>
+</Param>
+
+<RNG>
+  <Seed>
+    <elem>11</elem>
+    <elem>11</elem>
+    <elem>11</elem>
+    <elem>0</elem>
+  </Seed>
+</RNG>
+
+<Cfg>
+  <cfg_type>WEAK_FIELD</cfg_type>
+  <cfg_file>/global/cscratch1/sd/fwinter/szscl21_32_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265_cfg_1600a.lime</cfg_file>
+  <parallel_io>true</parallel_io>
+</Cfg>
+</chroma>
