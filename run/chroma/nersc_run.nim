@@ -17,10 +17,22 @@ import propagator
 const basedir = strip(staticExec("pwd"))
 echo "basedir= ", basedir
 
+#------------------------------------------------------------------------------
 #const platform = "OLCF"
 const platform = "NERSC"
+#const platform = "TACC"
+
+when platform == "OLCF":
+  include config_OLCF
+elif platform == "NERSC":
+  include config_NERSC
+elif platform == "TACC":
+  include config_TACC
+else:
+  quit("unknown platform")
 
 
+#------------------------------------------------------------------------------
 type
   PathFile_t* = object
     name*:               string
@@ -125,7 +137,8 @@ proc constructPathNames*(t0: string): RunPaths_t =
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
-  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
+  # <elem>/global/homes/r/redwards/scratch/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per/eigs_mod/1820b/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per.3d.eigs.n_640.t_31.mod1820b</elem>
+  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod/" & seqno, name: stem & ".3d.eigs.n_640.t_" & t0 & ".mod" & seqno)]
 
   result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
   result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
@@ -157,7 +170,7 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
 
-  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t0 mod 32 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,

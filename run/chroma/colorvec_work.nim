@@ -508,7 +508,7 @@ when isMainModule:
   let t_origin = getTimeOrigin(Lt,seqno)
   echo "Lt= ", Lt, "   t_origin= ", t_origin
 
-  var (Nt_forward, Nt_backward) = if t_source mod 16 == 0: (48, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t_source mod 32 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: mass_label,
