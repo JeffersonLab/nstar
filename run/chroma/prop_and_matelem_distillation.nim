@@ -3,7 +3,6 @@
 import propagator
 import serializetools/serializexml
 import xmltree
-import inline_meas
 
 
 #------------------------------------------------------------------------------

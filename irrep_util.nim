@@ -1,7 +1,7 @@
 ##  Support for manipulating irreps
 ## 
 
-import lists, complex, serializetools/array1d
+import complex, serializetools/array1d
 import strutils
 
 type Mom_t = array[0..2,cint]    ## shorthand

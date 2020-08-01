@@ -1,15 +1,12 @@
 #
 # This is the work script called by run_colorvec_*pl
 #
-import os, osproc, strutils
+import os, strutils
 import re
 import xmltree
 
 import serializetools/serializexml
-import serializetools/array2d
-import niledb
 import ../../irrep_util
-import inline_meas
 import unsmeared_hadron_node_distillation
 import drand48
 
@@ -209,14 +206,10 @@ proc getTimeOrigin*(Lt: int, trajj: string): int =
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 ## Various constructions useful for distillation
-import chroma
-import prop_and_matelem_distillation as matelem
-#import prop_and_matelem_distillation
 import fermbc, fermstate
 import inverter
 import clover_fermact
 import link_smearing
-import propagator
 
 
 proc newStandardStoutLinkSmear*(): XmlNode =
@@ -456,6 +449,10 @@ proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int): XmlNode =
                                        VCycleVerboseP: @[0, 0],
                                        SubspaceId: "foo_eo"), "InvertParam")
 
+
+#------------------------------------------------------------------------------
+proc newLinkSmearing*(gammas: seq[cint]; mom2_min, mom2_max: cint): XmlNode =
+  ## Generate canonical momenta. In this version, no displacements
 
 
 

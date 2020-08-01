@@ -4,11 +4,19 @@ import serializetools/serializexml
 import xmltree
 
 type
+  NoneLinkSmearing_t* = object
+    LinkSmearingType*:   string
+
   StoutLinkSmearing_t* = object
     LinkSmearingType*:   string
     link_smear_fact*:    float
     link_smear_num*:     int   
     no_smear_dir*:       int   
+
+proc newNoneLinkSmearing*(fact: float, num: int, dir: int): XmlNode =
+  ## Return a new StoutLinkSmear
+  return serializeXML(NoneLinkSmearing_t(LinkSmearingType: "NONE"), "LinkSmearing")
+
 
 proc newStoutLinkSmearing*(fact: float, num: int, dir: int): XmlNode =
   ## Return a new StoutLinkSmear
