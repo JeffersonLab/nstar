@@ -416,8 +416,8 @@ proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): seq[Mom_t] =
   ##  This loop allows us to have, for example,  p= 100, 200, 300,  which all fall in D4
   var mom: Mom_t
   for px in 0 .. mom2_max:
-    for py in mom[0] .. mom2_max:
-      for pz in mom[1] .. mom2_max:
+    for py in 0 .. px:
+      for pz in 0 .. py:
         ##  Check if valid
         mom = [px,py,pz]
         if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):
