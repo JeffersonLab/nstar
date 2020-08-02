@@ -224,9 +224,12 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   for p in items(canon_moms):
     echo "p= ", p
-    moms.add([int(p[2]),int(p[1]),int(p[0])])
+    let pp = [int(p[0]),int(p[1]),int(p[2])]
+    moms.add(pp)
     if norm2(p) > 0:
-      moms.add([-int(p[2]),-int(p[1]),int(p[0])])
+      moms.add([-pp[0],-pp[1],-pp[2]])
+
+  echo "moms= ", moms
 
   # Need paths for the fifos
   var fifo = newSeq[string]()
