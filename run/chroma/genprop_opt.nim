@@ -4,14 +4,11 @@ import propagator
 import serializetools/serializexml
 import tables
 import xmltree
-#import inline_meas
-
 
 #------------------------------------------------------------------------------
-type
-  Displacements_t* = object
-    mass_label*:    seq[seq[int]] 
+type Mom_t = array[0..2,int]    ## shorthand
 
+type
   Contractions_t* = object
     num_vecs*:            int          ## yup
     mass_label*:          string       ## mass label
@@ -28,7 +25,7 @@ type
     PropSources*:     seq[int]
     SinkSources*:     Table[int,seq[int]]
     Displacements*:   seq[seq[int]]
-    Moms*:            seq[seq[int]]
+    Moms*:            seq[Mom_t]
     Contractions*:    Contractions_t
     Propagator*:      Propagator_t
 
@@ -43,23 +40,6 @@ type
     Param*:           GenPropParam_t
     NamedObject*:     NamedObject_t
 
-
-
-proc newGenPropParams*(LinkSmearing: XmlNode, 
-                       PropSources: seq[int], 
-                       SinkSources: Table[int,seq[int]],
-                       Displacements: seq[seq[int]],
-                       Moms: seq[seq[int]],
-                       Contractions: Contractions_t,
-                       Propagator: Propagator_t): GenPropParam_t =
-    ## Genprop params
-    return GenPropParam_t(LinkSmearing: LinkSmearing,
-                          PropSources: PropSources,
-                          SinkSources: SinkSources,
-                          Displacements: Displacements,
-                          Moms: Moms,
-                          Contractions: Contractions,
-                          Propagator: Propagator)
 
 proc newGenPropOptDistillation*(Param: GenPropParam_t, NamedObject: NamedObject_t): XmlNode =
   ## Return a new prop

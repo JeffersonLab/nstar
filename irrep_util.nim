@@ -4,7 +4,7 @@
 import complex, serializetools/array1d
 import strutils
 
-type Mom_t = array[0..2,cint]    ## shorthand
+type Mom_t = array[3,cint]    ## shorthand
 
 
 ## ----------------------------------------------------------------------------------
@@ -39,8 +39,7 @@ proc crtesn*(ipos0: int; latt_size: seq[int]): seq[int] =
   ## Decompose a lexicographic site into coordinates
   ##  Calculate the Cartesian coordinates of the VALUE of IPOS where the 
   ##  value is defined by
-  ## 
-  ##      for i = 0 to NDIM-1  {
+  ## g  ##      for i = 0 to NDIM-1  {
   ##         X_i  <- mod( IPOS, L(i) )
   ##         IPOS <- int( IPOS / L(i) )
   ##      }
