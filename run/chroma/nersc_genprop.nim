@@ -197,37 +197,40 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let t0       = wrapLt(tr.t_start, t_origin, Lt)
   let mass     = run_paths.mm.mass
 
-  var prop_sources = newSeq[int]()
+  var prop_sources = @[t0]
   var sink_sources = initTable[int,seq[int]]()
 
   for t in items(tr.t_snks):
-    let te = int(wrapLt(t, Lt, t_origin))
+    let te = int(wrapLt(t, t_origin, Lt))
     let fo = @[te]
     prop_sources.add(te)
     sink_sources.add(te, fo)
+    echo "t= ", t, " te= ", te, " fo= ", fo, " Lt= ", Lt, "  t_origin= ", t_origin
 
+  echo "prop_sources= ", prop_sources
   sink_sources.add(t0, prop_sources)
 
   let link_smearing = colorvec_work.newStandardStoutLinkSmear()
 
-  let displacements = newSeq[seq[int]]()
+  let displacements: seq[seq[int]] = @[]
   let nodes_per_cn  = 1
 
   # Generate the pos/neg pairs of canonical mom
   let mom2_min = 0
 #  let mom2_max = 4
-  let mom2_max = 1
+  let mom2_max = 2
   let canon_moms = irrep_util.generateCanonMoms(cint(mom2_min), cint(mom2_max))
   var moms = newSeq[array[3,int]]()
 
   for p in items(canon_moms):
+    echo "p= ", p
     moms.add([int(p[2]),int(p[1]),int(p[0])])
     if norm2(p) > 0:
       moms.add([-int(p[2]),-int(p[1]),int(p[0])])
 
   # Need paths for the fifos
   var fifo = newSeq[string]()
-  for n in 1 .. run_paths.time_ranges.Nt_forward:
+  for n in 1 .. nodes_per_cn:
     fifo.add("/tmp/harom-cmd" & $n)
 
   # That should be enough
