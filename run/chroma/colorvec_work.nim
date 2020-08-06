@@ -422,7 +422,7 @@ proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int): XmlNode =
                                        CloverParams: newAnisoCloverParams(mass),
                                        AntiPeriodicT: true,
                                        MGLevels: 3,
-                                       Blocking: @[@[4,4,4,4], @[3,3,2,2]],
+                                       Blocking: @[@[4,4,4,4], @[2,2,2,2]],
                                        NullVecs: @[24, 32],
                                        NullSolverMaxIters: @[100, 100],
                                        NullSolverRsdTarget: @[5e-6, 5e-6],

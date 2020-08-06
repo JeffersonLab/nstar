@@ -16,9 +16,9 @@ const basedir = strip(staticExec("pwd"))
 echo "basedir= ", basedir
 
 #------------------------------------------------------------------------------
-const platform = "TEST"
+#const platform = "TEST"
 #const platform = "OLCF"
-#const platform = "NERSC"
+const platform = "NERSC"
 #const platform = "TACC"
 
 when platform == "OLCF":
@@ -56,8 +56,8 @@ proc genPath*(files: seq[PathFile_t]): seq[string] =
 
 #------------------------------------------------------------------------------
 # Mass params - need to fix this stuff up to have the datasets and their masses
-let mass_s = 0.02
-let mass_l = 0.01
+let mass_s = -0.0743
+let mass_l = -0.0856
 
 type
   QuarkMass_t* = object
@@ -98,7 +98,7 @@ proc getTimeRanges*(): TimeRanges_t =
     result.Nt_forward = 6
   else:
     result.t_start    = 0
-    result.Nt_forward = 32
+    result.Nt_forward = 8
 
   result.t_snks  = @[result.t_start + result.Nt_forward]
 
@@ -126,6 +126,8 @@ type
     quark*:              string
     mm*:                 QuarkMass_t
     time_ranges*:        TimeRanges_t
+    chroma_per_node*:    int
+    harom_per_node*:     int
     seqno*:              string
     num_vecs*:           int
     prefix*:             string
@@ -158,10 +160,9 @@ proc constructPathNames*(quark: string, seqno: string, time_ranges: TimeRanges_t
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: result.stem & "_cfg_" & seqno & ".lime")
-  # <elem>/global/homes/r/redwards/scratch/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per/eigs_mod/1820b/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per.3d.eigs.n_640.t_31.mod1820b</elem>
-  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod/" & seqno, name: result.stem & ".3d.eigs.mod" & seqno)]
+  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: result.stem & ".3d.eigs.mod" & seqno)]
 
-  result.prefix          = result.stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t_" & $time_ranges.t_start
+  result.prefix          = result.stem & ".genprop.n" & $result.num_vecs & "." & result.quark & ".t_" & $time_ranges.t_start
   for t in items(time_ranges.t_snks):
     result.prefix &= "_" & $t
 
@@ -212,8 +213,15 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   let link_smearing = colorvec_work.newStandardStoutLinkSmear()
 
-  let displacements: seq[seq[int]] = @[]
-  let nodes_per_cn  = 1
+  var displacements: seq[seq[int]] = @[]
+  displacements.add(newSeq[int]())
+  displacements.add(@[3])
+  displacements.add(@[-3])
+  displacements.add(@[3,3])
+  displacements.add(@[-3,-3])
+  
+  let chroma_per_node = 8
+  let harom_per_node  = 4
 
   # Generate the pos/neg pairs of canonical mom
   let mom2_min = 0
@@ -233,7 +241,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   # Need paths for the fifos
   var fifo = newSeq[string]()
-  for n in 1 .. nodes_per_cn:
+  for n in 1 .. harom_per_node:
     fifo.add("/tmp/harom-cmd" & $n)
 
   # That should be enough
@@ -245,7 +253,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
                                         fifo: fifo,
                                         decay_dir: 3,
                                         num_tries: 1,
-                                        nodes_per_cn: nodes_per_cn)
+                                        nodes_per_cn: chroma_per_node)
  
   # Fermion action and inverters
   when platform == "OLCF":
@@ -308,12 +316,12 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   let queue    = "regular"
   #let queue    = "scavenger"
   let wallTime = "00:30:00"
-  let node_cnt          = 36
-  let corr_cnt_per_node = 16
- 
+  let node_cnt          = 4
+  let chroma_per_node   = 8
+  let harom_per_node    = 4
+
   # This particular job
-  let corr_cnt          = node_cnt * corr_cnt_per_node
-  #result.nodes          = node_cnt * t0s.len
+  let mpi_cnt           = node_cnt * chroma_per_node
   result.nodes          = node_cnt
   result.wallTime       = wallTime
   result.queuename      = queue
@@ -333,51 +341,54 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 
 cd """ & run_paths.seqDir & "\n" & """
 
-export OMP_NUM_THREADS=8
-export OMP_PLACES=threads
-export OMP_PROC_BIND=spread
+#export OMP_PLACES=threads
+#export OMP_PROC_BIND=spread
 
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
 out="""" & genPath(run_paths.out_file) & """"
-prop_tmp="""" & genPath(run_paths.genprop_op_tmp) & """"
-prop_op="""" & genPath(run_paths.genprop_op_file) & """"
-/bin/rm -f $prop_tmp
+genprop_tmp="""" & genPath(run_paths.genprop_op_tmp) & """"
+genprop_op="""" & genPath(run_paths.genprop_op_file) & """"
+/bin/rm -f $genprop_tmp
 
-if [ -e $prop_op ]
+if [ -e $genprop_op ]
 then
   exit 0
 fi
 
-CHROMA_OMP=1
-HAROM_OMP=1
-CHROMA_PER_NODE=1
-HAROM_PER_NODE=1
+CHROMA_OMP=8
+HAROM_OMP=8
+
+MPI_CNT="""" & $mpi_cnt & """"
+NODE_CNT="""" & $node_cnt & """"
+CHROMA_PER_NODE="""" & $chroma_per_node & """"
+HAROM_PER_NODE="""" & $harom_per_node & """"
 HAROM_LS="""" & $Ls & """"
 
-REMOVE=/Users/edwards/Documents/qcd/data/redstar/genprop_files/remove_fifo.sh
-LAUNCHER=/Users/edwards/Documents/qcd/git/devel/harom.shm/mainprogs/launcher/launcher
+REMOVE="/global/homes/r/redwards/m2156/exe/cori/remove_fifo.sh"
+LAUNCHER="/global/homes/r/redwards/m2156/exe/cori/launcher.jul_16_2020"
 
-CHROMA=/usr/local/Cellar/chroma/parscalar-single.shmharom/bin/chroma
-GENPROP=/Users/edwards/Documents/qcd/git/devel/harom.shm/lexico-scalar-Nd3/mainprogs/main/genprop
+CHROMA="/global/homes/r/redwards/m2156/exe/cori/chroma.cori.shm.jul_16_2020"
+GENPROP="/global/homes/r/redwards/m2156/exe/cori/genprop.cori.shm.jul_16_2020"
 
-#source """ & basedir & """/env_qphix.sh
-
-date
-srun -n """ & $corr_cnt & """ -c """ & $corr_cnt_per_node & """ --cores-per-socket 256 --cpu_bind=cores $exe -i $input -o $output -geom 1 3 6 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > $out 2>&1
-date
+echo "Starting remove"
+srun -n ${NODE_CNT} --ntasks-per-node=1 ${REMOVE}
+echo "End remove, starting CHROMA"
 
 # Usage ./launcher [ENV MPI RANK] [ranks per node] [chroma_exe] [chroma OMP] [chroma stdout] [harom_exe] [harom OMP] [harom stdout] [harom #/node] [harom FIFO stem] [harom LS] [chroma args..] 
 
 # Cori   srun -n 16 --ntasks-per-node=8 ${LAUNCHER} SLURM_PROCID 8 ${CHROMA} 8 out.chroma ${GENPROP} 8 out.harom 4 /tmp/harom-cmd 32 -i $INPUT -o $OUTPUT -geom 2 2 2 2 -by 4 -bz 4 -c 4 -sy 1 -sz 2
 
-
-${LAUNCHER} SLURM_PROCID ${CHROMA_PER_NODE} ${CHROMA} ${CHROMA_OMP} out.chroma ${GENPROP} ${HAROM_OMP} out.harom ${HAROM_PER_NODE} /tmp/harom-cmd ${HAROM_LS} -i ${input} -o ${output} -geom 1 1 1 1 -by 4 -bz 4 -c 4 -sy 1 -sz 2
+echo "Starting launcher"
+date
+srun -n ${MPI_CNT} --ntasks-per-node=${CHROMA_PER_NODE} ${LAUNCHER} SLURM_PROCID ${CHROMA_PER_NODE} ${CHROMA} ${CHROMA_OMP} out.chroma ${GENPROP} ${HAROM_OMP} out.harom ${HAROM_PER_NODE} /tmp/harom-cmd ${HAROM_LS} -i ${input} -o ${output} -iogeom 1 1 1 4 -geom 1 1 2 16 -by 4 -bz 4 -c 4 -sy 1 -sz 2
+date
+echo "End launcher"
 
 stat=$?
 if [ $stat -eq 0 ]
 then
-  /bin/mv $prop_tmp $prop_op
+  /bin/mv $genprop_tmp $genprop_op
 fi
 """
 
@@ -444,10 +455,8 @@ when isMainModule:
     let f = run_paths.seqDir & "/nersc.all.sh"
 
     echo "Submitting " & f
-#[
-    if execShellCmd("sbatch " & f) != 0:
-      quit("Some error submitting " & f)
-]#
+#    if execShellCmd("sbatch " & f) != 0:
+#      quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
