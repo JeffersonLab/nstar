@@ -98,7 +98,7 @@ proc getTimeRanges*(): TimeRanges_t =
     result.Nt_forward = 6
   else:
     result.t_start    = 0
-    result.Nt_forward = 8
+    result.Nt_forward = 32
 
   result.t_snks  = @[result.t_start + result.Nt_forward]
 
@@ -221,7 +221,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   displacements.add(@[-3,-3])
   
   let chroma_per_node = 8
-  let harom_per_node  = 4
+  let harom_per_node  = 8
 
   # Generate the pos/neg pairs of canonical mom
   let mom2_min = 0
@@ -318,7 +318,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   let wallTime = "00:30:00"
   let node_cnt          = 4
   let chroma_per_node   = 8
-  let harom_per_node    = 4
+  let harom_per_node    = 8
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
