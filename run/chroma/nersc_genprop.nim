@@ -214,7 +214,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let link_smearing = colorvec_work.newStandardStoutLinkSmear()
 
   var displacements: seq[seq[int]] = @[]
-  displacements.add(newSeq[int]())
+  displacements.add(@[])
   displacements.add(@[3])
   displacements.add(@[-3])
   displacements.add(@[3,3])
