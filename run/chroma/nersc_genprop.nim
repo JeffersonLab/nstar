@@ -100,7 +100,7 @@ proc getTimeRanges*(): TimeRanges_t =
     result.t_start    = 0
     result.Nt_forward = 32
 
-  result.t_snks  = @[result.t_start + result.Nt_forward]
+  result.t_snks  = @[result.t_start + result.Nt_forward - 1]
 
 
 proc wrapLt*(t0, t_origin, Lt: int): int =
@@ -221,12 +221,11 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   displacements.add(@[-3,-3])
   
   let chroma_per_node = 8
-  let harom_per_node  = 8
+  let harom_per_node  = 2
 
   # Generate the pos/neg pairs of canonical mom
   let mom2_min = 0
-#  let mom2_max = 4
-  let mom2_max = 2
+  let mom2_max = 4
   let canon_moms = irrep_util.generateCanonMoms(cint(mom2_min), cint(mom2_max))
   var moms = newSeq[array[3,int]]()
 
@@ -315,10 +314,10 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
   let queue    = "regular"
   #let queue    = "scavenger"
-  let wallTime = "00:30:00"
-  let node_cnt          = 4
+  let wallTime = "12:00:00"
+  let node_cnt          = 16
   let chroma_per_node   = 8
-  let harom_per_node    = 8
+  let harom_per_node    = 2
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
@@ -366,10 +365,10 @@ HAROM_PER_NODE="""" & $harom_per_node & """"
 HAROM_LS="""" & $Ls & """"
 
 REMOVE="/global/homes/r/redwards/m2156/exe/cori/remove_fifo.sh"
-LAUNCHER="/global/homes/r/redwards/m2156/exe/cori/launcher.jul_16_2020"
+LAUNCHER="/global/homes/r/redwards/m2156/exe/cori/launcher.aug_6_2020"
 
-CHROMA="/global/homes/r/redwards/m2156/exe/cori/chroma.cori.shm.jul_16_2020"
-GENPROP="/global/homes/r/redwards/m2156/exe/cori/genprop.cori.shm.jul_16_2020"
+CHROMA="/global/homes/r/redwards/m2156/exe/cori/chroma.cori.shm.aug_20_2020"
+GENPROP="/global/homes/r/redwards/m2156/exe/cori/genprop.cori.shm.aug_6_2020"
 
 echo "Starting remove"
 srun -n ${NODE_CNT} --ntasks-per-node=1 ${REMOVE}
@@ -381,7 +380,7 @@ echo "End remove, starting CHROMA"
 
 echo "Starting launcher"
 date
-srun -n ${MPI_CNT} --ntasks-per-node=${CHROMA_PER_NODE} ${LAUNCHER} SLURM_PROCID ${CHROMA_PER_NODE} ${CHROMA} ${CHROMA_OMP} out.chroma ${GENPROP} ${HAROM_OMP} out.harom ${HAROM_PER_NODE} /tmp/harom-cmd ${HAROM_LS} -i ${input} -o ${output} -iogeom 1 1 1 4 -geom 1 1 2 16 -by 4 -bz 4 -c 4 -sy 1 -sz 2
+srun -n ${MPI_CNT} --ntasks-per-node=${CHROMA_PER_NODE} ${LAUNCHER} SLURM_PROCID ${CHROMA_PER_NODE} ${CHROMA} ${CHROMA_OMP} out.chroma ${GENPROP} ${HAROM_OMP} out.harom ${HAROM_PER_NODE} /tmp/harom-cmd ${HAROM_LS} -i ${input} -o ${output} -iogeom 1 1 1 8 -geom 1 2 4 16 -by 4 -bz 4 -c 4 -sy 1 -sz 2
 date
 echo "End launcher"
 
