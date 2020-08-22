@@ -33,6 +33,12 @@ else:
   quit("unknown platform")
 
 
+
+# Bury these here unfortunately
+const chroma_per_node = 8
+const harom_per_node  = 2
+const node_cnt        = 16
+
 #------------------------------------------------------------------------------
 type
   PathFile_t* = object
@@ -99,6 +105,9 @@ proc getTimeRanges*(): TimeRanges_t =
   else:
     result.t_start    = 0
     result.Nt_forward = 32
+
+  if result.Nt_forward != harom_per_node*node_cnt:
+    quit("Nt_forward not consistent")
 
   result.t_snks  = @[result.t_start + result.Nt_forward - 1]
 
@@ -215,14 +224,11 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   var displacements: seq[seq[int]] = @[]
   displacements.add(@[])
-  displacements.add(@[3])
-  displacements.add(@[-3])
-  displacements.add(@[3,3])
-  displacements.add(@[-3,-3])
+#  displacements.add(@[3])
+#  displacements.add(@[-3])
+#  displacements.add(@[3,3])
+#  displacements.add(@[-3,-3])
   
-  let chroma_per_node = 8
-  let harom_per_node  = 2
-
   # Generate the pos/neg pairs of canonical mom
   let mom2_min = 0
   let mom2_max = 4
@@ -315,9 +321,6 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   let queue    = "regular"
   #let queue    = "scavenger"
   let wallTime = "12:00:00"
-  let node_cnt          = 16
-  let chroma_per_node   = 8
-  let harom_per_node    = 2
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
