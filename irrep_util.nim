@@ -349,7 +349,7 @@ proc buildIrrepWithParity*(irrep: string; P: int): string =
       rep &= "m"
   return rep
 
-proc buildIrrepWithPG*(irrep: string; P: cint; G: cint): string = 
+proc buildIrrepWithPG*(irrep: string; P: int; G: int): string = 
   ## Representation including parity and G-parity if it exists
   var rep: string = buildIrrepWithParity(irrep, P)
   var mm: IrrepNames_t = getIrrepIndex(irrep)
