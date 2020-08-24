@@ -3,7 +3,7 @@
 
 import hadron_sun_npart_irrep_op, particle_op, streams, os, xmlparser, re,
        serializetools/serializexml, tables, xmltree, parseutils, strutils,
-       ensem, serializetools/array1d
+       ensem, serializetools/array1d, operator_name_util
 
 type
   # We choose some particular structure for the objects
@@ -170,6 +170,30 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
 
     result[kk] = float64(C)*v
 
+
+
+proc writeProjOpsXML*(chan: string, output: ProjectedOpWeights) =
+  ## Write the xml
+  var f: File
+  if open(f, "weights." & chan & ".xml", fmWrite):
+    f.write(xmlHeader)
+    f.write(serializeXML(output, "ProjectedOpWeights"))
+    f.close()
+ 
+
+proc writeProjOpsList*(chan: string, output: ProjectedOpWeights) =
+  ## Write the list
+  var f: File
+  if open(f, "weights." & chan & ".list", fmWrite):
+    for k,v in pairs(output.ProjectedOps):
+      #pion_proj0_p100_H0D4A2
+      let pp = split(k.name,'_')
+      var mom = pp[2]
+      mom.delete(0,0)
+      let ir = mom & "_" & getIrrepWithPG(k.name)
+      f.write(ir & " " & k.name & "\n")
+    f.close()
+ 
 
 
 #-----------------------------------------------------------------------------
