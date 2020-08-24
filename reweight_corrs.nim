@@ -10,8 +10,24 @@ import
   ensem, extract_all_v_coeffs_xml, niledb
 
 import
-  os, strutils, xmltree, xmlparser, posix
+  os, strutils, xmltree, xmlparser, posix, system
 
+when defined(openmp):
+  {.passC: "-O3 -fopenmp".}
+  {.passL: "-fopenmp".}
+
+  {.pragma: omp, header:"omp.h".}
+
+  proc omp_set_num_threads*(x: cint) {.omp.}
+  proc omp_get_num_threads*(): cint {.omp.}
+  proc omp_get_max_threads*(): cint {.omp.} # This takes hyperthreading into account
+  proc omp_get_thread_num*(): cint {.omp.}
+
+else:
+  template omp_set_num_threads*(x: cint) = discard
+  template omp_get_num_threads*(): cint = 1
+  template omp_get_max_threads*(): cint = 1
+  template omp_get_thread_num*(): cint = 0
 
 ## ----------------------------------------------------------------------------
 proc getNbins*(corrs: Table[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]): int =
@@ -274,14 +290,20 @@ when isMainModule:
       for kk1,vv1 in pairs(nv1):
         for kk2,vv2 in pairs(nv2):
           #echo "Construct this corr"
+          let vvv = vv1 * vv2
           let cr = constructCorr(flavor, irmom, kk1, kk2)
+          var crcorrs = newVal(nbins,Lt)
+          for n in 0..nbins-1:
+            for i in 0..Lt-1:
+              crcorrs[n][i] = corrs[cr][n][i]
           #echo $serializeXML(cr)
           if not corrs.hasKey(cr):
             quit("oops, corr does not exist: cr= " & $cr)
           # Accumulate
-          for n in 0..nbins-1:
+          #for n in 0..nbins-1:
+          for n in `||`(0,nbins-1,1):
             for i in 0..Lt-1:
-              val[n][i] += corrs[cr][n][i] * vv1 * vv2
+              val[n][i] += crcorrs[n][i] * vvv
 
       new_corrs[key] = val
 

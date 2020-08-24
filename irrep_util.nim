@@ -1,10 +1,10 @@
 ##  Support for manipulating irreps
 ## 
 
-import lists, complex, serializetools/array1d
+import complex, serializetools/array1d
 import strutils
 
-type Mom_t = array[0..2,cint]    ## shorthand
+type Mom_t = array[3,cint]    ## shorthand
 
 
 ## ----------------------------------------------------------------------------------
@@ -39,8 +39,7 @@ proc crtesn*(ipos0: int; latt_size: seq[int]): seq[int] =
   ## Decompose a lexicographic site into coordinates
   ##  Calculate the Cartesian coordinates of the VALUE of IPOS where the 
   ##  value is defined by
-  ## 
-  ##      for i = 0 to NDIM-1  {
+  ## g  ##      for i = 0 to NDIM-1  {
   ##         X_i  <- mod( IPOS, L(i) )
   ##         IPOS <- int( IPOS / L(i) )
   ##      }
@@ -417,8 +416,8 @@ proc generateCanonMoms*(mom2_min: cint; mom2_max: cint): seq[Mom_t] =
   ##  This loop allows us to have, for example,  p= 100, 200, 300,  which all fall in D4
   var mom: Mom_t
   for px in 0 .. mom2_max:
-    for py in mom[0] .. mom2_max:
-      for pz in mom[1] .. mom2_max:
+    for py in 0 .. px:
+      for pz in 0 .. py:
         ##  Check if valid
         mom = [px,py,pz]
         if (norm2(mom) < mom2_min) or (norm2(mom) > mom2_max):

@@ -3,7 +3,7 @@
 import os, xmltree, strutils
 
 import colorvec_work, serializetools/serializexml
-import config
+#import config
 
 import chroma
 import prop_and_matelem_distillation as matelem
@@ -17,10 +17,22 @@ import propagator
 const basedir = strip(staticExec("pwd"))
 echo "basedir= ", basedir
 
+#------------------------------------------------------------------------------
 #const platform = "OLCF"
 #const platform = "NERSC"
 const platform = "TACC"
 
+when platform == "OLCF":
+  include config_OLCF
+elif platform == "NERSC":
+  include config_NERSC
+elif platform == "TACC":
+  include config_TACC
+else:
+  quit("unknown platform")
+
+
+#------------------------------------------------------------------------------
 type
   PathFile_t* = object
     name*:               string
@@ -125,7 +137,8 @@ proc constructPathNames*(t0: string): RunPaths_t =
 
   # Files
   result.cfg_file       = PathFile_t(fileDir: result.dataDir & "/cfgs", name: stem & "_cfg_" & seqno & ".lime")
-  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod", name: stem & ".3d.eigs.mod" & seqno)]
+  # <colorvec_files><elem>/global/homes/r/redwards/scratch/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per/eigs_mod/1980b/szscl21_48_512_b1p50_t_x4p300_um0p0865_sm0p0743_n1p265seo_per.3d.eigs.n_640.t_10.mod1980b</elem></colorvec_files>
+  result.colorvec_files = @[PathFile_t(fileDir: result.dataDir & "/eigs_mod/" & seqno, name: stem & ".3d.eigs.n_640.t_" & t0 & ".mod" & seqno)]
 
   result.prefix         = stem & ".prop.n" & $result.num_vecs & "." & result.quark & ".t0_" & t0 
   result.prop_op_tmp    = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".sdb" & seqno)
@@ -157,7 +170,7 @@ proc generateChromaXML*(t0: int, run_paths: RunPaths_t) =
   let Lt = lattSize[3]
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
 
-  var (Nt_forward, Nt_backward) = if t0 mod 16 == 0: (48, 0) else: (1, 0)
+  var (Nt_forward, Nt_backward) = if t0 mod 32 == 0: (48, 0) else: (1, 0)
 
   # Used by distillation input
   let contract = matelem.Contractions_t(mass_label: run_paths.mm.mass_label,
@@ -219,10 +232,10 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   ## Generate input file
   # Common stuff
   let propCheck = "/home1/00314/tg455881/qcd/git/nim-play/nstar/prop_check"
-  let nodes    = 4
-  let mpi      = 64 
+  let nodes    = 18
+  let mpi      = 288 
   let queue    = "normal"
-  let wallTime = "6:00:00"
+  let wallTime = "17:00:00"
 
   let total_nodes = nodes * t0s.len()
   let total_mpi   = mpi * t0s.len()
@@ -232,6 +245,7 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
   let seqDir    = job_paths.seqDir
 
   if t0s.len() < 1: quit("Need more than 0 t0s")
+  # SBATCH -A TG-PHY190008  structure account
 
   var exe = """
 #!/bin/bash
@@ -241,40 +255,41 @@ proc generateTACCRunScript*(t0s: seq[int]): string =
 #SBATCH -n """ & $total_mpi & "\n" & """
 #SBATCH -A TG-PHY190005
 
-cd """ & seqDir & "\n" & """
+cd """ & seqDir & "\n\n"
 
-export OMP_NUM_THREADS=8
-export OMP_PLACES=threads
-export OMP_PROC_BIND=spread
-exe="/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
-"""
+  exe = exe & "date\n\n"
 
-  exe = exe & "source " & basedir & "/env_stampede2.sh\n"
+  let bin = "/home1/00314/tg455881/bin/exe/tacc/chroma.knl.double.parscalar.sep_29_2019"
   var cnt = 0
 
+  # Build each helper script
   for t0 in items(t0s):
     let run_paths = constructPathNames($t0)
-    exe = exe & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n"
-  
-  exe = exe & "\ndate\n"
 
-  for t0 in items(t0s):
-    let run_paths = constructPathNames($t0)
-    exe = exe & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity $exe -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 1 4 16 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 &\n"
+    var exe_t0 = "#!/bin/bash\n\n"
+    exe_t0 = exe_t0 & "export OMP_NUM_THREADS=8\n"
+    exe_t0 = exe_t0 & "export OMP_PLACES=threads\n"
+    exe_t0 = exe_t0 & "export OMP_PROC_BIND=spread\n\n"
+    exe_t0 = exe_t0 & "source " & basedir & "/env_stampede2.sh\n"
+    exe_t0 = exe_t0 & "/bin/rm -f " & genPath(run_paths.prop_op_tmp) & "\n\n"
+    exe_t0 = exe_t0 & "ibrun -n " & $mpi & " -o " & $cnt & " task_affinity " & bin & " -i " & genPath(run_paths.input_file) & " -o " & genPath(run_paths.output_file) & " -geom 1 3 3 32 --qmp-alloc-map 3 2 1 0 --qmp-logic-map 3 2 1 0 -by 4 -bz 4 -c 4 -sy 1 -sz 2  > " & genPath(run_paths.out_file) & " 2>&1 \n\n"
     cnt += mpi
+    exe_t0 = exe_t0 & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
 
-  exe = exe & "wait\ndate\n\n\n"
-
-  for t0 in items(t0s):
-    let run_paths = constructPathNames($t0)
-    exe = exe & propCheck & " 0.5 " & genPath(run_paths.prop_op_tmp) & " > " & genPath(run_paths.check_file) & "\n"
-    exe = exe & """
+    exe_t0 = exe_t0 & """
 stat=$?
 if [ $stat -eq 0 ]
 then
   /bin/mv """ & genPath(run_paths.prop_op_tmp) & " " & genPath(run_paths.prop_op_file) & "\n" & """
 fi
 """
+    exe_t0 = exe_t0 & "\n\nexit 0\n"
+    let script_t0 = seqDir & "/helper.t_" & $t0 & ".sh"
+    writeFile(script_t0, exe_t0)
+    exe = exe & "bash " & script_t0 & " &\n"
+
+  # Finish up
+  exe = exe & "\nwait\ndate\n\n\n"
   exe = exe & "\nexit 0\n"
 
   # Will hopefully remove writing any specific file
@@ -326,9 +341,10 @@ when isMainModule:
     var array_t0s: seq[int]
     array_t0s = @[]    
 
-    for t0 in 0 .. Lt-1:
+    # for t0 in 0 .. Lt-1:
+    for t0 in 0 .. 31:
       #if (t0 mod 16) != 0: continue
-      if (t0 mod 16) == 0: continue
+      if (t0 mod 32) == 0: continue
       echo "Check t0= ", t0
       let run_paths = constructPathNames($t0)
       let outputFile = genPath(run_paths.prop_op_file)
@@ -354,7 +370,7 @@ when isMainModule:
       continue
 
     # Must construct
-    let max_t0 = 64
+    let max_t0 = 11
 
     for to_do in items(splitSeq(array_t0s, max_t0)):
       let f = generateTACCRunScript(to_do)

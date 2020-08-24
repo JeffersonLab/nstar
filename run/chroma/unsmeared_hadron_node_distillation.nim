@@ -1,9 +1,8 @@
 ## Prop and matelem distillation
 
-import propagator, link_smearing
+import propagator
 import serializetools/serializexml
 import xmltree
-import inline_meas
 
 # io/xml_group_reader
 

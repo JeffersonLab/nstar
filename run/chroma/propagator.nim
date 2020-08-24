@@ -1,6 +1,6 @@
 ## Propagator support
 
-import serializetools/serializexml
+#import serializetools/serializexml
 import xmltree
 
 type

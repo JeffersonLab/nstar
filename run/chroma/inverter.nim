@@ -1,8 +1,6 @@
 ## Clover inverters
 
 import clover_fermact
-import serializetools/serializexml
-import xmltree
 
 
 #---------------------------------------------------------------------
