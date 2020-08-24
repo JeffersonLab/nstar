@@ -237,12 +237,15 @@ proc getThreeY*(opName: string): int =
     
   return 3*threeY
 
+# ----------------------------------------------------------------------------------
+proc getGParity*(opName: string): int =
+  ## Get strangeness of particle id
+  return getFlavorIndex(opName).G
 
 # ----------------------------------------------------------------------------------
 proc getStrangeness*(opName: string): int =
   ## Get strangeness of particle id
   return getFlavorIndex(opName).S
-
 
 # ----------------------------------------------------------------------------------
 proc getIrrepNoParity*(opName: string): string =
@@ -256,3 +259,20 @@ proc getIrrepWithParity*(opName: string): string =
   let mm = getFlavorIndex(opName)
   
   return buildIrrepWithParity(irrep, mm.P)
+
+# ----------------------------------------------------------------------------------
+proc getIrrepWithGParity*(opName: string): string =
+  ## Get irrep with parity
+  let irrep = getCubicRepNoParity(getIrrep(opName))
+  let mm = getFlavorIndex(opName)
+  
+  return buildIrrepWithParity(irrep, mm.P)
+
+# ----------------------------------------------------------------------------------
+proc getIrrepWithPG*(opName: string): string =
+  ## Get irrep with parity
+  let irrep = getCubicRepNoParity(getIrrep(opName))
+  let mm = getFlavorIndex(opName)
+  
+  return buildIrrepWithPG(irrep, mm.P, mm.G)
+  
