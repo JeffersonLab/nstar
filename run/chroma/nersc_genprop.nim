@@ -179,7 +179,7 @@ proc constructPathNames*(quark: string, seqno: string, time_ranges: TimeRanges_t
   result.input_file      = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".ini.xml" & seqno)
   result.output_file     = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out.xml" & seqno)
   result.out_file        = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out" & seqno)
-  result.genprop_op_file = PathFile_t(fileDir: result.dataDir & "/genprop_db", name: result.genprop_op_tmp.name)
+  result.genprop_op_file = PathFile_t(fileDir: result.dataDir & "/genprop_db2", name: result.genprop_op_tmp.name)
 
 
 #------------------------------------------------------------------------------
@@ -237,7 +237,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   for p in items(canon_moms):
     echo "p= ", p
-    let pp = [int(p[0]),int(p[1]),int(p[2])]
+    let pp = [int(p[2]),int(p[1]),int(p[0])]
     moms.add(pp)
     if norm2(p) > 0:
       moms.add([-pp[0],-pp[1],-pp[2]])
@@ -320,7 +320,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   let propCheck = "/global/homes/r/redwards/qcd/git/nim-play/nstar/prop_check"
   let queue    = "regular"
   #let queue    = "scavenger"
-  let wallTime = "12:00:00"
+  let wallTime = "10:00:00"
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
@@ -457,8 +457,8 @@ when isMainModule:
     let f = run_paths.seqDir & "/nersc.all.sh"
 
     echo "Submitting " & f
-#    if execShellCmd("sbatch " & f) != 0:
-#      quit("Some error submitting " & f)
+    if execShellCmd("sbatch " & f) != 0:
+      quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
