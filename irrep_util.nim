@@ -253,14 +253,14 @@ proc removeHelicity*(irrep: string): string =
       irrep.startsWith("H4D") or irrep.startsWith("H0C") or
       irrep.startsWith("H1C") or irrep.startsWith("H2C") or
       irrep.startsWith("H3C") or irrep.startsWith("H4C")):
-    result.delete(0,2)
+    result.delete(0,1)
     return
 
   if (irrep.startsWith("H1o2D") or irrep.startsWith("H3o2D") or
       irrep.startsWith("H5o2D") or irrep.startsWith("H7o2D") or
       irrep.startsWith("H1o2C") or irrep.startsWith("H3o2C") or
       irrep.startsWith("H5o2C") or irrep.startsWith("H7o2C")):
-    result.delete(0,4)
+    result.delete(0,3)
 
   return
 
@@ -349,7 +349,7 @@ proc buildIrrepWithParity*(irrep: string; P: int): string =
       rep &= "m"
   return rep
 
-proc buildIrrepWithPG*(irrep: string; P: cint; G: cint): string = 
+proc buildIrrepWithPG*(irrep: string; P: int; G: int): string = 
   ## Representation including parity and G-parity if it exists
   var rep: string = buildIrrepWithParity(irrep, P)
   var mm: IrrepNames_t = getIrrepIndex(irrep)
