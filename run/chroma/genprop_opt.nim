@@ -17,7 +17,7 @@ type
     t_start*:             int          ## start time for all genprops
     Nt_forward*:          int          ## number steps forward, so  t_source + Nt_forward-1 is the last tslice
     num_tries*:           int
-    fifo*:                seq[string]
+    ts_per_node*:         int
     nodes_per_cn*:        int
 
   GenPropParam_t* = object
@@ -43,7 +43,7 @@ type
 
 proc newGenPropOptDistillation*(Param: GenPropParam_t, NamedObject: NamedObject_t): XmlNode =
   ## Return a new prop
-  return serializeXML(GenPropOpt2DistillationParams_t(Name: "UNSMEARED_HADRON_NODE_DISTILLATION_HAROM_OPT2", 
+  return serializeXML(GenPropOpt2DistillationParams_t(Name: "UNSMEARED_HADRON_NODE_DISTILLATION_HAROM_OPT3", 
                                                       Frequency: 1, 
                                                       Param: Param, 
                                                       NamedObject: NamedObject))

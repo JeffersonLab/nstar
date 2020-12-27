@@ -62,7 +62,7 @@ proc genPath*(files: seq[PathFile_t]): seq[string] =
 #------------------------------------------------------------------------------
 # Mass params - need to fix this stuff up to have the datasets and their masses
 let mass_s = -0.0743
-let mass_l = -0.0856
+let mass_l = -0.0840
 
 type
   QuarkMass_t* = object
@@ -270,6 +270,9 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
     let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
     let fermact = newAnisoPrecCloverFermAct(mass)
   elif platform == "NERSC":
+    let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
+    let fermact = newAnisoCloverFermAct(mass)
+  elif platform == "TACC":
     let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
     let fermact = newAnisoCloverFermAct(mass)
   elif platform == "JLab":
