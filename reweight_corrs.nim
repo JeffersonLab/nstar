@@ -2,15 +2,15 @@
 
 import
   tables, complex,
-  hadron_sun_npart_irrep_op, hadron_sun_npart_irrep, hadron_sun_npart_npt_corr, irrep_util,
+  hadron_sun_npart_irrep_op, hadron_sun_npart_irrep, hadron_sun_npart_npt_corr,
   serializetools/serializexml, 
   serializetools/serializebin, 
   serializetools/array1d,
   particle_op, cgc_su3, cgc_irrep_mom,
-  ensem, extract_all_v_coeffs_xml, niledb
+  extract_all_v_coeffs_xml, niledb
 
 import
-  os, strutils, xmltree, xmlparser, posix, system
+  os, xmltree, xmlparser, posix, system
 
 when defined(openmp):
   {.passC: "-O3 -fopenmp".}
@@ -53,6 +53,7 @@ proc readProjectOpWeights*(files: seq[string]): Table[KeyParticleOp_t, Table[Key
       result[k] = v
 
 
+#[
 ## ----------------------------------------------------------------------------------
 proc openTheSDB(out_file: string): ConfDataStoreDB =
   ## Convenience function to open a DB
@@ -64,6 +65,7 @@ proc openTheSDB(out_file: string): ConfDataStoreDB =
   echo "return type= ", ret
   if ret != 0:
     quit("strerror= " & $strerror(errno))
+]#
 
 
 ## ----------------------------------------------------------------------------------
@@ -211,16 +213,16 @@ proc constructCorr*(flavor: KeyCGCSU3_t; irmom: KeyCGCIrrepMom_t; snk, src: KeyH
 when isMainModule:
   echo "paramCount = ", paramCount()
   if paramCount() < 5:
-    quit("Usage: exe <out> <in> <proj op xml> <use_herm? [Y/N]> <ops map 1> <ops map 2> ...")
+    quit("Usage: exe <out> <proj op xml> <use_herm? [Y/N]> <in 1> ... <in N>")
     
   let output_edb    = paramStr(1)
-  let input_edb     = paramStr(2)
-  let proj_op_xml   = paramStr(3)
-  let herm   = paramStr(4)
+  let proj_op_xml   = paramStr(2)
+  let herm          = paramStr(3)
 
   echo "Read proj ops map"
   let projOpsMap = readProjectOpWeights(@[proj_op_xml])
 
+#[
   # Read the ops files
   var ops_map_files = newSeq[string](0)
 
@@ -230,12 +232,21 @@ when isMainModule:
     
   # Op files
   let opsMap = readOpsMapFiles(ops_map_files)
+]#
 
-  echo "Read edb = ", input_edb
-  let meta_corrs = readEDB(input_edb)
-  let meta  = meta_corrs.meta
-  let corrs = meta_corrs.corrs
-  
+  var meta: string
+  var corrs = initTable[KeyHadronSUNNPartNPtCorr_t,seq[seq[Complex64]]]()
+
+  # Go through each of the input tables and put them in the big table
+  for n in 4 .. paramCount():
+    let input_edb     = paramStr(n)
+    echo "Read edb = ", input_edb
+    let meta_corrs = readEDB(input_edb)
+    meta  = meta_corrs.meta
+    let corrs_tmp = meta_corrs.corrs
+    for k,v in corrs_tmp:
+      corrs[k] = v
+    
   #echo "Here is the contents of corrs\n", $corrs
   #echo "Here is the xml version of corrs\n", serializeXML(corrs)
 
@@ -253,7 +264,6 @@ when isMainModule:
   var Lt:       int
   var nbins:    int
   var irrep_ops = initTable[KeyHadronSUNNPartIrrepOp_t,int]()
-  var keylist: KeyHadronSUNNPartIrrepOp_t
 
 #  var count: int
   var irrep_ops2 = initTable[KeyHadronSUNNPartIrrepOp_t,int]()
