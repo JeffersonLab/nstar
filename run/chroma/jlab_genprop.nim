@@ -28,15 +28,14 @@ import irrep_util
 import chroma
 import genprop_opt as genprop
 #import fermbc, fermstate
-import inverter
 import propagator
 
 
 #
 # Bury these here unfortunately
-const chroma_per_node = 16
-const harom_per_node  = 16
-const node_cnt        = 2
+const chroma_per_node = 8
+const harom_per_node  = 8
+const node_cnt        = 4
 
 #------------------------------------------------------------------------------
 type
@@ -223,11 +222,11 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
     let te = int(wrapLt(t, t_origin, Lt))
     let fo = @[te]
     prop_sources.add(te)
-    sink_sources.add(te, fo)
+    sink_sources[te] = fo
     echo "t= ", t, " te= ", te, " fo= ", fo, " Lt= ", Lt, "  t_origin= ", t_origin
 
   echo "prop_sources= ", prop_sources
-  sink_sources.add(t0, prop_sources)
+  sink_sources[t0] = prop_sources
 
   let link_smearing = colorvec_work.newStandardStoutLinkSmear()
 
@@ -326,7 +325,7 @@ type
 proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   ## Generate input file
   # Common stuff
-  let propCheck = "/home/edwards/bin/x86_64-linux/prop_check"
+  #let propCheck = "/home/edwards/bin/x86_64-linux/prop_check"
 
   #SBATCH -J snl
   ##SBATCH -o snl.o%j
@@ -345,7 +344,6 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   result.wallTime       = wallTime
   result.queuename      = queue
   result.outputFile     = genPath(run_paths.genprop_op_file)
-  let Ls                = extractLattSize(run_paths.stem)[0]
 
 
   # SBATCH --time-min 4:00:00
@@ -363,8 +361,10 @@ source /dist/intel/parallel_studio_2019/parallel_studio_xe_2019/bin/psxevars.sh 
 
 cd """ & run_paths.seqDir & "\n" & """
 
+CHROMA_OMP=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
+export OMP_NUN_THREADS=${CHROMA_OMP}
 
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
@@ -378,7 +378,6 @@ then
   exit 0
 fi
 
-CHROMA_OMP=8
 
 MPI_CNT="""" & $mpi_cnt & """"
 
@@ -389,7 +388,7 @@ echo "nodelist= $nodelist"
 
 echo "Starting Chroma"
 date
-mpirun -n ${MPI_CNT} -hosts ${nodelist} -genv OMP_NUM_THREADS=${CHROMA_OMP} ${CHROMA} -i ${input} -o ${output} -iogeom 1 1 1 8 -geom 1 1 1 32 -by 4 -bz 4 -c 4 -sy 1 -sz 2 &> ${out}
+mpirun -n ${MPI_CNT} -hosts ${nodelist} -genv OMP_NUM_THREADS=${CHROMA_OMP} ${CHROMA} -i ${input} -o ${output} -iogeom 1 1 1 8 -geom 1 1 2 32 -by 4 -bz 4 -c 4 -sy 1 -sz 2 &> ${out}
 date
 echo "End Chroma"
 
@@ -442,7 +441,7 @@ when isMainModule:
     let outputFile = genPath(run_paths.genprop_op_file)
 
     # Empty files are bad
-    if existsFile(outputFile):
+    if fileExists(outputFile):
       if getFileSize(outputFile) == 0:
         discard tryRemoveFile(outputFile)
 
