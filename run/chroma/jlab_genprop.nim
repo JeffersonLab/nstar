@@ -33,9 +33,9 @@ import propagator
 
 #
 # Bury these here unfortunately
-const chroma_per_node = 8
-const harom_per_node  = 8
-const node_cnt        = 4
+const chroma_per_node = 16
+const harom_per_node  = 16
+const node_cnt        = 2
 
 #------------------------------------------------------------------------------
 type
@@ -359,12 +359,14 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 
 source /dist/intel/parallel_studio_2019/parallel_studio_xe_2019/bin/psxevars.sh intel64 
 
-cd """ & run_paths.seqDir & "\n" & """
+cd """ & run_paths.seqDir & """
+
+echo """" & run_paths.seqDir & """"
 
 CHROMA_OMP=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
-export OMP_NUN_THREADS=${CHROMA_OMP}
+export OMP_NUM_THREADS=${CHROMA_OMP}
 
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
@@ -378,17 +380,23 @@ then
   exit 0
 fi
 
-
 MPI_CNT="""" & $mpi_cnt & """"
+MPI_PER_NODE="""" & $chroma_per_node & """"
 
-CHROMA="/home/edwards/bin/exe/ib9q/chroma.knl.double.parscalar.dec_22_2020"
+CHROMA="/home/edwards/bin/exe/ib9q/chroma.knl.double.parscalar.jan_3_2021"
 
-nodelist=`/home/edwards/bin/slurm_nodelist.pl`
-echo "nodelist= $nodelist"
+hostfile=$(mktemp "hostfile.XXXXX")
+/usr/bin/scontrol show hostnames $SLURM_JOB_NODELIST > ${hostfile}
+echo "nodelist:"
+cat ${hostfile}
+
+echo """" & run_paths.seqDir & """" > ${out}
+echo "nodelist:" >> ${out}
+cat ${hostfile} >> ${out}
 
 echo "Starting Chroma"
 date
-mpirun -n ${MPI_CNT} -hosts ${nodelist} -genv OMP_NUM_THREADS=${CHROMA_OMP} ${CHROMA} -i ${input} -o ${output} -iogeom 1 1 1 8 -geom 1 1 2 32 -by 4 -bz 4 -c 4 -sy 1 -sz 2 &> ${out}
+mpiexec -launcher=rsh -genvall -n ${MPI_CNT} -ppn ${MPI_PER_NODE} -hostfile ${hostfile} ${CHROMA} -i ${input} -o ${output} -iogeom 1 1 1 8 -geom 1 1 1 32 -by 4 -bz 4 -c 4 -sy 1 -sz 2 &>> ${out}
 date
 echo "End Chroma"
 
@@ -397,6 +405,8 @@ if [ $stat -eq 0 ]
 then
   /bin/mv $genprop_tmp $genprop_op
 fi
+
+#/bin/rm -f ${hostfile}
 """
 
   ##""" & propCheck & " 0.5 $genprop_tmp > " & genPath(run_paths.check_file) & """
