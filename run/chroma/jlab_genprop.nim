@@ -336,7 +336,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
   ##SBATCH -A Spectrump
 
   let queue    = "phi"
-  let wallTime = "10:00:00"
+  let wallTime = "24:00:00"
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
