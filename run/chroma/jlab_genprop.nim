@@ -406,7 +406,7 @@ then
   /bin/mv $genprop_tmp $genprop_op
 fi
 
-#/bin/rm -f ${hostfile}
+/bin/rm -f ${hostfile}
 """
 
   ##""" & propCheck & " 0.5 $genprop_tmp > " & genPath(run_paths.check_file) & """
