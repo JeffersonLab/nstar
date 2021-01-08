@@ -306,23 +306,8 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   writeFile(genPath(run_paths.input_file), input)
 
 
-#-----------------------------------------------------------------------------
-# Types need for submitter
-type
-  PandaJob_t* = object
-    nodes*:            int
-    walltime*:         string
-    queuename*:        string
-    outputFile*:       string
-    command*:          string
-
-  PandaSubmitter_t* = object
-    campaign*:         string
-    jobs*:             seq[PandaJob_t]
-
-
 #------------------------------------------------------------------------------
-proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
+proc generateNERSCRunScript*(run_paths: RunPaths_t) =
   ## Generate input file
   # Common stuff
   #let propCheck = "/home/edwards/bin/x86_64-linux/prop_check"
@@ -340,20 +325,17 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t): PandaJob_t =
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
-  result.nodes          = node_cnt
-  result.wallTime       = wallTime
-  result.queuename      = queue
-  result.outputFile     = genPath(run_paths.genprop_op_file)
+  let nodes             = node_cnt
 
 
   # SBATCH --time-min 4:00:00
 
-  result.command = """
+  let command = """
 #!/bin/bash -x
 #SBATCH -J g4
-#SBATCH -N """ & $result.nodes & "\n" & """
+#SBATCH -N """ & $nodes & "\n" & """
 #SBATCH -q """ & queue & "\n" & """
-#SBATCH -t """ & result.wallTime & "\n" & """
+#SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -C cache,quad,knl,16p
 #SBATCH -A Spectrump
 
@@ -363,10 +345,9 @@ cd """ & run_paths.seqDir & """
 
 echo """" & run_paths.seqDir & """"
 
-CHROMA_OMP=8
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
-export OMP_NUM_THREADS=${CHROMA_OMP}
+export OMP_NUM_THREADS=8
 
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
@@ -414,7 +395,7 @@ fi
 
   # Will hopefully remove writing any specific file
   let f = run_paths.run_script
-  writeFile(f, result.command)
+  writeFile(f, command)
   var perm = getFilePermissions(f) + {fpUserExec}
   setFilePermissions(f, perm)
 
@@ -442,10 +423,6 @@ when isMainModule:
     echo "seqno= ", seqno
 
     # All the jobs to accumulate
-    var Data: PandaSubmitter_t
-    Data.campaign = "nada"
-    Data.jobs = @[]
-
     let run_paths = constructPathNames(quark, seqno, time_ranges)
     echo run_paths
     let outputFile = genPath(run_paths.genprop_op_file)
@@ -459,16 +436,16 @@ when isMainModule:
     if fileExists(outputFile): continue
 
     # build input for each directory
-    let cwd = getCurrentDir()
-    setCurrentDir(cwd)
-
     echo "Generate job for prop= ", outputFile
     generateChromaXML(run_paths)
 
     # Must construct
-    discard generateNERSCRunScript(run_paths)
+    generateNERSCRunScript(run_paths)
 
     # Either is not or empty, so submit
+    let cwd = getCurrentDir()
+    setCurrentDir(run_paths.seqDir)
+
     let f = run_paths.run_script
     echo "Submitting " & f
     if execShellCmd("sbatch " & f) != 0:
