@@ -107,7 +107,9 @@ proc getTimeRanges*(): TimeRanges_t =
   if result.Nt_forward != harom_per_node*node_cnt:
     quit("Nt_forward not consistent")
 
-  result.t_snks  = @[result.t_start + result.Nt_forward - 1]
+  let t_snk = 24
+# result.t_snks  = @[result.t_start + result.Nt_forward - 1]
+  result.t_snks  = @[result.t_start + t_snk]
 
 
 proc wrapLt*(t0, t_origin, Lt: int): int =
@@ -321,7 +323,7 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t) =
   ##SBATCH -A Spectrump
 
   let queue    = "phi"
-  let wallTime = "24:00:00"
+  let wallTime = "12:00:00"
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
