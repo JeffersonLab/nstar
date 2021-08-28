@@ -208,6 +208,7 @@ when isMainModule:
   # Weights
   # Work on multiple directories
   let ot = "../../omega8/fits_rge"
+  let chan = "rho"
 
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights("h8", @[
@@ -225,9 +226,6 @@ when isMainModule:
        opsMap)
 
   # Write the xml
-  var f: File
-  if open(f, "new_all_proj_op.xml", fmWrite):
-    f.write(xmlHeader)
-    f.write(serializeXML(output, "ProjectedOpWeights"))
-    f.close()
-  
+  writeProjOpsXML(chan, output)
+  writeProjOpsList(chan, output)
+
