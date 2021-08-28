@@ -474,7 +474,6 @@ when isMainModule:
     let cfg_file   =  lustre_dir & "/" & stem & "/cfgs/" & stem & "_" & seqno & ".lime"
     let colorvec_files = @[lustre_dir & "/" & stem & "/eigs_mod/" & stem & ".3d.eigs." & seqno]
     let sdb = "prop_op_file"
-
     let mass        = -0.0856
     let mass_label  = "U" & formatFloat(mass, ffDecimal, 4)
     echo "mass_label= ", mass_label

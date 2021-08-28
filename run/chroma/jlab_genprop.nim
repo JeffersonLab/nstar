@@ -318,12 +318,13 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t) =
   ##SBATCH -o snl.o%j
   ##SBATCH -N 1
   ##SBATCH -p phi
-  ##SBATCH -C cache,quad,knl
+  ##SBATCH -C cache,quad,knl,16p
   ##SBATCH -t 20:00:00
   ##SBATCH -A Spectrump
+  ##SBATCH --reboot
 
   let queue    = "phi"
-  let wallTime = "12:00:00"
+  let wallTime = "15:00:00"
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
@@ -340,6 +341,9 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t) =
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH -C cache,quad,knl,16p
 #SBATCH -A Spectrump
+
+echo "host= " `hostname`
+echo "procid= $SLURM_JOB_ID"
 
 source /dist/intel/parallel_studio_2019/parallel_studio_xe_2019/bin/psxevars.sh intel64 
 
@@ -363,6 +367,9 @@ then
   exit 0
 fi
 
+echo "host= " `hostname` > ${out}
+echo "procid= " $SLURM_JOB_ID >> ${out}
+
 MPI_CNT="""" & $mpi_cnt & """"
 MPI_PER_NODE="""" & $chroma_per_node & """"
 
@@ -373,7 +380,7 @@ hostfile=$(mktemp "hostfile.XXXXX")
 echo "nodelist:"
 cat ${hostfile}
 
-echo """" & run_paths.seqDir & """" > ${out}
+echo """" & run_paths.seqDir & """" >> ${out}
 echo "nodelist:" >> ${out}
 cat ${hostfile} >> ${out}
 
@@ -433,6 +440,9 @@ when isMainModule:
     if fileExists(outputFile):
       if getFileSize(outputFile) == 0:
         discard tryRemoveFile(outputFile)
+
+    # Short cut - gauge has to exist
+    if not fileExists(genPath(run_paths.cfg_file)): continue
 
     # If the outputFile does not exist, do the thang!
     if fileExists(outputFile): continue
