@@ -134,7 +134,7 @@ var classnames: Class_t = {
 
 # SU(2)_F tetraquarks
 for twoI in 0..4:
-  for S in 2..2:
+  for S in -2..2:
     for P in items(@[-1,1]):
       for G in items(@[-1,1]):
         var os = "tetra2I" & $twoI & "S"
