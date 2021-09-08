@@ -3,7 +3,8 @@
 
 import hadron_sun_npart_irrep_op, particle_op, streams, os, xmlparser, re,
        serializetools/serializexml, tables, xmltree, parseutils, strutils,
-       irrep_util, ensem, serializetools/array1d, operator_name_util, math
+       irrep_util, ensem, serializetools/array1d, operator_name_util, math,
+       strformat
 
 type
   # Output for an irrep
@@ -243,7 +244,7 @@ proc writeProjOpsDat*(chan: string, L: int, output: ProjectedOpWeights) =
       let irrr = removeIrrepLG(irr)
       let ir = mom & "_" & irrr
       #echo "k.name= ", k.name, "  irr= ", irr, "  irrr= ", irrr
-      f.write(" " & $L & " " & ir & " " & $v.E_cm & " " & $v.E_lab & " " & k.name & "\n")
+      f.write(fmt"{L:>3}" & "   " & fmt"{ir:<10s}" & "  " & fmt"{v.E_cm:5.4f}" & "  " & fmt"{v.E_lab:5.4f}" & "    " & k.name & "\n")
     f.close()
 
 
