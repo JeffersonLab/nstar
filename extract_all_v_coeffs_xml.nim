@@ -3,13 +3,20 @@
 
 import hadron_sun_npart_irrep_op, particle_op, streams, os, xmlparser, re,
        serializetools/serializexml, tables, xmltree, parseutils, strutils,
-       ensem, serializetools/array1d, operator_name_util
+       irrep_util, ensem, serializetools/array1d, operator_name_util, math,
+       strformat
 
 type
+  # Output for an irrep
+  ProjOpVals* = tuple
+    E_cm:    float64
+    E_lab:   float64
+    weights: Table[KeyHadronSUNNPartIrrepOp_t,float64]
+    
   # We choose some particular structure for the objects
   ProjectedOpWeights* = tuple
     version:      int
-    ProjectedOps: Table[KeyParticleOp_t,Table[KeyHadronSUNNPartIrrepOp_t,float64]]
+    ProjectedOps: Table[KeyParticleOp_t,ProjOpVals]
     
   # Structure that drives the extraction routine
   ExtractProjOps_t* = tuple
@@ -38,20 +45,31 @@ proc readOpsMapFiles*(opsMapFiles: seq[string]): Table[string, KeyHadronSUNNPart
   
     # Loop over its entries and add to the main table
     for k, v in pairs(ops):
-      result.add(k,v)
+      result[k] = v
 
 
-proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): auto =
+proc computeEcm(E_lab: float64, L:int, xi: float64, p: array[0..2,cint]): float64 = 
+  let pi = 3.14159265359
+  let f  = 2.0*pi / (xi*float64(L))
+  result = sqrt(E_lab*E_lab - float64(p[0]*p[0] + p[1]*p[1] + p[2]*p[2])*f*f)
+
+
+proc fredextractProjectOpWeights*(L: int, xi: float64, mom_type: array[0..2, cint], state, t0, tZ: int; opsListFile: string; opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): ProjOpVals =
   ## Extract projected operator weights for state `state` at a fixed `t0` and `tZ`
   ## Return a table holding the operators and their weights (float64) - the "optimal" operator that projects onto this level.
   #
   echo "Extract weights for projected state = ", state
 
   # Output table starts empty
-  result = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
+  result.weights = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
 
   # The ensemble (mass) file we will use
   let massfile = readEnsemble("t0" & $t0 & "/MassJackFiles/mass_t0_" & $t0 & "_reorder_state" & $state & ".jack")
+
+  # Compute E_cm and E_lab
+  let E_labb   = calc(massfile)
+  result.E_lab = E_labb.data[0].avg.re
+  result.E_cm  = computeEcm(result.E_lab, L, xi, mom_type)
 
   # Slurp in the entire contents of the ops_phases file
   let inputString = readFile(opsListFile)
@@ -78,13 +96,14 @@ proc extractProjectOpWeights*(state, t0, tZ: int; opsListFile: string; opsMap: T
     # Calc utils from module "ensem"
     let valc = calc(sqrt(2 * massfile) * exp(-0.5*massfile * t0) * extract(Vt, tZ))
     let val  = valc.data[0].avg.re
-    echo "subopName= ", subopName, "  val= ", val
+    #echo "subopName= ", subopName, "  val= ", val
+    echo "subopName= ", subopName, "  val= ", val, "  E_cm= ", result.E_cm, "  E_lab= ", result.E_lab
 
     # Here is the struct
     let op = opsMap[subopName]
 
     # add it into the table
-    result[op] = val
+    result.weights[op] = val
 
 
 proc momType*(mom: string): array[0..2, cint] =
@@ -93,11 +112,12 @@ proc momType*(mom: string): array[0..2, cint] =
   result[1] = int32(parseInt($mom[1]))
   result[2] = int32(parseInt($mom[2]))
 
-proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[KeyParticleOp_t,Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
+proc extractProjectOpWeights*(channel: string, L: int, xi: float64, irreps: seq[ExtractProjOps_t], opsMap: Table[string,KeyHadronSUNNPartIrrepOp_t]): Table[KeyParticleOp_t, ProjOpVals] =
   ## Loop over many irreps extract the projects operators for several states `states` within an irrep
-  #
-  result = initTable[KeyParticleOp_t, Table[KeyHadronSUNNPartIrrepOp_t,float64]]()
+  result = initTable[KeyParticleOp_t, ProjOpVals]()
 
+  #Table[KeyHadronSUNNPartIrrepOp_t,float64]] =
+  
   # Loop over the irreps
   # For each irrep, extract the weights. 
   for rep in items(irreps):
@@ -115,8 +135,9 @@ proc extractProjectOpWeights*(channel: string, irreps: seq[ExtractProjOps_t], op
       # Grab the projected ops, and insert into the big map
       let proj_op_name = channel & "_proj" & $state & "_p" & rep.mom & "_" & rep.ir
       echo "Projected op = ", proj_op_name
-      let proj_op_key = KeyParticleOp_t(name: proj_op_name, smear: "", mom_type: momType(rep.mom))
-      result[proj_op_key] = extractProjectOpWeights(state, rep.t0, rep.tZ, "ops_phases", opsMap)
+      let mom_type = momType(rep.mom)
+      let proj_op_key = KeyParticleOp_t(name: proj_op_name, smear: "", mom_type: mom_type)
+      result[proj_op_key] = fredextractProjectOpWeights(L, xi, mom_type, state, rep.t0, rep.tZ, "ops_phases", opsMap)
 
     # Move back up
     setCurrentDir(cwd)
@@ -177,7 +198,8 @@ proc writeProjOpsXML*(chan: string, output: ProjectedOpWeights) =
   var f: File
   if open(f, "weights." & chan & ".xml", fmWrite):
     f.write(xmlHeader)
-    f.write(serializeXML(output, "ProjectedOpWeights"))
+    for k,v in pairs(output.ProjectedOps):
+      f.write(serializeXML(v, "ProjectedOpWeights"))
     f.close()
  
 
@@ -193,39 +215,65 @@ proc writeProjOpsList*(chan: string, output: ProjectedOpWeights) =
       let ir = mom & "_" & getIrrepWithPG(k.name)
       f.write(ir & " " & k.name & "\n")
     f.close()
+
+
+proc writeProjOpsDat*(chan: string, L: int, output: ProjectedOpWeights) =
+  ## Write the E_cm and E_lab for the projected ops
+  var f: File
+  if open(f, "weights." & chan & ".dat", fmWrite):
+    for k,v in pairs(output.ProjectedOps):
+      #pion_proj0_p100_H0D4A2
+      let pp = split(k.name,'_')
+      var mom = pp[2]
+      mom.delete(0,0)
+      #let irr = removeIrrepLG(removeHelicity(k.name))
+      let irr = getIrrepWithPG(k.name)
+      let irrr = removeIrrepLG(irr)
+      let ir = mom & "_" & irrr
+      #echo "k.name= ", k.name, "  irr= ", irr, "  irrr= ", irrr
+      #f.write(" " & $L & " " & ir & " " & $v.E_cm & " " & $v.E_lab & " " & k.name & "\n")
+      f.write(" " & fmt"{L:>2}" & "   " & fmt"{ir:<10}" & "   " & fmt"{v.E_cm:5.4f}" & "  " & fmt"{v.E_lab:5.4f}" & "    " & k.name & "\n")
+    f.close()
  
+
+proc writeProjOutput*(chan: string, L: int, output: ProjectedOpWeights) =
+  ## Write the xml, list and dat files
+  writeProjOpsXML(chan, output)
+  writeProjOpsList(chan, output)
+  writeProjOpsDat(chan, L, output)
 
 
 #-----------------------------------------------------------------------------
 when isMainModule:
   # Read in all the operators and build one big operator map
-  # Test dir is  /work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1/szscl3_20_128_b1p50_t_x4p300_um0p0743_n1p265_per/redstar/h8/fits_rge
-  let opsMap = readOpsMapFiles(@["./h8.ops.xml", "./omega8.ops.xml"])
+  # Test dir is  /work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1/szscl21_32_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265/redstar/pion/fits_rge
+  let opsMap = readOpsMapFiles(@["./single.ops.xml"])
 
   # Output file
   var output: ProjectedOpWeights
 
   # Weights
-  # Work on multiple directories
-  let ot = "../../omega8/fits_rge"
-  let chan = "rho"
+  let chan = "tetra2I2S0mM"
+  let L    = 32
+  let xi   = 3.461
+
+#m = 0.04724 +/- 0.00013
+#xi = 3.461 +/- 0.005
 
   output.version = 3
-  output.ProjectedOps = extractProjectOpWeights("h8", @[
-       #(dir:       "000_T1pP.fewer", ir: "T1",     mom: "000", t0: 8, tZ:10, states: @[0]),
-       #(dir:       "100_A2P",        ir: "H0D4A2", mom: "100", t0: 8, tZ: 9, states: @[0]),
-       #(dir: ot & "/100_E2P",        ir: "H1D4E2", mom: "100", t0: 9, tZ:10, states: @[1]),
-       #(dir:       "110_A2P",        ir: "H0D2A2", mom: "110", t0: 8, tZ: 6, states: @[0]),
-       #(dir: ot & "/110_B1P",        ir: "H1D2B1", mom: "110", t0: 9, tZ:11, states: @[1]),
-       #(dir: ot & "/110_B2P",        ir: "H1D2B2", mom: "110", t0:10, tZ:11, states: @[1]),
-       #(dir:       "110_A2P",        ir: "H0D3A2", mom: "111", t0: 8, tZ:10, states: @[0]),
-       #(dir: ot & "/111_E2P",        ir: "H1D3E2", mom: "100", t0: 8, tZ:11, states: @[1]),
-       (dir:       "200_A2P",        ir: "H0D4A2", mom: "200", t0: 7, tZ:10, states: @[0]),
-       #(dir: ot & "/200_E2P",        ir: "H1D4E2", mom: "200", t0: 8, tZ:11, states: @[1])
+  output.ProjectedOps = extractProjectOpWeights(chan, L, xi, @[
+       (dir:       "000_A1mM.no_2",     ir: "A1",        mom: "000", t0: 11, tZ: 14, states: @[0]),
+       (dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
+       (dir:       "110_A2M.no_2",      ir: "H0D2A2",    mom: "110", t0: 10, tZ: 15, states: @[0]),
+       (dir:       "111_A2M.no_2",      ir: "H0D3A2",    mom: "111", t0: 10, tZ: 16, states: @[0]),
+       (dir:       "200_A2M.no_2",      ir: "H0D4A2",    mom: "200", t0: 10, tZ: 18, states: @[0]),
+       (dir:       "210_nm0A2M.no_2",   ir: "H0C4nm0A2", mom: "210", t0: 10, tZ: 18, states: @[0]),
+       (dir:       "211_nnmA2M.no_2",   ir: "H0C4nnmA2", mom: "211", t0:  9, tZ: 24, states: @[0]),
        ],
        opsMap)
+
 
   # Write the xml
   writeProjOpsXML(chan, output)
   writeProjOpsList(chan, output)
-
+  writeProjOpsDat(chan, L, output)

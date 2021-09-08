@@ -16,9 +16,11 @@ when isMainModule:
 
   # Weights
   let chan = "pion"
+  let L    = 32
+  let xi   = 3.461
 
   output.version = 3
-  output.ProjectedOps = extractProjectOpWeights(chan, @[
+  output.ProjectedOps = extractProjectOpWeights(chan, L, xi, @[
        (dir:       "000_A1mM.no_2",     ir: "A1",        mom: "000", t0: 11, tZ: 14, states: @[0]),
        (dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
        (dir:       "110_A2M.no_2",      ir: "H0D2A2",    mom: "110", t0: 10, tZ: 15, states: @[0]),
@@ -30,8 +32,7 @@ when isMainModule:
        opsMap)
 
   # Write the xml
-  writeProjOpsXML(chan, output)
-  writeProjOpsList(chan, output)
+  writeProjOutput(chan, L, output)
  
 #[
   # Now, make Kbarneg version
