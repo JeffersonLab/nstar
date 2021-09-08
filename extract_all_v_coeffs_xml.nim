@@ -3,8 +3,7 @@
 
 import hadron_sun_npart_irrep_op, particle_op, streams, os, xmlparser, re,
        serializetools/serializexml, tables, xmltree, parseutils, strutils,
-       irrep_util, ensem, serializetools/array1d, operator_name_util, math,
-       strformat
+       irrep_util, ensem, serializetools/array1d, operator_name_util, math
 
 type
   # Output for an irrep
@@ -17,6 +16,10 @@ type
   ProjectedOpWeights* = tuple
     version:      int
     ProjectedOps: Table[KeyParticleOp_t,ProjOpVals]
+    
+  ProjectedOpWeightsSlim = tuple
+    version:      int
+    ProjectedOps: Table[KeyParticleOp_t,Table[KeyHadronSUNNPartIrrepOp_t,float64]]
     
   # Structure that drives the extraction routine
   ExtractProjOps_t* = tuple
@@ -192,14 +195,23 @@ proc flipSignOddChargeConj*(opsMap: Table[KeyHadronSUNNPartIrrepOp_t,float64]): 
     result[kk] = float64(C)*v
 
 
+proc extractWeightsSlim(input: ProjectedOpWeights): ProjectedOpWeightsSlim =
+  ## Extract just the weights
+  result.version      = input.version
+  result.ProjectedOps = initTable[KeyParticleOp_t,Table[KeyHadronSUNNPartIrrepOp_t,float64]]() # local copy
 
+  for k,v in pairs(input.ProjectedOps):
+    result.ProjectedOps[k] = v.weights
+
+ 
 proc writeProjOpsXML*(chan: string, output: ProjectedOpWeights) =
   ## Write the xml
+  var weights = extractWeightsSlim(output)
+
   var f: File
   if open(f, "weights." & chan & ".xml", fmWrite):
     f.write(xmlHeader)
-    for k,v in pairs(output.ProjectedOps):
-      f.write(serializeXML(v, "ProjectedOpWeights"))
+    f.write(serializeXML(weights, "ProjectedOpWeights"))
     f.close()
  
 
@@ -218,7 +230,7 @@ proc writeProjOpsList*(chan: string, output: ProjectedOpWeights) =
 
 
 proc writeProjOpsDat*(chan: string, L: int, output: ProjectedOpWeights) =
-  ## Write the E_cm and E_lab for the projected ops
+  ## Write the list
   var f: File
   if open(f, "weights." & chan & ".dat", fmWrite):
     for k,v in pairs(output.ProjectedOps):
@@ -231,16 +243,9 @@ proc writeProjOpsDat*(chan: string, L: int, output: ProjectedOpWeights) =
       let irrr = removeIrrepLG(irr)
       let ir = mom & "_" & irrr
       #echo "k.name= ", k.name, "  irr= ", irr, "  irrr= ", irrr
-      #f.write(" " & $L & " " & ir & " " & $v.E_cm & " " & $v.E_lab & " " & k.name & "\n")
-      f.write(" " & fmt"{L:>2}" & "   " & fmt"{ir:<10}" & "   " & fmt"{v.E_cm:5.4f}" & "  " & fmt"{v.E_lab:5.4f}" & "    " & k.name & "\n")
+      f.write(" " & $L & " " & ir & " " & $v.E_cm & " " & $v.E_lab & " " & k.name & "\n")
     f.close()
  
-
-proc writeProjOutput*(chan: string, L: int, output: ProjectedOpWeights) =
-  ## Write the xml, list and dat files
-  writeProjOpsXML(chan, output)
-  writeProjOpsList(chan, output)
-  writeProjOpsDat(chan, L, output)
 
 
 #-----------------------------------------------------------------------------
