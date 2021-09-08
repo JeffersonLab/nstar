@@ -245,7 +245,13 @@ proc writeProjOpsDat*(chan: string, L: int, output: ProjectedOpWeights) =
       #echo "k.name= ", k.name, "  irr= ", irr, "  irrr= ", irrr
       f.write(" " & $L & " " & ir & " " & $v.E_cm & " " & $v.E_lab & " " & k.name & "\n")
     f.close()
- 
+
+
+proc writeProjOutput*(chan: string, L: int, output: ProjectedOpWeights) =
+  ## Write the list, xml, dat files
+  writeProjOpsXML(chan, output)
+  writeProjOpsList(chan, output)
+  writeProjOpsDat(chan, L, output)
 
 
 #-----------------------------------------------------------------------------
