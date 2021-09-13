@@ -259,13 +259,18 @@ proc writeProjOutput*(chan: string, L: int, output: ProjectedOpWeights) =
 when isMainModule:
   # Read in all the operators and build one big operator map
   # Test dir is  /work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1/szscl21_32_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265/redstar/pion/fits_rge
+  let cwd = getCurrentDir()
+  let mydir = "/work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1/szscl21_32_256_b1p50_t_x4p300_um0p0856_sm0p0743_n1p265/redstar/pion/fits_rge"
+  setCurrentDir(mydir)
+
+  # For testing
   let opsMap = readOpsMapFiles(@["./single.ops.xml"])
 
   # Output file
   var output: ProjectedOpWeights
 
   # Weights
-  let chan = "tetra2I2S0mM"
+  let chan = "boson2I4S0c0B0pP"
   let L    = 32
   let xi   = 3.461
 
@@ -286,6 +291,6 @@ when isMainModule:
 
 
   # Write the xml
-  writeProjOpsXML(chan, output)
-  writeProjOpsList(chan, output)
-  writeProjOpsDat(chan, L, output)
+  writeProjOutput(chan, L, output)
+
+  setCurrentDir(cwd)
