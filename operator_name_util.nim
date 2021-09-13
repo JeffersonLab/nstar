@@ -132,6 +132,34 @@ var classnames: Class_t = {
   "OmegaccM": QuantumNum_t(had: 2, flavor: "OmegaccM", N: 2, F: "1", twoI: 0, S: 0, P: +1, G: 0),
   "OmegaccM": QuantumNum_t(had: 2, flavor: "OmegaccM", N: 2, F: "1", twoI: 0, S: 0, P: +1, G: 0)}.toTable
 
+# Bosons
+for twoI in 0..4:
+  for S in -2..2:
+    for P in items(@[-1,1]):
+      for G in items(@[-1,1]):
+        var os = "boson2I" & $twoI & "S"
+
+        if S < 0:
+          os &= "m" & $(-S)
+        elif S == 0:
+          os &= $S
+        else:
+          os &= "p" & $S
+
+        os &= "c0B0"
+
+        if P < 0:
+          os &= "m"
+        else:
+          os &= "p"
+
+        if G < 0:
+          os &= "M"
+        elif G > 0:
+          os &= "P"
+        
+        classnames[os & "_"] = QuantumNum_t(had: 4, flavor: os, N: 2, F: $(twoI+1), twoI: twoI, S: S, P: P, G: G)
+
 # SU(2)_F tetraquarks
 for twoI in 0..4:
   for S in -2..2:
