@@ -125,14 +125,14 @@ proc extractProjectOpWeights*(channel: string, L: int, xi: float64, irreps: seq[
   # Loop over the irreps
   # For each irrep, extract the weights. 
   for rep in items(irreps):
-    echo "\n--------------------------\nChannel= ", channel, "  irrep= ", rep.ir, " mom= ", rep.mom, " t0= ", rep.t0, " tZ= ", rep.tZ
-
     # Move into the expected dir
     if not dirExists(rep.dir):
       quit("dir = " & rep.dir & " does not exist")
 
     let cwd = getCurrentDir()
     setCurrentDir(rep.dir)
+
+    echo "\n--------------------------\nChannel= ", channel, "  irrep= ", rep.ir, " mom= ", rep.mom, " t0= ", rep.t0, " tZ= ", rep.tZ, "  dir= ", getCurrentDir()
 
     # Loop over each state
     for state in items(rep.states):
