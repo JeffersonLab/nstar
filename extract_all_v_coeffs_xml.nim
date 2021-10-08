@@ -280,12 +280,12 @@ when isMainModule:
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights(chan, L, xi, @[
        (dir:       "000_A1mM.no_2",     ir: "A1",        mom: "000", t0: 11, tZ: 14, states: @[0]),
-       (dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
-       (dir:       "110_A2M.no_2",      ir: "H0D2A2",    mom: "110", t0: 10, tZ: 15, states: @[0]),
-       (dir:       "111_A2M.no_2",      ir: "H0D3A2",    mom: "111", t0: 10, tZ: 16, states: @[0]),
-       (dir:       "200_A2M.no_2",      ir: "H0D4A2",    mom: "200", t0: 10, tZ: 18, states: @[0]),
-       (dir:       "210_nm0A2M.no_2",   ir: "H0C4nm0A2", mom: "210", t0: 10, tZ: 18, states: @[0]),
-       (dir:       "211_nnmA2M.no_2",   ir: "H0C4nnmA2", mom: "211", t0:  9, tZ: 24, states: @[0]),
+       #(dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
+       #(dir:       "110_A2M.no_2",      ir: "H0D2A2",    mom: "110", t0: 10, tZ: 15, states: @[0]),
+       #(dir:       "111_A2M.no_2",      ir: "H0D3A2",    mom: "111", t0: 10, tZ: 16, states: @[0]),
+       #(dir:       "200_A2M.no_2",      ir: "H0D4A2",    mom: "200", t0: 10, tZ: 18, states: @[0]),
+       #(dir:       "210_nm0A2M.no_2",   ir: "H0C4nm0A2", mom: "210", t0: 10, tZ: 18, states: @[0]),
+       #(dir:       "211_nnmA2M.no_2",   ir: "H0C4nnmA2", mom: "211", t0:  9, tZ: 24, states: @[0]),
        ],
        opsMap)
 
