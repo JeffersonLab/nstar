@@ -253,14 +253,14 @@ proc removeHelicity*(irrep: string): string =
       irrep.startsWith("H4D") or irrep.startsWith("H0C") or
       irrep.startsWith("H1C") or irrep.startsWith("H2C") or
       irrep.startsWith("H3C") or irrep.startsWith("H4C")):
-    result.delete(0,1)
+    result.delete(0..1)
     return
 
   if (irrep.startsWith("H1o2D") or irrep.startsWith("H3o2D") or
       irrep.startsWith("H5o2D") or irrep.startsWith("H7o2D") or
       irrep.startsWith("H1o2C") or irrep.startsWith("H3o2C") or
       irrep.startsWith("H5o2C") or irrep.startsWith("H7o2C")):
-    result.delete(0,3)
+    result.delete(0..3)
 
   return
 
@@ -272,7 +272,7 @@ proc removeIrrepLG*(rep: string): string =
   if (rep.startsWith("D4") or rep.startsWith("D2") or
       rep.startsWith("D3") or rep.startsWith("C4") or
       rep.startsWith("C2")):
-    result.delete(0,1)
+    result.delete(0..1)
   return
 
 ## ----------------------------------------------------------------------------------
@@ -308,10 +308,10 @@ proc getIrrepLG*(long_irrep: string): string =
   ##  Format of irrep label is D4A1 etc
   result = removeHelicity(long_irrep)
   if (result.startsWith("D2") or result.startsWith("D3") or result.startsWith("D4")):
-    result.delete(0,1)
+    result.delete(0..1)
     return
   if (result.startsWith("C4nm0") or result.startsWith("C4nnm")): 
-    result.delete(0,4)
+    result.delete(0..4)
     return
   result = "Oh"
 
@@ -775,7 +775,7 @@ proc opListToIrrepMom*(mom_irrep_name: string): IrrepMom_t =
   ## Inverse of momIrrepName. Turn an opList name back into irrep names (including LG) and momentum
   ## Turns 100_A1 ->  [D4A1, Array(1,0,0)]
   var rep = mom_irrep_name
-  rep.delete(0,3)
+  rep.delete(0..3)
   result.mom = Mom3d(parseInt($mom_irrep_name[0]),
                      parseInt($mom_irrep_name[1]),
                      parseInt($mom_irrep_name[2]))
