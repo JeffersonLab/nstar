@@ -1,10 +1,10 @@
 
 #------------------------------------------------------------------------------
-#const platform = "TEST"
+const platform = "TEST"
 #const platform = "OLCF"
 #const platform = "NERSC"
 #const platform = "TACC"
-const platform = "JLab"
+#const platform = "JLab"
 
 when platform == "OLCF":
   import config_OLCF
@@ -26,15 +26,16 @@ import colorvec_work, serializetools/serializexml
 
 import irrep_util
 import chroma
-import genprop_opt as genprop
+import genprop_superb as genprop
 #import fermbc, fermstate
 import propagator
+import inverter
+import sequtils
 
 
 #
 # Bury these here unfortunately
 const chroma_per_node = 16
-const harom_per_node  = 16
 const node_cnt        = 2
 
 #------------------------------------------------------------------------------
@@ -100,16 +101,14 @@ proc getTimeRanges*(): TimeRanges_t =
   when platform == "TEST":
     result.t_start    = 0
     result.Nt_forward = 6
+    let t_snks = @[2,3,4,5,6]
   else:
     result.t_start    = 0
     result.Nt_forward = 32
+    let t_snks = @[22,26,28,31]
 
-  if result.Nt_forward != harom_per_node*node_cnt:
-    quit("Nt_forward not consistent")
-
-  let t_snk = 24
-# result.t_snks  = @[result.t_start + result.Nt_forward - 1]
-  result.t_snks  = @[result.t_start + t_snk]
+  let t_start = result.t_start
+  result.t_snks = map(t_snks, proc(t: int): int = t_start + t)
 
 
 proc wrapLt*(t0, t_origin, Lt: int): int =
@@ -137,7 +136,6 @@ type
     mm*:                 QuarkMass_t
     time_ranges*:        TimeRanges_t
     chroma_per_node*:    int
-    harom_per_node*:     int
     seqno*:              string
     num_vecs*:           int
     prefix*:             string
@@ -213,22 +211,20 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let Lt       = lattSize[3]
   echo "lattSize= ", lattSize, " ",tr, " ",Lt, " seqno=", run_paths.seqno
     
-  let t_origin = getTimeOrigin(Lt, run_paths.seqno)
-  let t0       = wrapLt(tr.t_start, t_origin, Lt)
+  #let t_origin = getTimeOrigin(Lt, run_paths.seqno)
+  let t_origin = 0
+  let t_start  = wrapLt(tr.t_start, t_origin, Lt)
+  let t_snks   = map(tr.t_snks, proc(t: int): int = wrapLt(t, t_origin, Lt))
   let mass     = run_paths.mm.mass
 
-  var prop_sources = @[t0]
+  var prop_sources = concat(@[t_start], t_snks) 
   var sink_sources = initTable[int,seq[int]]()
 
-  for t in items(tr.t_snks):
-    let te = int(wrapLt(t, t_origin, Lt))
-    let fo = @[te]
-    prop_sources.add(te)
-    sink_sources[te] = fo
-    echo "t= ", t, " te= ", te, " fo= ", fo, " Lt= ", Lt, "  t_origin= ", t_origin
+  for t in items(t_snks):
+    sink_sources[t] = @[t]   # from sink to sink
 
   echo "prop_sources= ", prop_sources
-  sink_sources[t0] = prop_sources
+  sink_sources[t_start] = prop_sources
 
   let link_smearing = colorvec_work.newStandardStoutLinkSmear()
 
@@ -257,13 +253,11 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   # That should be enough
   let contract = genprop.Contractions_t(mass_label: run_paths.mm.mass_label,
                                         num_vecs: run_paths.num_vecs,
-                                        t_start: t0,
+                                        t_start: t_start,
                                         Nt_forward: run_paths.time_ranges.Nt_forward,
                                         displacement_length: 1,
-                                        ts_per_node: harom_per_node,
                                         decay_dir: 3,
-                                        num_tries: 1,
-                                        nodes_per_cn: chroma_per_node)
+                                        num_tries: 1)
  
   # Fermion action and inverters
   when platform == "OLCF":
@@ -298,7 +292,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let mat_named_obj = genprop.NamedObject_t(gauge_id: "default_gauge_field",
                                             colorvec_files: genPath(run_paths.colorvec_files),
                                             dist_op_file: genPath(run_paths.genprop_op_tmp))
-  let inline_dist   = genprop.newGenPropOptDistillation(mat_param, mat_named_obj)
+  let inline_dist   = genprop.newGenPropSuperbDistillation(mat_param, mat_named_obj)
 
   var chroma_param = chroma.Param_t(nrow: lattSize, InlineMeasurements: @[inline_dist])
   let cfg = chroma.Cfg_t(cfg_type: "SCIDAC", cfg_file: genPath(run_paths.cfg_file), reunit: true, parallel_io: true)
@@ -373,7 +367,7 @@ echo "procid= " $SLURM_JOB_ID >> ${out}
 MPI_CNT="""" & $mpi_cnt & """"
 MPI_PER_NODE="""" & $chroma_per_node & """"
 
-CHROMA="/home/edwards/bin/exe/ib9q/chroma.knl.double.parscalar.jan_3_2021"
+CHROMA="chroma-mgproto-qphix-qdpxx-double-nd4-avx512.aug_2_2022"
 
 hostfile=$(mktemp "hostfile.XXXXX")
 /usr/bin/scontrol show hostnames $SLURM_JOB_NODELIST > ${hostfile}
@@ -439,12 +433,14 @@ when isMainModule:
     # Empty files are bad
     if fileExists(outputFile):
       if getFileSize(outputFile) == 0:
-        discard tryRemoveFile(outputFile)
+       discard tryRemoveFile(outputFile)
 
     # Short cut - gauge has to exist
+    echo "Cfg= ", genPath(run_paths.cfg_file)
     if not fileExists(genPath(run_paths.cfg_file)): continue
 
     # If the outputFile does not exist, do the thang!
+    echo "outputFile= ", outputFile
     if fileExists(outputFile): continue
 
     # build input for each directory
