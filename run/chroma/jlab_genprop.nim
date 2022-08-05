@@ -1,10 +1,10 @@
 
 #------------------------------------------------------------------------------
-const platform = "TEST"
+#const platform = "TEST"
 #const platform = "OLCF"
 #const platform = "NERSC"
 #const platform = "TACC"
-#const platform = "JLab"
+const platform = "JLab"
 
 when platform == "OLCF":
   import config_OLCF
@@ -16,6 +16,7 @@ elif platform == "JLab":
   import config_JLab
 elif platform == "TEST":
   import config_TEST
+  import inverter
 else:
   quit("unknown platform")
 
@@ -29,7 +30,6 @@ import chroma
 import genprop_superb as genprop
 #import fermbc, fermstate
 import propagator
-import inverter
 import sequtils
 
 
