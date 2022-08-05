@@ -10,6 +10,7 @@ type Mom_t = array[0..2,int]    ## shorthand
 
 type
   Contractions_t* = object
+    use_derivP*:          bool
     num_vecs*:            int          ## yup
     mass_label*:          string       ## mass label
     decay_dir*:           int

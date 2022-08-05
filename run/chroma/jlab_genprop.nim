@@ -211,8 +211,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let Lt       = lattSize[3]
   echo "lattSize= ", lattSize, " ",tr, " ",Lt, " seqno=", run_paths.seqno
     
-  #let t_origin = getTimeOrigin(Lt, run_paths.seqno)
-  let t_origin = 0
+  let t_origin = getTimeOrigin(Lt, run_paths.seqno)
   let t_start  = wrapLt(tr.t_start, t_origin, Lt)
   let t_snks   = map(tr.t_snks, proc(t: int): int = wrapLt(t, t_origin, Lt))
   let mass     = run_paths.mm.mass
@@ -255,6 +254,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
                                         num_vecs: run_paths.num_vecs,
                                         t_start: t_start,
                                         Nt_forward: run_paths.time_ranges.Nt_forward,
+                                        use_derivP: false,
                                         displacement_length: 1,
                                         decay_dir: 3,
                                         num_tries: 1)
