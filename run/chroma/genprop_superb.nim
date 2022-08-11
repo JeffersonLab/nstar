@@ -18,6 +18,11 @@ type
     t_start*:             int          ## start time for all genprops
     Nt_forward*:          int          ## number steps forward, so  t_source + Nt_forward-1 is the last tslice
     num_tries*:           int
+    max_rhs*:                         int
+    max_tslices_in_contraction*:      int
+    max_moms_in_contraction*:         int
+    use_genprop4_format*:             bool
+    use_device_for_contractions*:     bool
 
   GenPropParam_t* = object
     LinkSmearing*:    XmlNode
