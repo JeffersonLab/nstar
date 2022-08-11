@@ -367,7 +367,7 @@ echo "procid= " $SLURM_JOB_ID >> ${out}
 MPI_CNT="""" & $mpi_cnt & """"
 MPI_PER_NODE="""" & $chroma_per_node & """"
 
-CHROMA="chroma-mgproto-qphix-qdpxx-double-nd4-avx512.aug_2_2022"
+CHROMA="/home/edwards/bin/exe/ib9q/chroma_mgproto_qphix_qdpxx_double_nd4_avx512.aug_11_2022"
 
 hostfile=$(mktemp "hostfile.XXXXX")
 /usr/bin/scontrol show hostnames $SLURM_JOB_NODELIST > ${hostfile}
