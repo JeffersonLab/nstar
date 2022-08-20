@@ -9,8 +9,9 @@ import hadron_sun_npart_irrep_op, particle_op, streams, os, xmlparser, re,
 type
   # Output for an irrep
   ProjOpVals* = tuple
-    E_cm:    float64
-    E_lab:   float64
+    E_cm:      float64
+    E_lab:     float64
+    massfile:  string
     weights: Table[KeyHadronSUNNPartIrrepOp_t,float64]
     
   # We choose some particular structure for the objects
@@ -68,10 +69,14 @@ proc fredextractProjectOpWeights*(L: int, xi: float64, mom_type: array[0..2, cin
   result.weights = initTable[KeyHadronSUNNPartIrrepOp_t,float64]()
 
   # The ensemble (mass) file we will use
-  let massfile = readEnsemble("t0" & $t0 & "/MassJackFiles/mass_t0_" & $t0 & "_reorder_state" & $state & ".jack")
+  let cwd = getCurrentDir()
+  echo cwd
+  let masspath = cwd & "/t0" & $t0 & "/MassJackFiles/mass_t0_" & $t0 & "_reorder_state" & $state & ".jack"
+  let massfile = readEnsemble(masspath)
 
   # Compute E_cm and E_lab
   let E_labb   = calc(massfile)
+  result.massfile = masspath
   result.E_lab = E_labb.data[0].avg.re
   result.E_cm  = computeEcm(result.E_lab, L, xi, mom_type)
 
@@ -95,7 +100,7 @@ proc fredextractProjectOpWeights*(L: int, xi: float64, mom_type: array[0..2, cin
       quit("Key=  " & subopName & "  not in operator opsMap")
 
     # V_t file
-    let Vt = readEnsemble("t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack")
+    let Vt = readEnsemble(cwd & "/t0" & $t0 & "/V_tJackFiles/V_t0_" & $t0 & "_reordered_state" & $state & "_op" & $ii & ".jack")
                     
     # Calc utils from module "ensem"
     let valc = calc(sqrt(2 * massfile) * exp(-0.5*massfile * t0) * extract(Vt, tZ))
@@ -248,11 +253,30 @@ proc writeProjOpsDat*(chan: string, L: int, output: ProjectedOpWeights) =
     f.close()
 
 
+proc writeProjOpsSpec*(chan: string, L: int, output: ProjectedOpWeights) =
+  ## Write the list
+  var f: File
+  if open(f, "weights." & chan & ".spec", fmWrite):
+    for k,v in pairs(output.ProjectedOps):
+      #pion_proj0_p100_H0D4A2
+      # output of form 000 A1p 24 Kneg_proj0_p000_A1__000  jack/Elab_000_A1p_proj0.ar.jack
+      #echo $v
+      let pp = split(k.name,'_')
+      var mom = pp[2]
+      mom.delete(0,0)
+      #let irr = removeIrrepLG(removeHelicity(k.name))
+      let irr = getIrrepWithPG(k.name)
+      let irrr = removeIrrepLG(irr)
+      f.write(mom & " " & irrr & " " & $L & " " & k.name & " " & "  " & v.massfile & "\n")
+    f.close()
+
+
 proc writeProjOutput*(chan: string, L: int, output: ProjectedOpWeights) =
   ## Write the list, xml, dat files
   writeProjOpsXML(chan, output)
   writeProjOpsList(chan, output)
   writeProjOpsDat(chan, L, output)
+  writeProjOpsSpec(chan, L, output)
 
 
 #-----------------------------------------------------------------------------
@@ -280,7 +304,7 @@ when isMainModule:
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights(chan, L, xi, @[
        (dir:       "000_A1mM.no_2",     ir: "A1",        mom: "000", t0: 11, tZ: 14, states: @[0]),
-       #(dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
+       (dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
        #(dir:       "110_A2M.no_2",      ir: "H0D2A2",    mom: "110", t0: 10, tZ: 15, states: @[0]),
        #(dir:       "111_A2M.no_2",      ir: "H0D3A2",    mom: "111", t0: 10, tZ: 16, states: @[0]),
        #(dir:       "200_A2M.no_2",      ir: "H0D4A2",    mom: "200", t0: 10, tZ: 18, states: @[0]),
