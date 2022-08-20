@@ -111,9 +111,9 @@ proc getTimeRanges*(): TimeRanges_t =
   result.t_snks = map(t_snks, proc(t: int): int = t_start + t)
 
 
-proc wrapLt*(t0, t_origin, Lt: int): int =
+proc wrapLt*(t0, Lt: int): int =
   ## Wrap time around the lattice
-  return (t0 + t_origin + Lt) mod Lt
+  return (t0 + Lt) mod Lt
 
  
 
@@ -212,19 +212,42 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   echo "lattSize= ", lattSize, " ",tr, " ",Lt, " seqno=", run_paths.seqno
     
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
-  let t_start  = wrapLt(tr.t_start, t_origin, Lt)
-  let t_snks   = map(tr.t_snks, proc(t: int): int = wrapLt(t, t_origin, Lt))
+  let t_start  = wrapLt(tr.t_start+t_origin, Lt)
+  let t_snks   = map(tr.t_snks, proc(t: int): int = wrapLt(t+t_origin, Lt))
   let mass     = run_paths.mm.mass
 
-  var prop_sources = concat(@[t_start], t_snks) 
-  var sink_sources = initTable[int,seq[int]]()
+  echo "t_origin = ", t_origin
 
+  var sink_sources = newSeq[SinkSource_t]()
+
+#  # Find the longest plateau
+#  var Nt_forward: int
+#  for t in items(t_snks):
+#    Nt_forward = max(wrapLt(t-t_start,Lt), Nt_forward)
+
+  # Source-source annih
+  sink_sources.add(SinkSource_t(t_sink: t_start,
+                                t_source: t_start,
+                                Nt_backward: 0,
+                                Nt_forward: tr.Nt_forward))
+
+  # Sink-* annihilation
   for t in items(t_snks):
-    sink_sources[t] = @[t]   # from sink to sink
+    let t_plat = wrapLt(t-t_start,Lt)+1
 
-  echo "prop_sources= ", prop_sources
-  sink_sources[t_start] = prop_sources
+    # Sink-sink annihilation
+    sink_sources.add(SinkSource_t(t_sink: t,
+                                  t_source: t,
+                                  Nt_backward: t_plat,
+                                  Nt_forward: 0))
 
+    # Sink-source annihilation
+    sink_sources.add(SinkSource_t(t_sink: t,
+                                  t_source: t_start,
+                                  Nt_backward: 0,
+                                  Nt_forward: t_plat))
+
+  # Smearing
   let link_smearing = colorvec_work.newStandardStoutLinkSmear()
 
   var displacements: seq[seq[int]] = @[]
@@ -249,12 +272,26 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
   echo "moms= ", moms
 
+  # Only interesting gammas
+  var gammas = @[1,2,4,8,9,10,12,0]
+
+  # Build DispGammaMomList
+  var disp_gamma_moms = newSeq[DispGammaMom_t]()
+
+  for g in items(gammas):
+    for p in items(moms):
+      for d in items(displacements):
+        disp_gamma_moms.add(DispGammaMom_t(gamma: g, displacement: d, mom: p))
+
+
   # That should be enough
   let contract = genprop.Contractions_t(mass_label: run_paths.mm.mass_label,
                                         num_vecs: run_paths.num_vecs,
                                         t_start: t_start,
-                                        Nt_forward: run_paths.time_ranges.Nt_forward,
-                                        use_derivP: false,
+                                        max_moms_in_contraction: 1,
+                                        max_tslices_in_contraction: run_paths.time_ranges.Nt_forward,
+                                        use_genprop4_format: true,
+                                        use_device_for_contractions: false,
                                         displacement_length: 1,
                                         decay_dir: 3,
                                         num_tries: 1)
@@ -283,10 +320,8 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   # Inline measurement
   let mat_prop      = propagator.newPropagator(fermact, inv)
   let mat_param     = genprop.GenPropParam_t(LinkSmearing: link_smearing,
-                                             PropSources: prop_sources,
-                                             SinkSources: sink_sources,
-                                             Displacements: displacements,
-                                             Moms: moms,
+                                             SinkSourcePairs: sink_sources,
+                                             DispGammaMomList: disp_gamma_moms,
                                              Contractions: contract,
                                              Propagator: mat_prop)
   let mat_named_obj = genprop.NamedObject_t(gauge_id: "default_gauge_field",
@@ -456,8 +491,8 @@ when isMainModule:
 
     let f = run_paths.run_script
     echo "Submitting " & f
-    if execShellCmd("sbatch " & f) != 0:
-      quit("Some error submitting " & f)
+#    if execShellCmd("sbatch " & f) != 0:
+#      quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
