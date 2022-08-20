@@ -9,25 +9,27 @@ import hadron_sun_npart_irrep_op, streams, os, xmlparser,
 when isMainModule:
   # Read in all the operators and build one big operator map
   # Test dir is  /work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1/szscl21_24_256_b1p50_t_x4p300_um0p0850_sm0p0743_n1p265/redstar/pion/fits_rge
-  let opsMap = readOpsMapFiles(@["./single.ops.xml"])
+  let pp = "/work/JLabLQCD/LHPC/Spectrum/Clover/NF2+1/szscl21_16_128_b1p50_t_x4p300_um0p0840_sm0p0743_n1p265_per/redstar/rhopi.i2/fits_rge/"
+  let opsMap = readOpsMapFiles(@[pp & "two.ops.xml"])
 
   # Output file
   var output: ProjectedOpWeights
 
   # Weights
-  let chan = "pion"
-  let L    = 32
-  let xi   = 3.461
+  let chan = "boson2I4S0c0B0pM"
+  let L    = 16
+  let xi   = 3.444
 
   output.version = 3
   output.ProjectedOps = extractProjectOpWeights(chan, L, xi, @[
-       (dir:       "000_A1mM.no_2",     ir: "A1",        mom: "000", t0: 11, tZ: 14, states: @[0]),
-       (dir:       "100_A2M.no_2",      ir: "H0D4A2",    mom: "100", t0: 10, tZ: 15, states: @[0]),
-       (dir:       "110_A2M.no_2",      ir: "H0D2A2",    mom: "110", t0: 10, tZ: 15, states: @[0]),
-       (dir:       "111_A2M.no_2",      ir: "H0D3A2",    mom: "111", t0: 10, tZ: 16, states: @[0]),
-       (dir:       "200_A2M.no_2",      ir: "H0D4A2",    mom: "200", t0: 10, tZ: 18, states: @[0]),
-       (dir:       "210_nm0A2M.no_2",   ir: "H0C4nm0A2", mom: "210", t0: 10, tZ: 18, states: @[0]),
-       (dir:       "211_nnmA2M.no_2",   ir: "H0C4nnmA2", mom: "211", t0:  9, tZ: 24, states: @[0]),
+       (dir:   pp &    "000_T1pM",   ir: "T1p",       mom: "000", t0: 10, tZ: 14, states: @[0,1]),
+       (dir:   pp &    "100_A2M",    ir: "H0D4A2",    mom: "100", t0: 10, tZ: 26, states: @[0,1,2]),
+       (dir:   pp &    "100_E2M",    ir: "H0D4E2",    mom: "100", t0: 10, tZ: 10, states: @[0,1]),
+       (dir:   pp &    "110_A2M",    ir: "H0D2A2",    mom: "110", t0: 10, tZ: 19, states: @[0,1,2,3,4]),
+       (dir:   pp &    "110_B1M",    ir: "H0D2B1",    mom: "110", t0: 11, tZ: 17, states: @[0,1,2]),
+       #(dir:       "200_A1P",    ir: "H0D4A1",    mom: "200", t0: 10, tZ: 19, states: @[0,1,2,3,4,5,6]),
+       #(dir:       "210_nm0A1P",   ir: "H0C4nm0A1", mom: "210", t0:  10, tZ: 23, states: @[0,1,2,3,4,5]),
+       #(dir:       "211_nnmA1P",   ir: "H0C4nnmA1", mom: "211", t0:  10, tZ: 27, states: @[0,1,2,3,4,5,6]),
        ],
        opsMap)
 
@@ -48,8 +50,7 @@ when isMainModule:
     output.ProjectedOps[kk] = vv
 
   # Write the xml
-  writeProjOpsXML("kbar", output)
-  writeProjOpsList("kbar", output)
+  writeProjOutput("kbar", L, output)
  
 ]#
 
