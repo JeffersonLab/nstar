@@ -4,7 +4,8 @@
 #const platform = "OLCF"
 #const platform = "NERSC"
 #const platform = "TACC"
-const platform = "JLab"
+#const platform = "JLab"
+const platform = "21g"
 
 when platform == "OLCF":
   import config_OLCF
@@ -14,6 +15,8 @@ elif platform == "TACC":
   import config_TACC
 elif platform == "JLab":
   import config_JLab
+elif platform == "21g":
+  import config_21g
 elif platform == "TEST":
   import config_TEST
   import inverter
@@ -35,7 +38,7 @@ import sequtils
 
 #
 # Bury these here unfortunately
-const chroma_per_node = 16
+const chroma_per_node = 8
 const node_cnt        = 2
 
 #------------------------------------------------------------------------------
@@ -310,6 +313,10 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   elif platform == "JLab":
     let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter)
     let fermact = newAnisoCloverFermAct(mass)
+  elif platform == "21g":
+    let mg  = newQUDAMGParams24x256()
+    let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
+    let fermact = newAnisoPrecCloverFermAct(mass)
   elif platform == "TEST":
     let inv = serializeXML(CGInverter_t(invType: "CG_INVERTER", RsdCG: Rsd, MaxCG: MaxIter))
     let fermact = newAnisoCloverFermAct(mass)
@@ -338,22 +345,26 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
 
 
 #------------------------------------------------------------------------------
-proc generateNERSCRunScript*(run_paths: RunPaths_t) =
+proc generate21gRunScript*(run_paths: RunPaths_t) =
   ## Generate input file
   # Common stuff
   #let propCheck = "/home/edwards/bin/x86_64-linux/prop_check"
 
-  #SBATCH -J snl
-  ##SBATCH -o snl.o%j
-  ##SBATCH -N 1
-  ##SBATCH -p phi
-  ##SBATCH -C cache,quad,knl,16p
-  ##SBATCH -t 20:00:00
-  ##SBATCH -A Spectrump
-  ##SBATCH --reboot
+  #SBATCH -o light.o%j
+  #SBATCH -t 10:00:00
+  #SBATCH --nodes=2
+  #SBATCH --ntasks-per-node=8
+  #SBATCH -A spectrum21g
+  #SBATCH -p 21g
+  #SBATCH -J light
+  #SBATCH -c 16
 
-  let queue    = "phi"
-  let wallTime = "15:00:00"
+  #cd $SLURM_SUBMIT_DIR
+
+  #source /work/JLabLQCD/eromero/chromaform-roc/env.sh
+
+  let queue    = "21g"
+  let wallTime = "5:00:00"
 
   # This particular job
   let mpi_cnt           = node_cnt * chroma_per_node
@@ -364,25 +375,43 @@ proc generateNERSCRunScript*(run_paths: RunPaths_t) =
 
   let command = """
 #!/bin/bash -x
-#SBATCH -J g4
-#SBATCH -N """ & $nodes & "\n" & """
-#SBATCH -q """ & queue & "\n" & """
+#SBATCH -o light.o%j
 #SBATCH -t """ & wallTime & "\n" & """
-#SBATCH -C cache,quad,knl,16p
-#SBATCH -A Spectrump
+#SBATCH --nodes=""" & $nodes & "\n" & """
+#SBATCH --ntasks-per-node=""" & $chroma_per_node & "\n" & """
+#SBATCH -A spectrum21g
+#SBATCH -p """ & queue & "\n" & """
+#SBATCH -J light
+#SBATCH -c 16
+
+cd $SLURM_SUBMIT_DIR
+
+source /work/JLabLQCD/eromero/chromaform-roc/env.sh
+
+rehash
+
+setenv NODEFILE `mktemp`
+scontrol show hostnames "${SLURM_JOB_NODELIST}" > ${NODEFILE}
+
+echo nodes
+cat ${NODEFILE}
+
+setenv SB_ASYNC_ALLTOALL 0 # avoid bug on openmp
+setenv OMP_NUM_THREADS 16
+setenv QUDA_ENABLE_P2P 0    # P2P can still have issues so disable
+setenv QUDA_ENABLE_GDR 0    # You need a GDR capable MPI for this to work, so disable
+setenv SB_LOG 1
+setenv SB_TRACK_MEM 1
+setenv SB_TRACK_TIME 1
+setenv HIP_VISIBLE_DEVICES 0,1,2,3,4,5,6,7
+setenv ROCR_VISIBLE_DEVICES 0,1,2,3,4,5,6,7
+setenv GPU_DEVICE_ORDINAL 0,1,2,3,4,5,6,7
+setenv CUDA_VISIBLE_DEVICES 0,1,2,3,4,5,6,7
+
+rm -f module_* prop* gprop*
 
 echo "host= " `hostname`
 echo "procid= $SLURM_JOB_ID"
-
-source /dist/intel/parallel_studio_2019/parallel_studio_xe_2019/bin/psxevars.sh intel64 
-
-cd """ & run_paths.seqDir & """
-
-echo """" & run_paths.seqDir & """"
-
-export OMP_PLACES=threads
-export OMP_PROC_BIND=spread
-export OMP_NUM_THREADS=8
 
 input="""" & genPath(run_paths.input_file) & """"
 output="""" & genPath(run_paths.output_file) & """"
@@ -398,24 +427,11 @@ fi
 
 echo "host= " `hostname` > ${out}
 echo "procid= " $SLURM_JOB_ID >> ${out}
-
-MPI_CNT="""" & $mpi_cnt & """"
-MPI_PER_NODE="""" & $chroma_per_node & """"
-
-CHROMA="/home/edwards/bin/exe/ib9q/chroma_mgproto_qphix_qdpxx_double_nd4_avx512.aug_11_2022"
-
-hostfile=$(mktemp "hostfile.XXXXX")
-/usr/bin/scontrol show hostnames $SLURM_JOB_NODELIST > ${hostfile}
-echo "nodelist:"
-cat ${hostfile}
-
-echo """" & run_paths.seqDir & """" >> ${out}
-echo "nodelist:" >> ${out}
-cat ${hostfile} >> ${out}
+mpi_cnt="""" & $mpi_cnt & """"
 
 echo "Starting Chroma"
 date
-mpiexec -launcher=rsh -genvall -n ${MPI_CNT} -ppn ${MPI_PER_NODE} -hostfile ${hostfile} ${CHROMA} -i ${input} -o ${output} -iogeom 1 1 1 8 -geom 1 1 1 32 -by 4 -bz 4 -c 4 -sy 1 -sz 2 &>> ${out}
+mpirun -np ${mpi_cnt} --hostfile ${NODEFILE}  -mca pml ucx -mca btl '^vader,tcp,uct,openib,rocm' -x UCX_NET_DEVICES=mlx5_0:1 $exe -i ${input} -geom 1 2 2 4 -pool-max-alloc 0 -pool-max-alignment 512 -poolsize 0k >> ${out}
 date
 echo "End Chroma"
 
@@ -425,11 +441,7 @@ then
   /bin/mv $genprop_tmp $genprop_op
 fi
 
-/bin/rm -f ${hostfile}
 """
-
-  ##""" & propCheck & " 0.5 $genprop_tmp > " & genPath(run_paths.check_file) & """
-
 
   # Will hopefully remove writing any specific file
   let f = run_paths.run_script
@@ -483,7 +495,7 @@ when isMainModule:
     generateChromaXML(run_paths)
 
     # Must construct
-    generateNERSCRunScript(run_paths)
+    generate21gRunScript(run_paths)
 
     # Either is not or empty, so submit
     let cwd = getCurrentDir()

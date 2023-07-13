@@ -90,7 +90,7 @@ type
     Blocking*:                   seq[seq[int]]
     CoarseSolverType*:           seq[string]
     CoarseResidual*:             seq[float]
-    MaxCoarseIterations*:        seq[float]
+    MaxCoarseIterations*:        seq[int]
     RelaxationOmegaMG*:          seq[float]
     SmootherType*:               seq[string]
     SmootherTol*:                seq[float]

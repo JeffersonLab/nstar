@@ -355,19 +355,19 @@ proc newQOPAMG24x256*(mass: float, Rsd: float, MaxIter: int): XmlNode =
 
 proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
   ## QUDA MG params to run small sizes
-  MULTIGRIDParams_t(Verbosity: false,
+  MULTIGRIDParams_t(Verbosity: true,
                     Precision: "HALF",
                     Reconstruct: "RECONS_12",
-                    Blocking: @[@[4,4,4,4], @[2,2,2,2]],
+                    Blocking: @[@[3,3,3,2], @[2,2,2,2]],
                     CoarseSolverType: @["GCR", "CA_GCR"],
                     CoarseResidual: @[0.1, 0.1, 0.1],
-                    MaxCoarseIterations: @[0.1, 0.1, 0.1],
+                    MaxCoarseIterations: @[12, 12, 8],
                     RelaxationOmegaMG: @[1.0, 1.0, 1.0],
                     SmootherType: @["CA_GCR", "CA_GCR", "CA_GCR"],
                     SmootherTol: @[0.25, 0.25, 0.25],
                     NullVectors: @[24, 32],
-                    PreSmootherApplications: @[4, 4],
-                    PostSmootherApplications: @[4, 4],
+                    PreSmootherApplications: @[0, 0],
+                    PostSmootherApplications: @[8, 8],
                     SubspaceSolver: @["CG", "CG"],
                     RsdTargetSubspaceCreate: @[5.0e-06, 5.0e-06],
                     MaxIterSubspaceCreate: @[500, 500],
@@ -384,14 +384,31 @@ proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
 
 
 
+#            <RsdTarget>1e-08</RsdTarget>
+#            <Delta>1.0e-1</Delta>
+#            <Pipeline>4</Pipeline>
+#            <MaxIter>1000</MaxIter>
+#            <RsdToleranceFactor>8.0</RsdToleranceFactor>
+#            <AntiPeriodicT>true</AntiPeriodicT>
+#            <SolverType>GCR</SolverType>
+#            <Verbose>true</Verbose>
+#            <AsymmetricLinop>false</AsymmetricLinop>
+#            <CudaReconstruct>RECONS_12</CudaReconstruct>
+#            <CudaSloppyPrecision>SINGLE</CudaSloppyPrecision>
+#            <CudaSloppyReconstruct>RECONS_12</CudaSloppyReconstruct>
+#            <AxialGaugeFix>false</AxialGaugeFix>
+#            <AutotuneDslash>true</AutotuneDslash>
+
 proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t): XmlNode =
   ## QUDA MG inverter, with some parameters hardwired
   serializeXML(QUDA_MULTIGRID_CLOVER_INVERTER_t(invType: "QUDA_MULTIGRID_CLOVER_INVERTER",
                                                 RsdTarget: Rsd,
                                                 MULTIGRIDParams: mg,
                                                 CloverParams: newAnisoCloverParams(mass),
-                                                Delta: 1.0e-4, MaxIter: MaxIter, RsdToleranceFactor: 100,
-                                                SilentFail: true,
+                                                Delta: 1.0e-1,
+                                                Pipeline: 4,
+                                                MaxIter: MaxIter,
+                                                RsdToleranceFactor: 10,                                                                                       SilentFail: true,
                                                 AntiPeriodicT: true,
                                                 SolverType: "GCR",
                                                 Verbose: true,
