@@ -288,7 +288,7 @@ proc newAnisoCloverFermAct*(mass: float): XmlNode =
 
 proc newAnisoPrecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action
-  newAnisoCloverFermAct("PRECONDITIONED_CLOVER", mass)
+  newAnisoCloverFermAct("CLOVER", mass)
 
 proc newAnisoSEOPrecCloverFermAct*(mass: float): XmlNode =
   ## Anisotropic clover fermion action

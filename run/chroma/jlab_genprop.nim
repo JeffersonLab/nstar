@@ -296,6 +296,7 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
                                         use_genprop4_format: true,
                                         use_device_for_contractions: false,
                                         displacement_length: 1,
+                                        max_rhs: 8,
                                         decay_dir: 3,
                                         num_tries: 1)
  
@@ -374,7 +375,7 @@ proc generate21gRunScript*(run_paths: RunPaths_t) =
   # SBATCH --time-min 4:00:00
 
   let command = """
-#!/bin/bash -x
+#!/bin/tcsh -x
 #SBATCH -o light.o%j
 #SBATCH -t """ & wallTime & "\n" & """
 #SBATCH --nodes=""" & $nodes & "\n" & """
@@ -392,6 +393,7 @@ rehash
 
 setenv NODEFILE `mktemp`
 scontrol show hostnames "${SLURM_JOB_NODELIST}" > ${NODEFILE}
+set mpi_cnt="""" & $mpi_cnt & """"
 
 echo nodes
 cat ${NODEFILE}
@@ -413,33 +415,37 @@ rm -f module_* prop* gprop*
 echo "host= " `hostname`
 echo "procid= $SLURM_JOB_ID"
 
-input="""" & genPath(run_paths.input_file) & """"
-output="""" & genPath(run_paths.output_file) & """"
-out="""" & genPath(run_paths.out_file) & """"
-genprop_tmp="""" & genPath(run_paths.genprop_op_tmp) & """"
-genprop_op="""" & genPath(run_paths.genprop_op_file) & """"
+set input="""" & genPath(run_paths.input_file) & """"
+set output="""" & genPath(run_paths.output_file) & """"
+set out="""" & genPath(run_paths.out_file) & """"
+set genprop_tmp="""" & genPath(run_paths.genprop_op_tmp) & """"
+set genprop_op="""" & genPath(run_paths.genprop_op_file) & """"
 /bin/rm -f $genprop_tmp
 
-if [ -e $genprop_op ]
-then
-  exit 0
-fi
+set exe="/work/JLabLQCD/eromero/chromaform-roc/install/chroma-quda-qdp-jit-double-nd4-cmake-superbblas-hip/bin/chroma"
 
 echo "host= " `hostname` > ${out}
 echo "procid= " $SLURM_JOB_ID >> ${out}
-mpi_cnt="""" & $mpi_cnt & """"
+
+if (-e $genprop_op) then
+  exit 0
+endif
+
+# Horrible hack to support bad variable names
+set hack="`mktemp`"
+cat $input | sed 's/PreSmo/Pre-Smo/g' | sed 's/PostSmo/Post-Smo/g' > $hack
 
 echo "Starting Chroma"
 date
-mpirun -np ${mpi_cnt} --hostfile ${NODEFILE}  -mca pml ucx -mca btl '^vader,tcp,uct,openib,rocm' -x UCX_NET_DEVICES=mlx5_0:1 $exe -i ${input} -geom 1 2 2 4 -pool-max-alloc 0 -pool-max-alignment 512 -poolsize 0k >> ${out}
+mpirun -np ${mpi_cnt} --hostfile ${NODEFILE}  -mca pml ucx -mca btl '^vader,tcp,uct,openib,rocm' -x UCX_NET_DEVICES=mlx5_0:1 $exe -i ${hack} -geom 1 2 2 4 -pool-max-alloc 0 -pool-max-alignment 512 -poolsize 0k >> ${out}
 date
 echo "End Chroma"
 
-stat=$?
-if [ $stat -eq 0 ]
-then
-  /bin/mv $genprop_tmp $genprop_op
-fi
+#stat=$?
+#if [ $stat -eq 0 ]
+#then
+#  /bin/mv $genprop_tmp $genprop_op
+#fi
 
 """
 
@@ -503,8 +509,8 @@ when isMainModule:
 
     let f = run_paths.run_script
     echo "Submitting " & f
-#    if execShellCmd("sbatch " & f) != 0:
-#      quit("Some error submitting " & f)
+    if execShellCmd("sbatch " & f) != 0:
+      quit("Some error submitting " & f)
 
     # popd
     setCurrentDir(cwd)
