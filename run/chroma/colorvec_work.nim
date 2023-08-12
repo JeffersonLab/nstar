@@ -412,7 +412,7 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t)
                                                 AntiPeriodicT: true,
                                                 SolverType: "GCR",
                                                 Verbose: true,
-                                                AsymmetricLinop: false,
+                                                AsymmetricLinop: true,
                                                 CudaReconstruct: "RECONS_12",
                                                 CudaSloppyPrecision: "SINGLE",
                                                 CudaSloppyReconstruct: "RECONS_12",

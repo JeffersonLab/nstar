@@ -180,7 +180,7 @@ type
             <AntiPeriodicT>true</AntiPeriodicT>
             <SolverType>GCR</SolverType>
             <Verbose>true</Verbose>
-            <AsymmetricLinop>false</AsymmetricLinop>
+            <AsymmetricLinop>true</AsymmetricLinop>
             <CudaReconstruct>RECONS_12</CudaReconstruct>
             <CudaSloppyPrecision>SINGLE</CudaSloppyPrecision>
             <CudaSloppyReconstruct>RECONS_8</CudaSloppyReconstruct>

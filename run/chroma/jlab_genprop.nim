@@ -39,7 +39,7 @@ import sequtils
 #
 # Bury these here unfortunately
 const chroma_per_node = 8
-const node_cnt        = 2
+const node_cnt        = 1
 
 #------------------------------------------------------------------------------
 type
@@ -181,7 +181,7 @@ proc constructPathNames*(quark: string, seqno: string, time_ranges: TimeRanges_t
   result.input_file      = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".ini.xml" & seqno)
   result.output_file     = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out.xml" & seqno)
   result.out_file        = PathFile_t(fileDir: result.seqDir, name: result.prefix & ".out" & seqno)
-  result.genprop_op_file = PathFile_t(fileDir: result.dataDir & "/genprop_db2", name: result.genprop_op_tmp.name)
+  result.genprop_op_file = PathFile_t(fileDir: result.dataDir & "/genprop_db3", name: result.genprop_op_tmp.name)
 
   result.run_script      = result.seqDir & "/jlab.all.sh"
 
@@ -437,15 +437,34 @@ cat $input | sed 's/PreSmo/Pre-Smo/g' | sed 's/PostSmo/Post-Smo/g' > $hack
 
 echo "Starting Chroma"
 date
-mpirun -np ${mpi_cnt} --hostfile ${NODEFILE}  -mca pml ucx -mca btl '^vader,tcp,uct,openib,rocm' -x UCX_NET_DEVICES=mlx5_0:1 $exe -i ${hack} -geom 1 2 2 4 -pool-max-alloc 0 -pool-max-alignment 512 -poolsize 0k >> ${out}
+mpirun -np ${mpi_cnt} --hostfile ${NODEFILE}  -mca pml ucx -mca btl '^vader,tcp,uct,openib,rocm' -x UCX_NET_DEVICES=mlx5_0:1 $exe -i ${hack} -geom 1 1 2 4 -pool-max-alloc 0 -pool-max-alignment 512 -poolsize 0k >> ${out}
 date
 echo "End Chroma"
 
-#stat=$?
-#if [ $stat -eq 0 ]
-#then
-#  /bin/mv $genprop_tmp $genprop_op
-#fi
+echo "Check output"
+xmllint XMLDAT >& /dev/null
+set stat=$status
+
+if ($stat != 0) then
+  echo "Exiting after some error in ${out}"
+  exit 1
+endif
+
+if (! -f $genprop_tmp) then 
+  echo "Missing genprop= $genprop_tmp"
+  exit 1
+endif
+
+echo "Check db"
+$HOME/bin/x86_64-redhat-linux-gnu/dbkeys $genprop_tmp keys >& /dev/null
+set stat=$status
+
+if ($stat != 0) then 
+  echo "Moving $genprop_tmp to $genprop_op"
+  /bin/mv $genprop_tmp $genprop_op
+endif
+
+exit 0
 
 """
 
