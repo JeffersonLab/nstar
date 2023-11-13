@@ -109,6 +109,7 @@ proc getTimeRanges*(): TimeRanges_t =
     result.t_start    = 0
     result.Nt_forward = 32
     let t_snks = @[22,26,28,31]
+#    let t_snks = @[10,12,14,16,18]
 
   let t_start = result.t_start
   result.t_snks = map(t_snks, proc(t: int): int = t_start + t)
@@ -358,7 +359,7 @@ proc generate21gRunScript*(run_paths: RunPaths_t) =
   #SBATCH -A spectrum21g
   #SBATCH -p 21g
   #SBATCH -J light
-  #SBATCH -c 16
+  #SBATCH -c 8
 
   #cd $SLURM_SUBMIT_DIR
 
@@ -383,7 +384,7 @@ proc generate21gRunScript*(run_paths: RunPaths_t) =
 #SBATCH -A spectrum21g
 #SBATCH -p """ & queue & "\n" & """
 #SBATCH -J light
-#SBATCH -c 16
+#SBATCH -c 8
 
 cd $SLURM_SUBMIT_DIR
 
