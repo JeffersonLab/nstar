@@ -261,6 +261,10 @@ proc newAnisoParams*(): AnisoParam_t =
   ## Anisotropic clover params for light and strange quarks
   AnisoParam_t(anisoP: true, xi_0: 4.3, nu: 1.265, t_dir: 3)
 
+proc newAnisoCharmParams*(): AnisoParam_t =
+  ## Anisotropic clover params for light and strange quarks
+  AnisoParam_t(anisoP: true, xi_0: 4.3, nu: 1.078, t_dir: 3)
+
 proc newSFBC*(): XmlNode =
   ## Simple anti-periodic fermion bc
   newSimpleFermBC(@[1,1,1,-1])
@@ -269,39 +273,39 @@ proc newAnisoCloverParams*(mass: float): CloverParams_t =
   ## QUDA used this for clover parameters
   CloverParams_t(Mass: mass, clovCoeffR: 1.589327, clovCoeffT: 0.902784, AnisoParam: newAnisoParams())
 
+proc newAnisoCharmParams*(mass: float): CloverParams_t =
+  ## QUDA used this for clover parameters
+  CloverParams_t(Mass: mass, clovCoeffR: 1.35438320085927, clovCoeffT: 0.793917288535831, AnisoParam: newAnisoCharmParams())
+
 proc newAnisoStoutFermState*(): XmlNode = 
   ## Create an anisotropic stout ferm state
   newStoutFermState(0.14, 2, 3, newSFBC())
 
-proc newAnisoClover*(FermAct: string, mass: float): XmlNode =
-  ## Anisotropic clover fermion action
-  let params = newAnisoCloverParams(mass)
-  result = newCloverFermionAction(FermAct, mass, params.clovCoeffR, params.clovCoeffT, params.AnisoParam, newAnisoStoutFermState())
+#proc newAnisoClover*(FermAct: string, mass: float): XmlNode =
+#  ## Anisotropic clover fermion action
+#  let params = newAnisoCloverParams(mass)
+#  result = newCloverFermionAction(FermAct, mass, params.clovCoeffR, params.clovCoeffT, params.AnisoParam, newAnisoStoutFermState())
 
-proc newAnisoCloverFermAct*(FermAct: string, mass: float): XmlNode =
+proc newAnisoCloverFermAct*(FermAct: string, clov: CloverParams_t): XmlNode =
   ## Anisotropic clover fermion action
-  newCloverFermionAction(FermAct, mass, 1.589327, 0.902784, newAnisoParams(), newAnisoStoutFermState())
+  newCloverFermionAction(FermAct, clov.Mass, clov.clovCoeffR, clov.clovCoeffT, clov.AnisoParam, newAnisoStoutFermState())
 
-proc newAnisoCloverFermAct*(mass: float): XmlNode =
+proc newAnisoCloverFermAct*(clov: CloverParams_t): XmlNode =
   ## Anisotropic clover fermion action
-  newAnisoCloverFermAct("CLOVER", mass)
+  newAnisoCloverFermAct("CLOVER", clov)
 
-proc newAnisoPrecCloverFermAct*(mass: float): XmlNode =
+proc newAnisoSEOPrecCloverFermAct*(clov: CloverParams_t): XmlNode =
   ## Anisotropic clover fermion action
-  newAnisoCloverFermAct("CLOVER", mass)
+  newAnisoCloverFermAct("SEOPREC_CLOVER", clov)
 
-proc newAnisoSEOPrecCloverFermAct*(mass: float): XmlNode =
-  ## Anisotropic clover fermion action
-  newAnisoCloverFermAct("SEOPREC_CLOVER", mass)
+#proc newAnisoUnprecCloverFermAct*(clov: CloverParams_t): XmlNode =
+#  ## Anisotropic clover fermion action
+#  newAnisoCloverFermAct("UNPRECONDITIONED_CLOVER", clov)
 
-proc newAnisoUnprecCloverFermAct*(mass: float): XmlNode =
-  ## Anisotropic clover fermion action
-  newAnisoCloverFermAct("UNPRECONDITIONED_CLOVER", mass)
-
-proc newIsoCloverFermAct*(mass: float): XmlNode =
-  ## Isotropic clover fermion action
-  let state  = newSimpleFermState(newSFBC())
-  serializeXML(IsoCloverFermionAction_t(FermAct: "CLOVER", Mass: mass, clovCoeff: 1.0, FermState: state), "FermState")
+#proc newIsoCloverFermAct*(clov: CloverParams_t): XmlNode =
+#  ## Isotropic clover fermion action
+#  let state  = newSimpleFermState(newSFBC())
+#  serializeXML(IsoCloverFermionAction_t(FermAct: "CLOVER", Mass: mass, clovCoeff: 1.0, FermState: state), "FermState")
 
 
 #------------------------------------------------------------------------------
@@ -399,12 +403,12 @@ proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
 #            <AxialGaugeFix>false</AxialGaugeFix>
 #            <AutotuneDslash>true</AutotuneDslash>
 
-proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t): XmlNode =
+proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, clov: CloverParams_t, mg: MULTIGRIDParams_t): XmlNode =
   ## QUDA MG inverter, with some parameters hardwired
   serializeXML(QUDA_MULTIGRID_CLOVER_INVERTER_t(invType: "QUDA_MULTIGRID_CLOVER_INVERTER",
                                                 RsdTarget: Rsd,
                                                 MULTIGRIDParams: mg,
-                                                CloverParams: newAnisoCloverParams(mass),
+                                                CloverParams: clov,
                                                 Delta: 1.0e-1,
                                                 Pipeline: 4,
                                                 MaxIter: MaxIter,
@@ -421,13 +425,13 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, mg: MULTIGRIDParams_t)
                                                 SubspaceID: "foo"), "InvertParam")
 
 
-proc newQPhiXBiCGInv*(mass: float, rsd: float, MaxIter: int): XmlNode =
+proc newQPhiXBiCGInv*(mass: float, rsd: float, MaxIter: int, clov: CloverParams_t): XmlNode =
   ## QPHIX BICGstab inverter, with some parameters hardwired
   serializeXML(QPhiXCloverIterRefineBICGstabInverter_t(invType: "QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER",
                                                        SolverType: "BICGSTAB",
                                                        MaxIter: MaxIter,
                                                        RsdTarget: rsd,
-                                                       CloverParams: newAnisoCloverParams(mass),
+                                                       CloverParams: clov,
                                                        Delta: 1.0e-4, 
                                                        RsdToleranceFactor: 100,
                                                        AntiPeriodicT: true,
@@ -435,10 +439,10 @@ proc newQPhiXBiCGInv*(mass: float, rsd: float, MaxIter: int): XmlNode =
 
 
 
-proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int): XmlNode =
+proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int, clov: CloverParams_t): XmlNode =
   ## QPHIX BICGstab inverter, with some parameters hardwired
   serializeXML(QPhiXCloverMGInverter_t(invType: "MG_PROTO_QPHIX_EO_CLOVER_INVERTER",
-                                       CloverParams: newAnisoCloverParams(mass),
+                                       CloverParams: clov,
                                        AntiPeriodicT: true,
                                        MGLevels: 3,
                                        Blocking: @[@[3,3,3,2], @[2,2,2,2]],
@@ -475,6 +479,7 @@ proc newLinkSmearing*(gammas: seq[cint]; mom2_min, mom2_max: cint): XmlNode =
 
 
 
+#[
 #------------------------------------------------------------------------------
 when isMainModule:
   let input_file = "fred.xml"
@@ -537,13 +542,13 @@ when isMainModule:
 
   # Fermion action and inverters
   when ensemble == "real":
-    let mg  = newQUDAMGParams24x256()
-    let inv = newQUDAMGInv(mass, Rsd, MaxIter, mg)
-    let fermact = newAnisoPrecCloverFermAct(mass)
+    let mg   = newQUDAMGParams24x256()
+    let inv  = newQUDAMGInv(mass, Rsd, MaxIter, clov, mg)
+    let fermact = newAnisoCloverFermAct(clov)
 
   elif ensemble == "test":
     let inv  = newVanillaCG(Rsd, MaxIter)
-    let fermact = newIsoCloverFermAct(mass)
+    let fermact = newIsoCloverFermAct(clov)
 
   else:
     quit("Unknown")
@@ -567,3 +572,6 @@ when isMainModule:
 
   let input = xmlHeader & xmlToStr(serializeXML(chroma_xml))
   writeFile(input_file, input)
+
+]#
+
