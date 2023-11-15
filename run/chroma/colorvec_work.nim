@@ -403,7 +403,7 @@ proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
 #            <AxialGaugeFix>false</AxialGaugeFix>
 #            <AutotuneDslash>true</AutotuneDslash>
 
-proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, clov: CloverParams_t, mg: MULTIGRIDParams_t): XmlNode =
+proc newQUDAMGInv*(Rsd: float, MaxIter: int, clov: CloverParams_t, mg: MULTIGRIDParams_t): XmlNode =
   ## QUDA MG inverter, with some parameters hardwired
   serializeXML(QUDA_MULTIGRID_CLOVER_INVERTER_t(invType: "QUDA_MULTIGRID_CLOVER_INVERTER",
                                                 RsdTarget: Rsd,
@@ -425,7 +425,7 @@ proc newQUDAMGInv*(mass: float, Rsd: float, MaxIter: int, clov: CloverParams_t, 
                                                 SubspaceID: "foo"), "InvertParam")
 
 
-proc newQPhiXBiCGInv*(mass: float, rsd: float, MaxIter: int, clov: CloverParams_t): XmlNode =
+proc newQPhiXBiCGInv*(rsd: float, MaxIter: int, clov: CloverParams_t): XmlNode =
   ## QPHIX BICGstab inverter, with some parameters hardwired
   serializeXML(QPhiXCloverIterRefineBICGstabInverter_t(invType: "QPHIX_CLOVER_ITER_REFINE_BICGSTAB_INVERTER",
                                                        SolverType: "BICGSTAB",
@@ -439,7 +439,7 @@ proc newQPhiXBiCGInv*(mass: float, rsd: float, MaxIter: int, clov: CloverParams_
 
 
 
-proc newQPhiXMGParams24x256*(mass: float, rsd: float, MaxIter: int, clov: CloverParams_t): XmlNode =
+proc newQPhiXMGParams24x256*(rsd: float, MaxIter: int, clov: CloverParams_t): XmlNode =
   ## QPHIX BICGstab inverter, with some parameters hardwired
   serializeXML(QPhiXCloverMGInverter_t(invType: "MG_PROTO_QPHIX_EO_CLOVER_INVERTER",
                                        CloverParams: clov,
@@ -543,7 +543,7 @@ when isMainModule:
   # Fermion action and inverters
   when ensemble == "real":
     let mg   = newQUDAMGParams24x256()
-    let inv  = newQUDAMGInv(mass, Rsd, MaxIter, clov, mg)
+    let inv  = newQUDAMGInv(Rsd, MaxIter, clov, mg)
     let fermact = newAnisoCloverFermAct(clov)
 
   elif ensemble == "test":

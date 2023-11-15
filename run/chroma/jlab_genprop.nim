@@ -70,29 +70,29 @@ let mass_c =  0.092
 
 type
   QuarkMass_t* = object
-    mass*:         float
+    clov*:         CloverParams_t
     mass_label*:   string
-    clov:          CloverParams_t
+#    mass*:         float
 
 proc quarkMass*(stem: string, quark: string): QuarkMass_t =
   ## Pull out the mass and label
   case quark:
     of "charm":
-      result.mass = mass_c
+#      result.mass = mass_c
       result.clov = newAnisoCharmParams(mass_c)
       
     of "strange":
-      result.mass = mass_s
+#      result.mass = mass_s
       result.clov = newAnisoCloverParams(mass_s)
       
     of "light":
-      result.mass = mass_l
+#      result.mass = mass_l
       result.clov = newAnisoCloverParams(mass_l)
 
     else:
       quit("Unknown quark = " & quark)
 
-  result.mass_label  = "U" & formatFloat(result.mass, ffDecimal, 4)
+  result.mass_label  = "U" & formatFloat(result.clov.Mass, ffDecimal, 4)
 
 
 
@@ -176,7 +176,7 @@ proc constructPathNames*(quark: string, seqno: string, time_ranges: TimeRanges_t
   # Main paths
   result.dataDir    = result.cache
   result.workDir    = result.scratch
-  result.seqName    = result.seqno & "." & formatFloat(result.mm.mass, ffDecimal, 4) & ".allt"
+  result.seqName    = result.seqno & "." & formatFloat(result.mm.clov.Mass, ffDecimal, 4) & ".allt"
   result.seqDir     = result.workdir & "/" & result.seqName
 
   # Files
@@ -227,7 +227,6 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   let t_origin = getTimeOrigin(Lt, run_paths.seqno)
   let t_start  = wrapLt(tr.t_start+t_origin, Lt)
   let t_snks   = map(tr.t_snks, proc(t: int): int = wrapLt(t+t_origin, Lt))
-  let mass     = run_paths.mm.mass
   let clov     = run_paths.mm.clov
 
   echo "t_origin = ", t_origin
@@ -314,20 +313,20 @@ proc generateChromaXML*(run_paths: RunPaths_t) =
   # Fermion action and inverters
   when platform == "OLCF":
     let mg   = newQUDAMGParams24x256()
-    let inv  = newQUDAMGInv(mass, Rsd, MaxIter, clov, mg)
+    let inv  = newQUDAMGInv(Rsd, MaxIter, clov, mg)
     let fermact = newAnisoPrecCloverFermAct(clov)
   elif platform == "NERSC":
-    let inv  = newQPhiXMGParams24x256(mass, Rsd, MaxIter, clov)
+    let inv  = newQPhiXMGParams24x256(Rsd, MaxIter, clov)
     let fermact = newAnisoCloverFermAct(clov)
   elif platform == "TACC":
-    let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter, clov)
+    let inv = newQPhiXMGParams24x256(Rsd, MaxIter, clov)
     let fermact = newAnisoCloverFermAct(clov)
   elif platform == "JLab":
-    let inv = newQPhiXMGParams24x256(mass, Rsd, MaxIter, clov)
+    let inv = newQPhiXMGParams24x256(Rsd, MaxIter, clov)
     let fermact = newAnisoCloverFermAct(clov)
   elif platform == "21g":
     let mg   = newQUDAMGParams24x256()
-    let inv  = newQUDAMGInv(mass, Rsd, MaxIter, clov, mg)
+    let inv  = newQUDAMGInv(Rsd, MaxIter, clov, mg)
     let fermact = newAnisoCloverFermAct(clov)
   elif platform == "TEST":
     let inv = serializeXML(CGInverter_t(invType: "CG_INVERTER", RsdCG: Rsd, MaxCG: MaxIter))
