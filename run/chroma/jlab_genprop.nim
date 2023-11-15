@@ -64,29 +64,24 @@ proc genPath*(files: seq[PathFile_t]): seq[string] =
 
 #------------------------------------------------------------------------------
 # Mass params - need to fix this stuff up to have the datasets and their masses
-let mass_s = -0.0743
-let mass_l = -0.0840
-let mass_c =  0.092
-
 type
   QuarkMass_t* = object
     clov*:         CloverParams_t
     mass_label*:   string
-#    mass*:         float
 
 proc quarkMass*(stem: string, quark: string): QuarkMass_t =
   ## Pull out the mass and label
   case quark:
     of "charm":
-#      result.mass = mass_c
+      let mass_c =  0.092
       result.clov = newAnisoCharmParams(mass_c)
       
     of "strange":
-#      result.mass = mass_s
+      let mass_s = -0.0743
       result.clov = newAnisoCloverParams(mass_s)
       
     of "light":
-#      result.mass = mass_l
+      let mass_l = -0.0840
       result.clov = newAnisoCloverParams(mass_l)
 
     else:
