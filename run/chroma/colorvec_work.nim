@@ -357,6 +357,36 @@ proc newQOPAMG24x256*(mass: float, Rsd: float, MaxIter: int): XmlNode =
 #              <RelaxationOmegaOuter>1.0</RelaxationOmegaOuter>
 #              <SetupOnGPU>1 1</SetupOnGPU>
 
+proc newQUDAMGParams20x256*(): MULTIGRIDParams_t =
+  ## QUDA MG params to run small sizes
+  MULTIGRIDParams_t(Verbosity: true,
+                    Precision: "HALF",
+                    Reconstruct: "RECONS_12",
+                    Blocking: @[@[5,5,5,4], @[2,2,2,2]],
+                    CoarseSolverType: @["GCR", "CA_GCR"],
+                    CoarseResidual: @[0.1, 0.1, 0.1],
+                    MaxCoarseIterations: @[12, 12, 8],
+                    RelaxationOmegaMG: @[1.0, 1.0, 1.0],
+                    SmootherType: @["CA_GCR", "CA_GCR", "CA_GCR"],
+                    SmootherTol: @[0.25, 0.25, 0.25],
+                    NullVectors: @[24, 32],
+                    PreSmootherApplications: @[0, 0],
+                    PostSmootherApplications: @[8, 8],
+                    SubspaceSolver: @["CG", "CG"],
+                    RsdTargetSubspaceCreate: @[5.0e-06, 5.0e-06],
+                    MaxIterSubspaceCreate: @[500, 500],
+                    MaxIterSubspaceRefresh: @[500, 500],
+                    OuterGCRNKrylov: 20,
+                    PrecondGCRNKrylov: 10,
+                    GenerateNullspace: true,
+                    CheckMultigridSetup: false,
+                    GenerateAllLevels: true, 
+                    CycleType: "MG_RECURSIVE",
+                    SchwarzType: "ADDITIVE_SCHWARZ",
+                    RelaxationOmegaOuter: 1.0,
+                    SetupOnGPU: @[1, 1])
+
+
 proc newQUDAMGParams24x256*(): MULTIGRIDParams_t =
   ## QUDA MG params to run small sizes
   MULTIGRIDParams_t(Verbosity: true,
