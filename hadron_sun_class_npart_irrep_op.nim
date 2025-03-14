@@ -1,23 +1,23 @@
 ## Hadron multi-particle operators projected onto an irrep
 
-import particle_op, serializetools/array1d, hashes
+import particle_class_op, serializetools/array1d, hashes
 
 #----------------------------------------------------------------------------
 # Time slice collection of operators projected onto a definite irrep
 type
   Slot_t* = object
-    slot*:      string            ## At first level, the HadronOp index, at higher levels, the temporary 
-    irrep*:     string            ## Target Octahedral/little-group irrep - of form   "Lambda,embed" 
-    F*:         string            ## Target SU(N) flavor irrep - of form for SU(2) "3,1", or for SU(3) "8,1" 
-    mom_type*:  seq[cint]         ## Target D-1 Canonical momentum type 
+    slot*:       string            ## At first level, the HadronOp index, at higher levels, the temporary 
+    irrep*:      string            ## Target Octahedral/little-group irrep - of form   "Lambda,embed" 
+    F*:          string            ## Target SU(N) flavor irrep - of form for SU(2) "3,1", or for SU(3) "8,1" 
+    mom_class*:  seq[cint]         ## Target D-1 Canonical momentum type
     
   CGPair_t* = object
     left*:      string            ## Left side of CG 
     right*:     string            ## Right side of CG 
     target*:    Slot_t            ## Target of CG 
   
-  KeyHadronSUNNPartIrrepOp_t* = object
-    Operators*: Array1dO[KeyParticleOp_t] ## Each operator 
+  KeyHadronSUNClassNPartIrrepOp_t* = object
+    Operators*: Array1dO[KeyParticleClassOp_t] ## Each operator 
     CGs*:       Array1dO[CGPair_t]        ## Each pair of CG contractions 
 
 
@@ -43,7 +43,7 @@ proc hash*(x: CGPair_t): Hash =
   result = !$h
 
 
-proc hash*(x: KeyHadronSUNNPartIrrepOp_t): Hash =
+proc hash*(x: KeyHadronSUNClassNPartIrrepOp_t): Hash =
   ## Computes a Hash from `x`.
   var h: Hash = 0
   # Iterate over parts of `x`.
@@ -58,8 +58,8 @@ proc hash*(x: KeyHadronSUNNPartIrrepOp_t): Hash =
 when isMainModule:
   import serializetools/serializexml, tables, xmlparser, xmltree
 
-  var opsMap: Table[string, KeyHadronSUNNPartIrrepOp_t]
-  var f: string = "ex.ops.8.xml"
+  var opsMap: Table[string, KeyHadronSUNClassNPartIrrepOp_t]
+  var f: string = "3pi.ops.xml"
 
   echo "Read file= ", f
   let xml: XmlNode = loadXml(f)
@@ -70,10 +70,10 @@ when isMainModule:
   opsMap = deserializeXML[type(opsMap)](xml, "OpsList")
   
   echo "Check it out"
-  let foo = opsMap["omega8_proj1_p200_H1D4E2__200xxomega1_proj0_p200_H1D4E2__200__F8,1_T2pM,1__000"]
+  let foo = opsMap["XXpion_pionxD0_J0__J0_H0D2A2__-101xxpion_pionxD0_J0__J0_H0D2A2__110__F3,1_D2B1P,1__011XXpion_pionxD0_J0__J0_H0D2A2__0-1-1__F5,1_T1mM,1__000"]
   echo "Look up a key: result= ", foo
-  echo "wunderbar, pull out a mom_type"
-  let ff: array[0..2,cint] = foo.Operators[1].mom_type
-  echo "zoom in:  mom_type= ", @ff
+  echo "wunderbar, pull out a mom_class"
+  let ff: array[0..2,cint] = foo.Operators[1].mom_class
+  echo "zoom in:  mom_class= ", @ff
 
   

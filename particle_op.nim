@@ -1,6 +1,6 @@
 ## Hadron-like particle operators
 
-import hadron_vertex, hashes
+import hashes
 
 #----------------------------------------------------------------------------
 # Key for a hadron-like particle operator

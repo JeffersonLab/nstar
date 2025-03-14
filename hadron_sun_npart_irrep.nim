@@ -25,7 +25,7 @@ proc hash*(x: KeyHadronSUNNPartIrrep_t): Hash =
 
 
 when isMainModule:
-  import serializexml, tables, xmlparser, xmltree
+  import serializetools/serializexml, tables, xmlparser, xmltree
 
   var opsList: Table[string, KeyHadronSUNNPartIrrep_t]
   var f: string = "ex.ops.8.xml"
